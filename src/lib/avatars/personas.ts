@@ -210,7 +210,9 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/pooja.glb",
     portrait: "/images/teacher-portraits/pooja.jpg",
     gender: "feminine",
-    voice: "aura-2-vesta-en",
+    // Vesta paused often and ran ~40% longer than the other voices; Helena is
+    // warm and even-paced.
+    voice: "aura-2-helena-en",
     geminiVoice: "Callirrhoe",
     manner: "Warm and professional. Gives polished guidance without making it feel formal.",
     tagline: "Warm, polished, quietly reassuring",

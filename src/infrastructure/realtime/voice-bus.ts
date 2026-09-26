@@ -25,6 +25,24 @@ export interface VoiceBands {
 
 const SILENT: VoiceBands = { level: 0, low: 0, mid: 0, high: 0, silent: true };
 
+/**
+ * Voices differ by up to ~8 dB in loudness (Deepgram's Zeus against Neptune,
+ * for example), and the mouth opens with loudness, so quiet voices barely moved
+ * the jaw. A running estimate of this voice's speaking level normalises every
+ * clip toward the same target, whichever provider or voice is speaking.
+ */
+const TARGET_SPEECH_RMS = 0.11;
+const INITIAL_SPEECH_RMS = 0.08;
+const SPEECH_RMS_SMOOTHING = 0.03;
+const MIN_GAIN = 0.75;
+const MAX_GAIN = 2.4;
+let speechRms = INITIAL_SPEECH_RMS;
+
+/** A new voice starts from a neutral estimate instead of the last speaker's. */
+function resetLoudness(): void {
+  speechRms = INITIAL_SPEECH_RMS;
+}
+
 let context: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let source: AudioNode | null = null;
@@ -79,6 +97,7 @@ export function attachElement(element: HTMLMediaElement): void {
   // The element still has to reach the speakers, so pass it through.
   node.connect(ctx.destination);
   source = node;
+  resetLoudness();
   void ctx.resume().catch(() => null);
 }
 
@@ -91,6 +110,7 @@ export function attachTrack(track: MediaStreamTrack): void {
   const node = ctx.createMediaStreamSource(new MediaStream([track]));
   node.connect(analyser);
   source = node;
+  resetLoudness();
   void ctx.resume().catch(() => null);
 }
 
@@ -129,9 +149,11 @@ export function readVoice(): VoiceBands {
   // Gate: below this the signal is line noise, and an open jaw on silence is
   // what made the old mouth look slack between words.
   const silent = rms < 0.012;
+  if (!silent) speechRms += (rms - speechRms) * SPEECH_RMS_SMOOTHING;
+  const gain = Math.min(MAX_GAIN, Math.max(MIN_GAIN, TARGET_SPEECH_RMS / speechRms));
 
   return {
-    level: silent ? 0 : Math.min(1, rms * 5.2),
+    level: silent ? 0 : Math.min(1, rms * gain * 5.2),
     low,
     mid,
     high,

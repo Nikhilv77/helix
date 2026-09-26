@@ -3990,794 +3990,794 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
-    "text": "Now you solve. I'll stay beside each question with hints if you get stuck. Take them one at a time, and mark each one done so I can keep your path current.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-01fbf00f37c6.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You haven't solved a practice question yet. Complete one question to start tracking your progress.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-038d2a2e88c2.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your baseline shows where to start. Begin with the focus area I've highlighted.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-0af18af1534e.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "That round is done, and your interviewer has shared their notes with me. I'll show you what landed and where to focus next. Well done for finishing.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-0e0183b72847.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I can see the output. Some tests are still failing. Review the failing case and try again.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-100500ad95ba.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You're making steady progress. I've noted what worked and one thing to tighten before your next interview.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-105a3d7ef746.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Good progress. Get the approach right first, then make it faster.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-118fc0477059.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Good momentum. Keep practising, and point the next block at your weakest interview skill.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-11bddd9c3888.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Here is your next incident. Follow the evidence, isolate the root cause, then ship the repair safely.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-14bffa6fe684.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I've put your interview results together. Let's see what's working and what to practise next.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-1532bffc8ef9.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I've picked your next focus from your results. Work through it one question at a time.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-161057d9d6b0.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your report is ready. Read it carefully, then work on the weakness that keeps showing up.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-1b07eba2669a.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Let's begin with the first pattern. Say which idea the problem needs before you start writing.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-1bf2b1cc4561.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Nice going. Maintain your practice pace, and aim the next block at the gap from your latest interview.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-20bf3a0d9d06.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Claire will take your DSA interview. You'll solve two coding problems and explain your approach, complexity, and edge cases. She'll give you quiet space while you code.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-20c513311d14.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your interview is still open. Finish it before starting anything new.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-284e6603a1e5.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Great—let’s work through a role-aligned system design. I’ll use your interview context to choose the best starting scenario.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-28c88b8b31f5.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You're in good shape. Your recent interviews are consistently strong. One recurring gap is all that stands between you and a great round.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-2a2d91cfa424.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Strong work in that interview. You're building a real signal, so hold on to what worked.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-2ad316149dc2.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I’m preparing a reviewed incident with practical diagnosis, repair, testing, and rollout questions.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-2af4dd3239a6.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your resume points to a good first focus. Complete one block and I'll refine the plan.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-2b7ca0ddaff9.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Good start. One more completed question will make your plan sharper.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-2f7cc0df4c90.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
     "text": "Looking at your resume, I've chosen a place to start. One completed block will give me stronger evidence.",
-    "voice": "aura-2-vesta-en",
+    "voice": "aura-2-helena-en",
     "style": "aura-v1",
-    "src": "/voice/pooja-2fd8d51571ad.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "It's been a quiet week. Start small with one focused completion, then build the routine back up.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-38939805d5b3.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Some practice this week, which is good. Pick a regular time and let the streak start again.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-39257df71395.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Great job. So far, so good. Your recent rounds show real readiness. Keep your strongest habits, and polish the gap that still repeats.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-3b455a9b6e59.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Welcome back. Your progress is still here, so restart with one question. No need to catch up all at once.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-3b6327ff1650.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your coding interview is ready. Claire has two problems for you. Think out loud when it helps, and she'll give you room to write the code.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-3ebaa10c63c2.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Hi, I'm Pooja. I'll help you organize rough thoughts into polished answers that are clear, professional, and true to your experience.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-410f7704ad09.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Every test passed. Explain your approach, then submit when you're happy with it.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-47ed0250bc90.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Here is your next design scenario. Frame the requirements, trace the system, then defend the trade-offs.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-49f122948692.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Welcome back. This interview gives us a useful starting point. Don't be discouraged; this is exactly what practice is for.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-4c2a68da72a9.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Thanks for taking that round. We now know where to begin, and one focused area will make the biggest difference.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-55577fab29c5.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "There were no completed blocks this week. Your next session is a clean restart, not a catch-up task.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-570b735a5907.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You've already taken an interview. Solve one practice question and I'll start tracking your pace.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-58cab0fcc124.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You're getting there. Your strengths are showing, and one repeat gap is worth a focused block before your next interview.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-596ee5b0f2e6.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I've picked your first focus from your baseline. One completed block will tell me more.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-599f5f43e1f4.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "That was a great performance. Your strongest skills came through clearly. Let's keep this momentum going.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-5c21202fed48.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Three parts today. Quick checks across the core areas, then the mechanism behind a few of them, and we finish by diagnosing something real.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-5f165d62b604.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I could not load your latest coaching signal. Your saved work is safe.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-610e5d3cc38a.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "The traps I want you to avoid. These are the mistakes recorded against the questions in this chapter. Read them once now — they are much cheaper to avoid than to debug.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-69e311ef01ba.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your interview gave us a starting signal. One completed practice question will begin your progress history.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-6a2f0273a24d.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You're building real momentum. Keep the same pace this week.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-7226fad251b4.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Before another interview, spend one practice block on the gap your last round revealed.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-741b8aa31d0e.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your technical and projects round is ready. Claire will warm up with a few technical decisions, then dig into how one of your projects really worked.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-76743f6cb1a1.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "This is a good starting point. Your reports now show where to begin. Pick the recurring gap and practise it first.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-7776bc3fa0ad.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I've got the feedback from your interview. Let's look at your strengths first, then the one or two things worth practising next.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-7f57a6944020.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Start with the first pattern. Name the pattern before you code, then explain why it fits.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-875de27309e3.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Good effort in that round. The foundation is there. A little focused practice will make the next one stronger.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-8761b5e18584.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I can see your run. All the tests passed. Add your reasoning and submit when you are ready.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-8a936c69df7b.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You've been active this week, but there's no streak yet. Restart with one focused completion, then plan your next return.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-8b626cd5e705.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your system design round is ready. Start by asking Claire questions about the requirements, then sketch the architecture and defend your trade-offs.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-8bf747b65088.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You're on a streak. Come back for one focused block while it's active.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-8cac9a0e72cd.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Not all tests passed yet. Look at the failing case closely, then run it again.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-8d5f5c061f4d.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your resume interview is ready. James will ask about your recent work, so lead with specific examples and what changed because of you. Here he is.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-9041d312f033.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "James is ready for your final conversation. Use real examples of how you work with people, handle difficult situations, and make decisions. He will take over now.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-906aa7b86baf.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your turn. Hints are there if you get stuck. Work through the questions one at a time and mark each one done.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-9070628e0254.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your hiring manager round is ready. James wants honest stories about teamwork, pressure, and judgement. Take a breath, and he'll begin.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-9644b9faefaf.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Start by naming the pattern each problem needs, then write the code.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-9a767929770d.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Let's work through this path. Read the evidence, explain your decision, and check what would change it.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-9ba3a7e03d61.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Let's go under the framework. I'll start with quick checks, ask you to explain a few mechanisms, then we'll diagnose a real problem together.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-9be0b3f46d3e.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Welcome to Architecture and Design practice. Let’s build the system-design path aligned to your role.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-a0bc63c24b49.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your recent work points to the next best focus. Start there, and name the pattern before you code.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-a110e115d6a3.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You've started your practice path. Finish the next question to keep your progress moving.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-a74e0509777c.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your progress history starts with your first solved question. Pick any suggested question below.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-a9ee38159efc.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Every strong candidate starts somewhere. This report shows exactly what to practise first, so let's take it one step at a time.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-ab134b25ff5f.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You finished the DSA path. Revisit anything you skipped, then carry these patterns into your next interview.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-ad3f0687ef89.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I’m preparing a reviewed scenario with requirements, data, architecture, reliability, and evolution questions.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-afba52d27614.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "What a strong answer looks like. This is what an interviewer is listening for while you work. Narrate these as you go, even when you are still writing.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-b12f2426f619.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Good to see you again. Pick up where you left off with one small step.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-b648381f4d87.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "We've got a clear baseline now. Start with the gap that keeps showing up, and your next round will feel different.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-b904d1166740.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Great choice. I’ll prepare a focused production engineering path.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-bb710d68d7a4.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I’m preparing a focused set of recurring interview questions, code evidence, and learning guides for your level.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-bfc56ab115c6.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Welcome to Applied Engineering practice. Which technology should we use for your production incidents?",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-c188aeac3a00.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I’m using your resume, target role, level, and assessment history to choose the right technical focus.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-c2f65e9b33c2.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "James is ready for your resume interview. Give clear examples of what you owned, the decisions you made, and the results. He will take over now.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-cb70dff77429.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "I’ve prepared this path around practical interview questions. Start with the concrete problem, explain what is happening, then show how you would fix it.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-ceba511ac797.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Nice progress. Your recent rounds are moving in the right direction. Focus your next practice on the gap that keeps repeating.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-d1db8e216a25.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your latest interview shows one skill that needs attention. Start with one focused practice block.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-d592fb2dd486.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your interviewer has reported back to me. Let's walk through what worked and what to improve next. Finishing the interview is progress by itself.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-d6b86392dada.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Nice consistency. Keep going with the next question on your path.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-d749c06bb509.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Claire will give you an intentionally incomplete system-design prompt. Ask questions first, then draw and defend the architecture like a real interview.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-d98f7d863795.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Reach for these, in this order. Say the brute force out loud first, then improve it. Interviewers want to watch you move between approaches, not jump straight to the optimal one.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-db4510ade402.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Focus on recognising the pattern before you write code.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-df03d4cf92f9.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your streak is building nicely. Protect the routine, and keep the next session the same size.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-dfd03e8d6ca6.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Your daily interview limit is reached. Come back tomorrow for your report.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-e0d8fc7823bd.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Here's a new chapter. I'll walk you through the key ideas first, then it's your turn.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-e1049420cc74.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "You have an interview in progress. Finish it while the context is still fresh.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-e47e709ff2f2.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Claire will lead your Core Technical and Projects interview. She'll start with three short technical decisions, then go deep into one project you built.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-e55cca5fc7d4.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Let's take this chapter. I'll set up the pattern, then you solve.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-e73678c42182.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Take your first interview to unlock your reports.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-e78c2cb985e2.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Good momentum. Another short session tomorrow will turn this into a habit.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-e8838c567008.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Check this out. I created a report for you that shows what is working, what needs attention, and what to practise next.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-eba63bd0fe84.mp3"
-  },
-  {
-    "provider": "deepgram",
-    "persona": "pooja",
-    "text": "Welcome back. Your last interview showed real progress, and your strengths are starting to show. Let's sharpen one area next.",
-    "voice": "aura-2-vesta-en",
-    "style": "aura-v1",
-    "src": "/voice/pooja-ee64f2229b6a.mp3"
+    "src": "/voice/pooja-0a6d634942a7.mp3"
   },
   {
     "provider": "deepgram",
     "persona": "pooja",
     "text": "You're making progress through this pattern. Keep the approach clear before you optimise it.",
-    "voice": "aura-2-vesta-en",
+    "voice": "aura-2-helena-en",
     "style": "aura-v1",
-    "src": "/voice/pooja-ef427c41b6f1.mp3"
+    "src": "/voice/pooja-0c579eaafedf.mp3"
   },
   {
     "provider": "deepgram",
     "persona": "pooja",
-    "text": "You've been showing up consistently. That return pattern matters more than any single long session.",
-    "voice": "aura-2-vesta-en",
+    "text": "Strong work in that interview. You're building a real signal, so hold on to what worked.",
+    "voice": "aura-2-helena-en",
     "style": "aura-v1",
-    "src": "/voice/pooja-f3c107e669ac.mp3"
+    "src": "/voice/pooja-0cefdc582da7.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Focus on recognising the pattern before you write code.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-1171175c70d1.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Let's work through this path. Read the evidence, explain your decision, and check what would change it.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-11bdbd6d9d40.mp3"
   },
   {
     "provider": "deepgram",
     "persona": "pooja",
     "text": "Path complete. Well done. Review any skipped questions, and use these patterns in your next interview.",
-    "voice": "aura-2-vesta-en",
+    "voice": "aura-2-helena-en",
     "style": "aura-v1",
-    "src": "/voice/pooja-f7e5d398d39f.mp3"
+    "src": "/voice/pooja-12267ca22b9f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Good start. One more completed question will make your plan sharper.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-12b2b215c0c2.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your report is ready. Read it carefully, then work on the weakness that keeps showing up.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-13409fcfb281.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You're building real momentum. Keep the same pace this week.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-16490106ea5b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Here is your next incident. Follow the evidence, isolate the root cause, then ship the repair safely.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-16fb8b23a556.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Let's begin with the first pattern. Say which idea the problem needs before you start writing.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-181edbebae97.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Every test passed. Explain your approach, then submit when you're happy with it.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-1ab60f5b4c07.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Great—let’s work through a role-aligned system design. I’ll use your interview context to choose the best starting scenario.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-1bd156fe0114.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You've been active this week, but there's no streak yet. Restart with one focused completion, then plan your next return.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-2607ea18a8c3.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your progress history starts with your first solved question. Pick any suggested question below.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-2608b58ea020.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your streak is building nicely. Protect the routine, and keep the next session the same size.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-26efca3150ee.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your interviewer has reported back to me. Let's walk through what worked and what to improve next. Finishing the interview is progress by itself.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-273c9d696d71.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your resume interview is ready. James will ask about your recent work, so lead with specific examples and what changed because of you. Here he is.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-2bddf40eacf4.mp3"
   },
   {
     "provider": "deepgram",
     "persona": "pooja",
     "text": "Welcome back. You performed really well in your last interview. Keep that same clarity in your next round.",
-    "voice": "aura-2-vesta-en",
+    "voice": "aura-2-helena-en",
     "style": "aura-v1",
-    "src": "/voice/pooja-f88104747eb3.mp3"
+    "src": "/voice/pooja-2ce3152739ae.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Before another interview, spend one practice block on the gap your last round revealed.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-324b01310e55.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Now you solve. I'll stay beside each question with hints if you get stuck. Take them one at a time, and mark each one done so I can keep your path current.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-34a9dbde5b9e.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Welcome to Architecture and Design practice. Let’s build the system-design path aligned to your role.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-3873cedc5a2e.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You finished the DSA path. Revisit anything you skipped, then carry these patterns into your next interview.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-3b017a0729f9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Good progress. Get the approach right first, then make it faster.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-3b873da9449a.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I’m preparing a focused set of recurring interview questions, code evidence, and learning guides for your level.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-406dfc8a86b6.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "There were no completed blocks this week. Your next session is a clean restart, not a catch-up task.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-422a91ff33be.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "James is ready for your final conversation. Use real examples of how you work with people, handle difficult situations, and make decisions. He will take over now.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-424a7a4d1a9c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Start with the first pattern. Name the pattern before you code, then explain why it fits.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-4aa0400add98.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You're in good shape. Your recent interviews are consistently strong. One recurring gap is all that stands between you and a great round.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-4aad9b12b51a.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your interview is still open. Finish it before starting anything new.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-4c87aabd6a0c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I've got the feedback from your interview. Let's look at your strengths first, then the one or two things worth practising next.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-4ec8791b4f80.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Reach for these, in this order. Say the brute force out loud first, then improve it. Interviewers want to watch you move between approaches, not jump straight to the optimal one.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-563f5b9ca8cc.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your coding interview is ready. Claire has two problems for you. Think out loud when it helps, and she'll give you room to write the code.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-57e294ea4d65.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your system design round is ready. Start by asking Claire questions about the requirements, then sketch the architecture and defend your trade-offs.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-5c0a472d4757.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Good momentum. Keep practising, and point the next block at your weakest interview skill.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-5d28b6bf805c.mp3"
   },
   {
     "provider": "deepgram",
     "persona": "pooja",
     "text": "The ideas that keep coming back. These are the concepts your questions in this chapter actually test. If you can name which one a problem needs, you have already done most of the thinking.",
-    "voice": "aura-2-vesta-en",
+    "voice": "aura-2-helena-en",
     "style": "aura-v1",
-    "src": "/voice/pooja-fba7c211b75e.mp3"
+    "src": "/voice/pooja-5e9fc4ed716b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Every strong candidate starts somewhere. This report shows exactly what to practise first, so let's take it one step at a time.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-60cd18a97601.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Let's take this chapter. I'll set up the pattern, then you solve.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-60dd412cf8bc.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "What a strong answer looks like. This is what an interviewer is listening for while you work. Narrate these as you go, even when you are still writing.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-6542e3c6b390.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your technical and projects round is ready. Claire will warm up with a few technical decisions, then dig into how one of your projects really worked.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-6acb6dc30686.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Thanks for taking that round. We now know where to begin, and one focused area will make the biggest difference.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-6f5b3d00630f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You've been showing up consistently. That return pattern matters more than any single long session.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-75b7152a674c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Nice going. Maintain your practice pace, and aim the next block at the gap from your latest interview.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-769f3744a967.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "That round is done, and your interviewer has shared their notes with me. I'll show you what landed and where to focus next. Well done for finishing.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-7d5dd0a734c1.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I’m preparing a reviewed incident with practical diagnosis, repair, testing, and rollout questions.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-803abbda8884.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I’m preparing a reviewed scenario with requirements, data, architecture, reliability, and evolution questions.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-829b45c14a98.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Nice consistency. Keep going with the next question on your path.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-83f902cf5862.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You haven't solved a practice question yet. Complete one question to start tracking your progress.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-863d71129360.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Here's a new chapter. I'll walk you through the key ideas first, then it's your turn.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-89f65b2d1b90.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your turn. Hints are there if you get stuck. Work through the questions one at a time and mark each one done.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-8eb24635fd1c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Welcome to Applied Engineering practice. Which technology should we use for your production incidents?",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-8f4661e22cb9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Welcome back. This interview gives us a useful starting point. Don't be discouraged; this is exactly what practice is for.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-90f8bcd65252.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Good effort in that round. The foundation is there. A little focused practice will make the next one stronger.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-93baba18df42.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Great choice. I’ll prepare a focused production engineering path.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-94354db84352.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Claire will lead your Core Technical and Projects interview. She'll start with three short technical decisions, then go deep into one project you built.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-948dcc7cd6af.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Start by naming the pattern each problem needs, then write the code.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-99c61add50b2.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You're on a streak. Come back for one focused block while it's active.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-9e7b05cc643f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Three parts today. Quick checks across the core areas, then the mechanism behind a few of them, and we finish by diagnosing something real.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-9f92aa4efcf4.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "We've got a clear baseline now. Start with the gap that keeps showing up, and your next round will feel different.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-9fc8a87ed9df.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Welcome back. Your last interview showed real progress, and your strengths are starting to show. Let's sharpen one area next.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-a3cb2c8f273d.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Great job. So far, so good. Your recent rounds show real readiness. Keep your strongest habits, and polish the gap that still repeats.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-a60611a6f6ca.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You're making steady progress. I've noted what worked and one thing to tighten before your next interview.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-a9ceec6d3776.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your resume points to a good first focus. Complete one block and I'll refine the plan.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-aa2632c9d64d.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "It's been a quiet week. Start small with one focused completion, then build the routine back up.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-ab0ec0d36084.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "That was a great performance. Your strongest skills came through clearly. Let's keep this momentum going.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-b00461102d2d.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Not all tests passed yet. Look at the failing case closely, then run it again.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-b05dd7120e4c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I’m using your resume, target role, level, and assessment history to choose the right technical focus.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-b2d38583867c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Nice progress. Your recent rounds are moving in the right direction. Focus your next practice on the gap that keeps repeating.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-b52e78bbafe5.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Here is your next design scenario. Frame the requirements, trace the system, then defend the trade-offs.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-b648659dd735.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Good to see you again. Pick up where you left off with one small step.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-b65558e98b5b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your recent work points to the next best focus. Start there, and name the pattern before you code.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-b70e19d26c30.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Hi, I'm Pooja. I'll help you organize rough thoughts into polished answers that are clear, professional, and true to your experience.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-bbe629987401.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You've started your practice path. Finish the next question to keep your progress moving.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-bc25a5c20c49.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I can see your run. All the tests passed. Add your reasoning and submit when you are ready.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-bfa7b7c8772f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You have an interview in progress. Finish it while the context is still fresh.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-c1aabb2bad42.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Let's go under the framework. I'll start with quick checks, ask you to explain a few mechanisms, then we'll diagnose a real problem together.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-c2fa9292b3b4.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I've picked your first focus from your baseline. One completed block will tell me more.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-cad75524e674.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Claire will give you an intentionally incomplete system-design prompt. Ask questions first, then draw and defend the architecture like a real interview.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-cb381f03990e.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I've put your interview results together. Let's see what's working and what to practise next.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-cdaad1c78118.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your hiring manager round is ready. James wants honest stories about teamwork, pressure, and judgement. Take a breath, and he'll begin.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-cdcd367bf000.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I’ve prepared this path around practical interview questions. Start with the concrete problem, explain what is happening, then show how you would fix it.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-d0919a84ea11.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Check this out. I created a report for you that shows what is working, what needs attention, and what to practise next.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-d398887de967.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You're getting there. Your strengths are showing, and one repeat gap is worth a focused block before your next interview.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-d43f7375e79a.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I've picked your next focus from your results. Work through it one question at a time.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-d4eca18e1811.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "This is a good starting point. Your reports now show where to begin. Pick the recurring gap and practise it first.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-d81f8bcba63b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Take your first interview to unlock your reports.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-dbdfb88fdde1.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Welcome back. Your progress is still here, so restart with one question. No need to catch up all at once.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-e25bf34b5071.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "You've already taken an interview. Solve one practice question and I'll start tracking your pace.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-e379eaffbdb9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I can see the output. Some tests are still failing. Review the failing case and try again.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-e595fc19e97d.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your baseline shows where to start. Begin with the focus area I've highlighted.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-e5a4f49b0e9f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "The traps I want you to avoid. These are the mistakes recorded against the questions in this chapter. Read them once now — they are much cheaper to avoid than to debug.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-ea010796ba74.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "I could not load your latest coaching signal. Your saved work is safe.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-ec3af5340522.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your daily interview limit is reached. Come back tomorrow for your report.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-f12cd30d46ea.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Claire will take your DSA interview. You'll solve two coding problems and explain your approach, complexity, and edge cases. She'll give you quiet space while you code.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-f2c988eb93b4.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Some practice this week, which is good. Pick a regular time and let the streak start again.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-f574a794d0c8.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your interview gave us a starting signal. One completed practice question will begin your progress history.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-f585902e80da.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "James is ready for your resume interview. Give clear examples of what you owned, the decisions you made, and the results. He will take over now.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-f947518143df.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Good momentum. Another short session tomorrow will turn this into a habit.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-f9c9f6f77dff.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Your latest interview shows one skill that needs attention. Start with one focused practice block.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-ff884bd0df2b.mp3"
   },
   {
     "provider": "deepgram",
