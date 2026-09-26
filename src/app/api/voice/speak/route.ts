@@ -14,6 +14,7 @@ import {
   GEMINI_TTS_STYLE_VERSION,
   synthesizeGemini
 } from "@/server/voice/gemini-speech";
+import { activeTtsProvider } from "@/lib/avatars/voice-style";
 
 export const dynamic = "force-dynamic";
 
@@ -72,8 +73,12 @@ export async function GET(request: NextRequest) {
     const persona = personaById(parsed.data.persona) ?? MAYA;
     const fallbackModel = persona.voice || config.deepgramTtsModel;
     const geminiPaused = Date.now() < geminiQuotaPausedUntil && Boolean(config.deepgramApiKey);
+    // NEXT_PUBLIC_TTS_PROVIDER picks the teacher voice provider for live speech.
     const useGemini =
-      parsed.data.delivery !== "fast" && Boolean(config.geminiApiKey) && !geminiPaused;
+      activeTtsProvider() === "gemini" &&
+      parsed.data.delivery !== "fast" &&
+      Boolean(config.geminiApiKey) &&
+      !geminiPaused;
     const cacheKey = createHash("sha256")
       .update(
         useGemini
@@ -143,11 +148,20 @@ export async function GET(request: NextRequest) {
         "Trailgrad voice is not configured on this environment."
       );
     }
-    const upstream = await synthesizeDeepgram({
-      text: parsed.data.text,
-      model: fallbackModel,
-      apiKey
-    });
+    let upstream: Response;
+    try {
+      upstream = await synthesizeDeepgram({ text: parsed.data.text, model: fallbackModel, apiKey });
+    } catch (error) {
+      // With Deepgram as the primary provider, Gemini is the fallback.
+      if (!config.geminiApiKey || geminiPaused || parsed.data.delivery === "fast") throw error;
+      logger.warn(JSON.stringify({ event: "voice.deepgram_fallback", personaId: persona.id }));
+      const generated = await synthesizeGemini({
+        text: parsed.data.text,
+        apiKey: config.geminiApiKey,
+        persona
+      });
+      return audioResponse(generated, "miss");
+    }
     return streamDeepgram(upstream, cacheKey);
   } catch (error) {
     if (!(error instanceof ApiRouteError)) {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { personaById } from "@/lib/avatars/personas";
 import { staticVoiceUrl } from "@/lib/avatars/static-voice";
+import { activeTtsProvider, voiceIdentity } from "@/lib/avatars/voice-style";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { attachElement, detachVoice } from "./voice-bus";
 
@@ -38,8 +39,10 @@ export function voiceUrl(
   // Keep a model version in the URL as an extra guard for browser media caches.
   // The API still resolves and validates the model itself.
   const resolvedPersona = personaById(personaId);
-  const voiceVersion = resolvedPersona
-    ? `&v=${encodeURIComponent(`gemini-teacher-natural-v1:${resolvedPersona.geminiVoice}:${resolvedPersona.voice}`)}`
+  const provider = activeTtsProvider();
+  const identity = resolvedPersona ? voiceIdentity(resolvedPersona, provider) : null;
+  const voiceVersion = identity
+    ? `&v=${encodeURIComponent(`${provider}:${identity.style}:${identity.voice}`)}`
     : "";
   return `/api/voice/speak?text=${encodeURIComponent(line)}${persona}${voiceVersion}${deliveryMode}`;
 }

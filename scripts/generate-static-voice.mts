@@ -2,9 +2,15 @@
  * Pre-generates fixed teacher lines as static MP3s so the app plays them from
  * the CDN instead of waiting ~7–9 s for live text-to-speech.
  *
- *   pnpm voice:lines                    # generate missing or changed lines
- *   pnpm voice:lines --force            # regenerate every line
- *   pnpm voice:lines --from-wav <dir>   # encode existing WAVs instead of calling the API
+ *   pnpm voice:lines                          # active provider (NEXT_PUBLIC_TTS_PROVIDER)
+ *   pnpm voice:lines --provider deepgram      # or --provider gemini
+ *   pnpm voice:lines --concurrency 8          # parallel requests (default: 8 Deepgram, 2 Gemini)
+ *   pnpm voice:lines --limit 5                # generate at most 5 lines (a quick test)
+ *   pnpm voice:lines --force                  # regenerate every line for that provider
+ *   pnpm voice:lines --from-wav <dir>         # encode existing Gemini WAVs, no API calls
+ *
+ * Both providers' files can coexist; the app plays the set matching the active
+ * provider, so switching providers is instant once a set is generated.
  *
  * Lines: every persona's greeting, plus every fixed line in src/lib/voice/teacher-lines.ts for each
  * selectable teacher (the default teacher first). Progress is saved after each
@@ -27,17 +33,31 @@ import {
   STATIC_VOICE_LINES,
   type StaticVoiceLine
 } from "../src/lib/avatars/static-voice.generated";
+import { synthesizeGemini } from "../src/server/voice/gemini-speech";
 import {
+  activeTtsProvider,
   GEMINI_TTS_MODEL,
-  GEMINI_TTS_STYLE_VERSION,
-  synthesizeGemini
-} from "../src/server/voice/gemini-speech";
+  isTtsProvider,
+  TTS_PROVIDERS,
+  voiceIdentity,
+  type TtsProvider
+} from "../src/lib/avatars/voice-style";
 
 const OUTPUT_DIRECTORY = join("public", "voice");
 const MANIFEST_PATH = join("src", "lib", "avatars", "static-voice.generated.ts");
 const MP3_KBPS = 64;
+const DEEPGRAM_SPEAK_ENDPOINT = "https://api.deepgram.com/v1/speak";
 const force = process.argv.includes("--force");
 const wavDirectory = argValue("--from-wav");
+const requestedProvider = argValue("--provider");
+if (requestedProvider !== null && !isTtsProvider(requestedProvider)) {
+  throw new Error(`--provider must be one of: ${TTS_PROVIDERS.join(", ")}`);
+}
+const provider: TtsProvider = wavDirectory ? "gemini" : (requestedProvider ?? activeTtsProvider());
+const concurrency = Math.max(
+  1,
+  Number(argValue("--concurrency")) || (provider === "deepgram" ? 8 : 2)
+);
 
 type Job = { persona: InterviewerPersona; text: string };
 
@@ -63,27 +83,22 @@ function jobs(): Job[] {
   return [...greetings, ...practice];
 }
 
-function fingerprint({ persona, text }: Job): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify([
-        GEMINI_TTS_STYLE_VERSION,
-        GEMINI_TTS_MODEL,
-        persona.geminiVoice,
-        persona.id,
-        text
-      ])
-    )
+function fileNameFor({ persona, text }: Job, forProvider: TtsProvider): string {
+  const { voice, style } = voiceIdentity(persona, forProvider);
+  const model = forProvider === "gemini" ? GEMINI_TTS_MODEL : "deepgram";
+  const hash = createHash("sha256")
+    .update(JSON.stringify([style, model, voice, persona.id, text]))
     .digest("hex")
     .slice(0, 12);
+  return `${persona.id}-${hash}.mp3`;
 }
 
 function manifestEntry(job: Job, fileName: string): StaticVoiceLine {
   return {
+    provider,
     persona: job.persona.id,
     text: job.text,
-    voice: job.persona.geminiVoice,
-    style: GEMINI_TTS_STYLE_VERSION,
+    ...voiceIdentity(job.persona, provider),
     src: `/voice/${fileName}`
   };
 }
@@ -118,6 +133,26 @@ function wavToMp3(wav: Buffer): Buffer {
   return Buffer.concat(chunks);
 }
 
+async function synthesizeDeepgram(job: Job, apiKey: string): Promise<Buffer> {
+  const { voice } = voiceIdentity(job.persona, "deepgram");
+  for (let attempt = 1; ; attempt += 1) {
+    const response = await fetch(
+      `${DEEPGRAM_SPEAK_ENDPOINT}?model=${encodeURIComponent(voice)}&encoding=mp3&bit_rate=48000`,
+      {
+        method: "POST",
+        headers: { authorization: `Token ${apiKey}`, "content-type": "application/json" },
+        body: JSON.stringify({ text: job.text })
+      }
+    );
+    if (response.ok) return Buffer.from(await response.arrayBuffer());
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt >= 4) {
+      throw new Error(`Deepgram ${response.status}: ${(await response.text()).slice(0, 160)}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
+  }
+}
+
 async function synthesizeWithRetry(job: Job, apiKey: string): Promise<Buffer> {
   for (let attempt = 1; ; attempt += 1) {
     try {
@@ -136,7 +171,10 @@ async function synthesizeWithRetry(job: Job, apiKey: string): Promise<Buffer> {
 
 function writeManifest(lines: StaticVoiceLine[]): void {
   const sorted = [...lines].sort(
-    (left, right) => left.persona.localeCompare(right.persona) || left.src.localeCompare(right.src)
+    (left, right) =>
+      left.provider.localeCompare(right.provider) ||
+      left.persona.localeCompare(right.persona) ||
+      left.src.localeCompare(right.src)
   );
   writeFileSync(
     MANIFEST_PATH,
@@ -144,6 +182,7 @@ function writeManifest(lines: StaticVoiceLine[]): void {
 // Regenerate with \`pnpm voice:lines\` after changing a line, greeting, or voice.
 
 export type StaticVoiceLine = {
+  provider: "gemini" | "deepgram";
   persona: string;
   text: string;
   voice: string;
@@ -157,55 +196,81 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = ${JSON.stringify(s
 }
 
 async function main(): Promise<void> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey && !wavDirectory) throw new Error("GEMINI_API_KEY is required to generate lines.");
+  const apiKey = provider === "gemini" ? process.env.GEMINI_API_KEY : process.env.DEEPGRAM_API_KEY;
+  if (!apiKey && !wavDirectory) {
+    throw new Error(
+      `${provider === "gemini" ? "GEMINI_API_KEY" : "DEEPGRAM_API_KEY"} is required for --provider ${provider}.`
+    );
+  }
   mkdirSync(OUTPUT_DIRECTORY, { recursive: true });
 
   const wanted = jobs();
-  const wantedFiles = new Set(wanted.map((job) => `${job.persona.id}-${fingerprint(job)}.mp3`));
-  // Keep only entries that still describe a wanted line and exist on disk.
+  // Files each provider should have; the other provider's set is kept untouched.
+  const wantedByProvider = new Map<TtsProvider, Set<string>>(
+    TTS_PROVIDERS.map((candidate) => [
+      candidate,
+      new Set(wanted.map((job) => fileNameFor(job, candidate)))
+    ])
+  );
   const manifest = new Map<string, StaticVoiceLine>(
     STATIC_VOICE_LINES.filter(
       (line) =>
-        wantedFiles.has(line.src.replace("/voice/", "")) && existsSync(join("public", line.src))
+        wantedByProvider.get(line.provider)?.has(line.src.replace("/voice/", "")) &&
+        existsSync(join("public", line.src))
     ).map((line) => [line.src, line])
+  );
+  const limit = Number(argValue("--limit")) || Infinity;
+  const missing = wanted.filter(
+    (job) => force || !manifest.has(`/voice/${fileNameFor(job, provider)}`)
+  );
+  const pending = missing.slice(0, limit);
+  process.stdout.write(
+    `Provider ${provider}: ${wanted.length - missing.length}/${wanted.length} already generated, ${pending.length} to go (${concurrency} at a time).\n`
   );
   let generated = 0;
   let skipped = 0;
+  const runStartedAt = performance.now();
 
-  for (const job of wanted) {
-    const fileName = `${job.persona.id}-${fingerprint(job)}.mp3`;
-    const src = `/voice/${fileName}`;
-    if (!force && manifest.has(src)) continue;
-    const label = `${job.persona.id}: “${job.text.slice(0, 48)}…”`;
-    let wav: Buffer;
+  async function generate(job: Job): Promise<void> {
+    const fileName = fileNameFor(job, provider);
+    const label = `${job.persona.id}: “${job.text.slice(0, 44)}…”`;
     const startedAt = performance.now();
+    let mp3: Buffer;
     try {
       if (wavDirectory) {
         const legacy = readdirSync(wavDirectory).find(
           (name) => name.startsWith(`${job.persona.id}-`) && name.endsWith(".wav")
         );
-        if (!legacy || job.text !== job.persona.greeting) continue;
-        wav = readFileSync(join(wavDirectory, legacy));
+        if (!legacy || job.text !== job.persona.greeting) return;
+        mp3 = wavToMp3(readFileSync(join(wavDirectory, legacy)));
+      } else if (provider === "deepgram") {
+        mp3 = await synthesizeDeepgram(job, apiKey!);
       } else {
-        wav = await synthesizeWithRetry(job, apiKey!);
+        mp3 = wavToMp3(await synthesizeWithRetry(job, apiKey!));
       }
     } catch (error) {
       skipped += 1;
       process.stdout.write(
         `  skipped ${label} (${error instanceof Error ? error.message : String(error)})\n`
       );
-      continue;
+      return;
     }
-    const mp3 = wavToMp3(wav);
     writeFileSync(join(OUTPUT_DIRECTORY, fileName), mp3);
-    manifest.set(src, manifestEntry(job, fileName));
+    manifest.set(`/voice/${fileName}`, manifestEntry(job, fileName));
     writeManifest([...manifest.values()]);
     generated += 1;
     process.stdout.write(
-      `  ${label} → ${fileName} (${Math.round(mp3.byteLength / 1024)} KB, ${((performance.now() - startedAt) / 1000).toFixed(1)} s)\n`
+      `  [${generated}/${pending.length}] ${label} (${Math.round(mp3.byteLength / 1024)} KB, ${((performance.now() - startedAt) / 1000).toFixed(1)} s)\n`
     );
   }
+
+  // A small worker pool: each worker takes the next pending line until none remain.
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, pending.length) }, async () => {
+      while (next < pending.length) await generate(pending[next++]!);
+    })
+  );
 
   // Remove audio no longer referenced, such as superseded wording or voices.
   const referenced = new Set([...manifest.values()].map((line) => line.src.replace("/voice/", "")));
@@ -213,8 +278,9 @@ async function main(): Promise<void> {
     if (file.endsWith(".mp3") && !referenced.has(file)) rmSync(join(OUTPUT_DIRECTORY, file));
   }
   writeManifest([...manifest.values()]);
+  const ready = [...manifest.values()].filter((line) => line.provider === provider).length;
   process.stdout.write(
-    `${manifest.size}/${wanted.length} lines ready; ${generated} generated, ${skipped} skipped.\n`
+    `Provider ${provider}: ${ready}/${wanted.length} lines ready; ${generated} generated, ${skipped} skipped in ${((performance.now() - runStartedAt) / 1000).toFixed(0)} s.\n`
   );
   if (skipped) process.exitCode = 1;
 }

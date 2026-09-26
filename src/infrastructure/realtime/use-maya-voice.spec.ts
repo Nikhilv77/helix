@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ALL_TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { STATIC_VOICE_LINES } from "@/lib/avatars/static-voice.generated";
 import { ALL_PERSONAS, personaById } from "@/lib/avatars/personas";
-import { GEMINI_TTS_STYLE_VERSION } from "@/lib/avatars/voice-style";
+import { TTS_PROVIDERS, voiceIdentity } from "@/lib/avatars/voice-style";
 import { staticVoiceUrl, voiceUrl } from "./use-maya-voice";
 
 describe("voiceUrl", () => {
@@ -18,15 +18,26 @@ describe("voiceUrl", () => {
 });
 
 describe("pre-generated teacher lines", () => {
-  it("serves each manifest line's exact text from its static file", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("serves each line's static file for its own provider", () => {
     for (const line of STATIC_VOICE_LINES) {
-      expect(voiceUrl(line.text, line.persona)).toBe(line.src);
+      expect(staticVoiceUrl(line.text, line.persona, line.provider)).toBe(line.src);
+    }
+  });
+
+  it("follows NEXT_PUBLIC_TTS_PROVIDER when choosing which set to play", () => {
+    for (const provider of TTS_PROVIDERS) {
+      vi.stubEnv("NEXT_PUBLIC_TTS_PROVIDER", provider);
+      for (const line of STATIC_VOICE_LINES.filter((entry) => entry.provider === provider)) {
+        expect(voiceUrl(line.text, line.persona)).toBe(line.src);
+      }
     }
   });
 
   it("uses live speech for any other text, another teacher, and the fast path", () => {
     for (const line of STATIC_VOICE_LINES) {
-      expect(staticVoiceUrl(`${line.text} Extra.`, line.persona)).toBeNull();
+      expect(staticVoiceUrl(`${line.text} Extra.`, line.persona, line.provider)).toBeNull();
       expect(voiceUrl(line.text, line.persona, "fast")).toContain("/api/voice/speak");
     }
     const [first] = STATIC_VOICE_LINES;
@@ -37,7 +48,7 @@ describe("pre-generated teacher lines", () => {
             (line) => line.persona === persona.id && line.text === first.text
           )
       );
-      if (other) expect(staticVoiceUrl(first.text, other.id)).toBeNull();
+      if (other) expect(staticVoiceUrl(first.text, other.id, first.provider)).toBeNull();
     }
   });
 
@@ -56,8 +67,9 @@ describe("pre-generated teacher lines", () => {
         wanted.has(`${line.persona}\n${line.text}`),
         `${line.src} no longer matches its text; run pnpm voice:lines`
       ).toBe(true);
-      expect(line.voice).toBe(persona!.geminiVoice);
-      expect(line.style).toBe(GEMINI_TTS_STYLE_VERSION);
+      expect({ voice: line.voice, style: line.style }).toEqual(
+        voiceIdentity(persona!, line.provider)
+      );
       const file = join(process.cwd(), "public", line.src);
       expect(existsSync(file), `${line.src} is missing`).toBe(true);
       const header = readFileSync(file).subarray(0, 3);

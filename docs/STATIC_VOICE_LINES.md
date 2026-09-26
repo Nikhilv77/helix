@@ -12,15 +12,36 @@ from the CDN (about 0.1 s). Lines that depend on the learner stay live.
 
 | Item | State |
 | --- | --- |
-| Code: fixed lines, variants, lookup, generator | Done and tested |
-| Greetings generated | 8 of 10 (Maya, Claire, Daniel, Olivia, James, Alex, Sophia, Ryan) |
-| Greetings pending | Pooja, Ethan |
-| Practice, interview, report, progress, and coaching lines generated | 0 of 784 |
-| Total audio files | **8 of 794** (98 fixed lines × 8 teachers + 10 greetings) |
+| Active provider | **Deepgram** (default in code; override with `NEXT_PUBLIC_TTS_PROVIDER`) |
+| Deepgram set | **794 of 794** lines (98 fixed lines × 8 teachers + 10 greetings), generated 2026-09-26 in 5.4 minutes |
+| Gemini set | 8 of 794 (greetings for Maya, Claire, Daniel, Olivia, James, Alex, Sophia, Ryan) |
+| Files | 802 MP3s in `public/voice/`, 32 MB |
 | Behaviour for missing files | Falls back to live speech automatically; nothing breaks |
 
-Everything is safe to deploy in this state. Lines without a file keep the current live
-behaviour until their audio is generated and deployed.
+## Switching providers
+
+Teacher speech uses one provider at a time, chosen by `NEXT_PUBLIC_TTS_PROVIDER`
+(`deepgram` or `gemini`; Deepgram when unset). The browser, the speak route, and the generator
+all read it through [`src/lib/avatars/voice-style.ts`](../src/lib/avatars/voice-style.ts), so they
+always agree on which voice is current.
+
+- **Live speech** goes to the active provider first. Under Deepgram, Gemini is the fallback if
+  Deepgram fails; under Gemini, Deepgram is the fallback (and is used directly while Gemini's
+  quota is exhausted).
+- **Pre-generated lines** for both providers live side by side in the manifest. The app plays the
+  set that matches the active provider, so switching is instant once that set exists.
+
+To switch to Gemini (for example after enabling Gemini billing):
+
+1. Generate the Gemini set: `pnpm voice:lines --provider gemini`.
+2. Set `NEXT_PUBLIC_TTS_PROVIDER=gemini` in Vercel (Production), run
+   `npx vercel pull --environment=production` so the local build sees it, then deploy.
+   Or change `DEFAULT_TTS_PROVIDER` in `voice-style.ts`.
+
+| Provider | Price | Speed | Voice |
+| --- | --- | --- | --- |
+| Deepgram Aura-2 | ~$0.027 per minute ($0.030 per 1,000 characters); $200 signup credit | Streams; ~0.5–1 s to first audio | Neutral Aura voice per teacher |
+| Gemini 2.5 Flash TTS | ~$0.015 per minute; free tier 10 requests/day | Whole clip first; ~7–9 s | Styled per teacher's personality |
 
 ## How it works
 
@@ -76,9 +97,12 @@ behaviour until their audio is generated and deployed.
 ## Generating audio
 
 ```bash
-pnpm voice:lines                    # generate missing or changed lines
-pnpm voice:lines --force            # regenerate everything
-pnpm voice:lines --from-wav <dir>   # encode existing WAVs without calling the API
+pnpm voice:lines                          # active provider; only missing or changed lines
+pnpm voice:lines --provider deepgram      # or --provider gemini
+pnpm voice:lines --concurrency 8          # parallel requests (default 8 Deepgram, 2 Gemini)
+pnpm voice:lines --limit 5                # generate at most 5 lines (a quick test)
+pnpm voice:lines --force                  # regenerate every line for that provider
+pnpm voice:lines --from-wav <dir>         # encode existing Gemini WAVs, no API calls
 ```
 
 The script ([`scripts/generate-static-voice.mts`](../scripts/generate-static-voice.mts)):
@@ -89,11 +113,12 @@ The script ([`scripts/generate-static-voice.mts`](../scripts/generate-static-voi
 - saves the manifest after every file, so a run stopped by quota resumes where it left off;
 - deletes MP3s that no longer match any line.
 
-It needs `GEMINI_API_KEY` (read from `.env`/`.env.local`).
+It needs `DEEPGRAM_API_KEY` or `GEMINI_API_KEY` for the chosen provider (read from
+`.env`/`.env.local`). A full Deepgram run takes about 5 minutes and roughly $2.50 of credit.
 
-### Quota and cost
+### Gemini quota and cost
 
-| Option | Time to finish the remaining 786 files | Cost |
+| Option | Time to finish the remaining 786 Gemini files | Cost |
 | --- | --- | --- |
 | Free tier (10 requests/day, resets 07:00 UTC / 12:30 IST) | ~80 days | $0 |
 | Paid tier, one run | Minutes | **~$1.40 once** (~93 min of audio at ~$0.015/min) |
@@ -103,8 +128,8 @@ edited lines cost anything later (about a cent each). The free quota is shared w
 running app if production uses the same key, so run the script before using the app that
 day.
 
-**Recommended:** enable billing for Gemini, run `pnpm voice:lines` once, deploy, then disable
-billing if desired.
+Not needed while Deepgram is the active provider. Generate the Gemini set only before
+switching to Gemini.
 
 ## After each generation run
 

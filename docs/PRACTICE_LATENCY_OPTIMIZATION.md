@@ -91,7 +91,7 @@ Roles: backend, full-stack. API prefix: `/api/practice/core-technical`.
 | # | User action | API | Waits on | Cost | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2.1 | Confirm focus | `confirm` | Full profile read, eligibility query, write | 🟡 | todo | |
-| 2.2 | Prepare / start path | `prepare`, `start-path` | Full profile, eligibility, deterministic ranking (no AI), transaction with owner lock, + refresh | 🟡 | todo | |
+| 2.2 | Prepare / start path | `prepare`, `start-path` | Full profile, eligibility, AI (reasoning) story-candidate generation with a Groq fallback, transaction with owner lock, + refresh | 🔴 | todo | Measured in production: 55 s, then 503. See known issue K1. |
 | 2.3 | Draft autosave | `draft` | Transaction | 🟢 | todo | Fires often while typing. |
 | 2.4 | Reveal hint | `hint` | Transaction | 🟢 | todo | |
 | 2.5 | Run code | `run` | Transaction, then a new Vercel Sandbox for every run (1 vCPU), then save the result | 🔴 | todo | Sandbox startup is paid on every run. |
@@ -152,6 +152,32 @@ All disciplines share the API prefix `/api/practice/ai-ml`; questions are owner-
 | 5.6 | Submit a written answer | `attempt` | AI (fast), transaction, + refresh | 🔴 | todo | |
 | 5.7 | Learn instead | `learn` | Transaction, re-read, + refresh | 🟡 | todo | |
 
+## Known issues
+
+### K1. Core Technical "Preparing your personalised practice path" fails (open)
+
+Seen in production on 2026-09-26 after onboarding as a backend engineer. The page shows
+"We could not prepare the complete practice path. Nothing partial was saved; try again."
+
+What happened (`POST /api/practice/core-technical/prepare`, 55,062 ms, status 503):
+
+1. `core-technical-story-candidates` on Gemini `gemini-flash-latest` (reasoning) returned
+   **503** on all three attempts (4.3 s, 8.6 s, 3.8 s).
+2. The Groq fallback (`openai/gpt-oss-20b`) returned output that **did not match the schema**,
+   then was **rate-limited with 429 (request-size)**: the request is larger than Groq's
+   free-tier per-request token limit.
+3. The request gave up after 55 s. Nothing partial was saved.
+
+To investigate later:
+
+- Whether Gemini's 503 was a transient outage or tied to the free tier / model version.
+- Shrinking the candidate-generation prompt so the Groq fallback fits, or using a Gemini
+  model as the fallback instead.
+- Falling back to an already published story (`NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS`)
+  when generation fails, so learners are never blocked.
+- Moving generation off the request path (respond at once, prepare in the background, and
+  poll), which also removes the 55 s wait.
+
 ## Priority order
 
 1. ~~Assessment finalize (2.11, 3.11, 4.9)~~ — done on 2026-09-26.
@@ -168,5 +194,6 @@ All disciplines share the API prefix `/api/practice/ai-ml`; questions are owner-
 | 2026-09-26 | 0.4 | Practice page rebuilds coalesce per user on each server instance | Not measured |
 | 2026-09-26 | 0.5 | `enforceAndAcquire` runs rate limit and lock in parallel | One Upstash round trip saved per call |
 | 2026-09-26 | — | Inventory created | — |
+| 2026-09-26 | K1 | Logged: Core Technical prepare fails when Gemini returns 503 and the Groq fallback is rate-limited | 55 s, then 503 |
 | 2026-09-26 | 0.1 | `timeAction` logs and `Server-Timing` headers on all Practice and DSA actions | Baseline pending production deploy |
 | 2026-09-26 | 2.11, 3.11, 4.9 | Finalize saves the claim and grades after the response; the page polls every 5 s. Track landing pages no longer wait for grading during render (recovery moved to `after()`). A call grades only if it made the FINALIZING claim or the claim is older than 3 minutes, so the room, the page, and Retry no longer grade the same assessment twice. A grading failure makes the claim immediately retryable. | Request no longer waits on the reasoning model (up to ~55 s with fallback); confirm with `practice.*/assessment/finalize` timings |
