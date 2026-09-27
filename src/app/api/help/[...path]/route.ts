@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { GET as activeGet } from "../active/handler";
 import { GET as historyGet } from "../history/handler";
 import { GET as inboxGet } from "../inbox/handler";
+import { GET as leaderboardGet } from "../leaderboard/handler";
 import { GET as overviewGet } from "../overview/handler";
 import { GET as reportsGet, POST as reportsPost } from "../reports/handler";
 import { DELETE as requestDelete, GET as requestGet, POST as requestPost } from "../request/handler";
@@ -30,6 +31,7 @@ const handlers: Readonly<Record<string, Readonly<Record<string, HelpHandler>>>> 
     active: withoutId(activeGet),
     history: withoutId(historyGet),
     inbox: withoutId(inboxGet),
+    leaderboard: withoutId(leaderboardGet),
     overview: withoutId(overviewGet),
     reports: withoutId(reportsGet),
     request: withoutId(requestGet),

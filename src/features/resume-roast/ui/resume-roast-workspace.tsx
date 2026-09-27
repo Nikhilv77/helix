@@ -9,19 +9,36 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode
 } from "react";
-import { CircleAlert, FileText, Flame, Gauge, Wrench, type LucideIcon } from "lucide-react";
+import {
+  CircleAlert,
+  FileText,
+  Flame,
+  Gauge,
+  ListChecks,
+  PenLine,
+  ThumbsUp,
+  Wrench,
+  type LucideIcon
+} from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
 import { ReportMayaAvatar } from "@/features/reports/ui/report-maya-avatar";
 import {
   RESUME_ROAST_COMPANY_ENVIRONMENT_LABELS,
   RESUME_ROAST_COMPANY_ENVIRONMENT_OPTIONS,
+  RESUME_ROAST_DIMENSIONS,
   RESUME_ROAST_LEVEL_LABELS,
   RESUME_ROAST_LEVEL_OPTIONS,
   RESUME_ROAST_ROLE_LABELS,
   RESUME_ROAST_ROLE_OPTIONS,
+  RESUME_ROAST_SCORE_MEANINGS,
+  resumeRoastScoreMeaning,
+  type ResumeRoastDimensionKey,
   type ResumeRoastResult,
+  type ResumeRoastScorecard,
   type ResumeRoastStreamEvent,
   type ResumeRoastTarget
 } from "@/features/resume-roast/contracts/resume-roast";
@@ -31,13 +48,22 @@ import {
   ResumeRoastStreamParseError
 } from "@/features/resume-roast/application/stream";
 import { notifyWorkspaceNotificationsChanged } from "@/features/notifications/ui/notification-ui-events";
-import type { CandidateResume } from "@/lib/shared/types";
+import type { CandidateProfile, CandidateResume } from "@/lib/shared/types";
+import { ResumeUpdateModal } from "@/features/profile/ui/resume-update-modal";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { ResumeDocumentPreview } from "@/features/interviews/ui/voice/components/resume-document-preview";
 import {
   INTERVIEW_PANEL_RULE,
   INTERVIEW_PANEL_SHELL
 } from "@/features/interviews/ui/voice/components/panel-surface";
+import {
+  RESUME_ROAST_COMPANY_QUESTION,
+  RESUME_ROAST_INTRO,
+  RESUME_ROAST_LEVEL_QUESTION,
+  RESUME_ROAST_OPENING_VOICE_LINE,
+  RESUME_ROAST_READING_LINE,
+  RESUME_ROAST_ROLE_QUESTION
+} from "@/lib/voice/resume-roast-lines";
 import { ResumeRoastLoading } from "./resume-roast-skeleton";
 
 interface RoastRecord {
@@ -49,23 +75,36 @@ interface RoastRecord {
   createdAt?: number;
 }
 
+interface RoastInProgress {
+  roastId: string;
+  target: ResumeRoastTarget;
+  startedAt: number;
+}
+
 interface RoastState {
   hasResume: boolean;
   target: ResumeRoastTarget | null;
   suggestedTarget: Partial<ResumeRoastTarget> | null;
   previousRoast: RoastRecord | null;
   history: RoastRecord[];
+  /** Absent on payloads prepared before in-progress tracking. */
+  inProgress?: RoastInProgress | null;
 }
+
+type GenerationPoll =
+  | { status: "generating"; inProgress: RoastInProgress }
+  | { status: "ready"; roast: RoastRecord }
+  | { status: "failed" };
 
 type ScreenState = "loading" | "selecting" | "streaming" | "ready" | "failed";
 
-const INTRO = "Okay, I’ve got your resume. Three quick questions, then we’ll get into it.";
-const ROLE_QUESTION = "Which position are you targeting?";
-const OPENING_VOICE_LINE = `${INTRO} ${ROLE_QUESTION}`;
-const COMPANY_QUESTION = "What kind of company are we trying to impress?";
-const LEVEL_QUESTION = "What level are you applying for?";
-const READING_LINE =
-  "Perfect. I’ll start analysing it now. Give me a second—I’m checking what the confidence forgot to prove.";
+// Pre-recorded as static audio; see the shared module before editing wording.
+const INTRO = RESUME_ROAST_INTRO;
+const ROLE_QUESTION = RESUME_ROAST_ROLE_QUESTION;
+const OPENING_VOICE_LINE = RESUME_ROAST_OPENING_VOICE_LINE;
+const COMPANY_QUESTION = RESUME_ROAST_COMPANY_QUESTION;
+const LEVEL_QUESTION = RESUME_ROAST_LEVEL_QUESTION;
+const READING_LINE = RESUME_ROAST_READING_LINE;
 const ROAST_CLOSING =
   "Now check—I’ve laid out every issue with your resume and exactly how to fix it.";
 const PROVIDER_FAILURE_MESSAGE = "James is temporarily unavailable. Try again.";
@@ -75,10 +114,18 @@ const PROVIDER_RATE_LIMIT_MESSAGE = "James is busy right now. Wait a minute and 
 const RATE_LIMIT_MESSAGE = "You’ve requested several roasts. Try again in a few minutes.";
 const COMPLETION_AUTO_SCROLL_DELAY_MS = 5_000;
 const SCROLL_KEYS = new Set(["ArrowDown", "ArrowUp", "End", "Home", "PageDown", "PageUp", " "]);
+/** How often a reload or second tab checks on a roast it didn't start. */
+const GENERATION_POLL_MS = 1_000;
+/** Matches the server's stale window; past it the roast can't still be running. */
+const GENERATION_WATCH_LIMIT_MS = 90_000;
+/** Delay between revealed result sections, so the review lands in order. */
+const REVEAL_STEP_MS = 90;
 
 export function resumeRoastProgressMessage(elapsedSeconds: number): string {
-  if (elapsedSeconds < 15) return "James is reading your resume…";
-  if (elapsedSeconds < 30) return "Still working—good feedback takes a moment.";
+  if (elapsedSeconds < 3) return "James is reading your resume…";
+  if (elapsedSeconds < 7) return "Scoring it the way a recruiter would…";
+  if (elapsedSeconds < 15) return "Writing the roast…";
+  if (elapsedSeconds < 30) return "Still working. Good feedback takes a moment.";
   return "Almost there…";
 }
 
@@ -96,12 +143,19 @@ function apiFailureMessage(code: string | undefined): string {
 class ResumeRoastClientError extends Error {}
 
 export function ResumeRoastWorkspace({
-  resume,
+  resume: initialResume,
+  resumeTarget = null,
   initialState = null
 }: {
   resume: CandidateResume | null;
+  /** The profile's target, which re-reading an uploaded resume requires. */
+  resumeTarget?: Pick<CandidateProfile, "targetRole" | "level"> | null;
   initialState?: RoastState | null;
 }) {
+  // Local so an upload from this page swaps the preview without a reload.
+  const [resume, setResume] = useState(initialResume);
+  const [resumeUpdateOpen, setResumeUpdateOpen] = useState(false);
+  const canUpdateResume = Boolean(resumeTarget?.targetRole && resumeTarget.level);
   const mounted = useRef(true);
   const requestId = useRef(0);
   const stateController = useRef<AbortController | null>(null);
@@ -110,19 +164,23 @@ export function ResumeRoastWorkspace({
   const spokenRoast = useRef("");
   const spokenRoastAttempts = useRef({ roastId: "", count: 0 });
   const hasInitialState = useRef(initialState !== null);
+  const initialInProgress =
+    initialState?.hasResume && initialState.inProgress ? initialState.inProgress : null;
   const [state, setState] = useState<RoastState | null>(initialState);
   const [screen, setScreen] = useState<ScreenState>(() =>
     initialState
-      ? initialState.previousRoast || !initialState.hasResume
-        ? "ready"
-        : "selecting"
+      ? initialInProgress
+        ? "streaming"
+        : initialState.previousRoast || !initialState.hasResume
+          ? "ready"
+          : "selecting"
       : "loading"
   );
   const [target, setTarget] = useState<Partial<ResumeRoastTarget>>(
-    initialState?.previousRoast?.target ?? {}
+    initialInProgress?.target ?? initialState?.previousRoast?.target ?? {}
   );
   const [events, setEvents] = useState<ResumeRoastStreamEvent[]>(() =>
-    initialState?.previousRoast
+    !initialInProgress && initialState?.previousRoast
       ? resumeRoastResultEvents({
           roastId: initialState.previousRoast.id,
           replayed: true,
@@ -132,7 +190,7 @@ export function ResumeRoastWorkspace({
       : []
   );
   const [showingPrevious, setShowingPrevious] = useState(
-    Boolean(initialState?.previousRoast)
+    Boolean(!initialInProgress && initialState?.previousRoast)
   );
   const [failure, setFailure] = useState<string | null>(null);
   const [analysisElapsedSeconds, setAnalysisElapsedSeconds] = useState(0);
@@ -194,10 +252,15 @@ export function ResumeRoastWorkspace({
     return () => window.clearTimeout(timer);
   }, [awaitingGesture, complete, playVoice, screen, target.role, voiceLine]);
 
+  // Seeded from the server so a followed roast's timer counts from its start
+  // on the very first render, before the follow effect runs.
+  const analysisStartedAt = useRef<number | null>(initialInProgress?.startedAt ?? null);
+
   useEffect(() => {
     if (screen !== "streaming") return;
-    const startedAt = Date.now();
-    setAnalysisElapsedSeconds(0);
+    // A followed roast started before this page loaded; count from its start.
+    const startedAt = analysisStartedAt.current ?? Date.now();
+    setAnalysisElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1_000)));
     const timer = window.setInterval(() => {
       setAnalysisElapsedSeconds(Math.floor((Date.now() - startedAt) / 1_000));
     }, 1_000);
@@ -267,7 +330,9 @@ export function ResumeRoastWorkspace({
       const next = payload.data;
       setState(next);
       spokenRoast.current = "";
-      if (next.previousRoast) {
+      if (next.hasResume && next.inProgress) {
+        followRoast.current(next.inProgress);
+      } else if (next.previousRoast) {
         setTarget(next.previousRoast.target);
         setEvents(
           resumeRoastResultEvents({
@@ -314,6 +379,103 @@ export function ResumeRoastWorkspace({
     };
   }, [cancelRoast, requestState, stop]);
 
+  /** Adds a just-finished roast to history without waiting for a reload. */
+  const recordFinishedRoast = useCallback(
+    (record: RoastRecord) => {
+      setState((current) =>
+        current
+          ? {
+              ...current,
+              target: record.target,
+              inProgress: null,
+              previousRoast: record,
+              history: [
+                {
+                  ...record,
+                  resumeFileName: record.resumeFileName ?? resume?.fileName ?? null,
+                  createdAt: record.createdAt ?? Date.now()
+                },
+                ...(current.history ?? []).filter((entry) => entry.id !== record.id)
+              ]
+            }
+          : current
+      );
+      markSummaryDataChanged();
+      notifyWorkspaceNotificationsChanged();
+    },
+    [resume?.fileName]
+  );
+
+  /**
+   * Follows a roast this page didn't start (a reload mid-roast, or another
+   * tab). The server finishes it regardless; this only waits for the result.
+   */
+  const followRoast = useRef<(inProgress: RoastInProgress) => void>(() => undefined);
+  followRoast.current = (inProgress: RoastInProgress) => {
+    cancelRoast();
+    stop();
+    spokenLine.current = "";
+    spokenRoast.current = "";
+    const controller = new AbortController();
+    roastController.current = controller;
+    const id = ++requestId.current;
+    analysisStartedAt.current = inProgress.startedAt;
+    setTarget(inProgress.target);
+    setFailure(null);
+    setEvents([]);
+    setShowingPrevious(false);
+    setScreen("streaming");
+
+    const stale = () => !mounted.current || requestId.current !== id || controller.signal.aborted;
+    void (async () => {
+      try {
+        while (Date.now() - inProgress.startedAt < GENERATION_WATCH_LIMIT_MS) {
+          await wait(GENERATION_POLL_MS, controller.signal);
+          const response = await fetch(
+            `/api/resume-roast?roastId=${encodeURIComponent(inProgress.roastId)}`,
+            { signal: controller.signal, cache: "no-store" }
+          );
+          const payload = (await response.json().catch(() => null)) as {
+            data?: GenerationPoll;
+          } | null;
+          if (stale()) return;
+          if (!response.ok || !payload?.data) throw new ResumeRoastClientError(PROVIDER_FAILURE_MESSAGE);
+          const poll = payload.data;
+          if (poll.status === "generating") continue;
+          if (poll.status === "failed") throw new ResumeRoastClientError(PROVIDER_FAILURE_MESSAGE);
+          setEvents(
+            resumeRoastResultEvents({
+              roastId: poll.roast.id,
+              replayed: false,
+              target: poll.roast.target,
+              result: poll.roast.result
+            })
+          );
+          setTarget(poll.roast.target);
+          recordFinishedRoast(poll.roast);
+          setScreen("ready");
+          return;
+        }
+        throw new ResumeRoastClientError(TIMEOUT_MESSAGE);
+      } catch (error) {
+        if (isAbort(error) || stale()) return;
+        setState((current) => (current ? { ...current, inProgress: null } : current));
+        setFailure(error instanceof ResumeRoastClientError ? error.message : PROVIDER_FAILURE_MESSAGE);
+        setScreen("failed");
+      } finally {
+        if (roastController.current === controller) roastController.current = null;
+        if (analysisStartedAt.current === inProgress.startedAt) analysisStartedAt.current = null;
+      }
+    })();
+  };
+
+  // Only the server-rendered state can carry a roast to follow on mount. The
+  // unmount cleanup above cancels the follow, so a remount starts it again.
+  const initialFollow = useRef(initialInProgress);
+  useEffect(() => {
+    if (initialFollow.current) followRoast.current(initialFollow.current);
+  }, []);
+
   const startRoast = async (selected: ResumeRoastTarget) => {
     cancelRoast();
     stop();
@@ -336,6 +498,17 @@ export function ResumeRoastWorkspace({
         signal: controller.signal,
         cache: "no-store"
       });
+      if (response.status === 202) {
+        // Another tab (or an earlier click) already has a roast running.
+        const payload = (await response.json().catch(() => null)) as {
+          data?: { inProgress?: RoastInProgress };
+        } | null;
+        if (!mounted.current || requestId.current !== id || controller.signal.aborted) return;
+        if (!payload?.data?.inProgress) throw new ResumeRoastClientError(PROVIDER_FAILURE_MESSAGE);
+        if (roastController.current === controller) roastController.current = null;
+        followRoast.current(payload.data.inProgress);
+        return;
+      }
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as {
           error?: { code?: string };
@@ -347,6 +520,7 @@ export function ResumeRoastWorkspace({
       const parser = createResumeRoastEventParser();
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      const received: ResumeRoastStreamEvent[] = [];
       let finished = false;
 
       const accept = (event: ResumeRoastStreamEvent) => {
@@ -356,11 +530,12 @@ export function ResumeRoastWorkspace({
           setScreen("failed");
           return false;
         }
+        received.push(event);
         setEvents((current) => [...current, event]);
         if (event.type === "done" && !finished) {
           finished = true;
-          markSummaryDataChanged();
-          notifyWorkspaceNotificationsChanged();
+          const record = roastRecordFromEvents(received, selected);
+          if (record) recordFinishedRoast(record);
         }
         return true;
       };
@@ -380,7 +555,6 @@ export function ResumeRoastWorkspace({
       if (!mounted.current || requestId.current !== id || controller.signal.aborted) return;
       if (!finished) throw new ResumeRoastStreamParseError("Resume Roast stream ended early.");
 
-      setState((current) => (current ? { ...current, target: selected } : current));
       setScreen("ready");
     } catch (error) {
       if (isAbort(error) || controller.signal.aborted || requestId.current !== id) return;
@@ -431,10 +605,41 @@ export function ResumeRoastWorkspace({
     setScreen("ready");
   };
 
+  const resumeUpdate =
+    canUpdateResume && resumeTarget ? (
+      <ResumeUpdateModal
+        open={resumeUpdateOpen}
+        profile={{ ...resumeTarget, resume }}
+        onClose={() => setResumeUpdateOpen(false)}
+        onUpdated={(next) => {
+          // A new resume is a new version: nothing from the old one applies,
+          // so drop the current review and re-read the page state for it.
+          cancelRoast();
+          stop();
+          spokenLine.current = "";
+          spokenRoast.current = "";
+          setResumeUpdateOpen(false);
+          setResume(next.resume);
+          setFailure(null);
+          setEvents([]);
+          setShowingPrevious(false);
+          setTarget({});
+          markSummaryDataChanged();
+          requestState();
+        }}
+      />
+    ) : null;
+
   if (screen === "loading") return <ResumeRoastLoading />;
   if (!state && screen === "failed")
     return <LoadFailure message={failure} onRetry={requestState} />;
-  if (!state?.hasResume || !resume) return <MissingResume />;
+  if (!state?.hasResume || !resume)
+    return (
+      <>
+        <MissingResume onUpload={canUpdateResume ? () => setResumeUpdateOpen(true) : null} />
+        {resumeUpdate}
+      </>
+    );
 
   return (
     <main className="resume-roast-page interview-workspace-page workspace-black h-[calc(100dvh-4.25rem)] w-full overflow-hidden bg-black px-3 py-3 text-cream sm:px-5">
@@ -469,8 +674,17 @@ export function ResumeRoastWorkspace({
             const selected = completeTarget(target);
             if (selected) void startRoast(selected);
           }}
+          lastTarget={state.target}
+          suggestedTarget={state.suggestedTarget}
+          onReuseTarget={(selected) => {
+            stop();
+            spokenLine.current = "";
+            setTarget(selected);
+            void startRoast(selected);
+          }}
           history={state.history ?? []}
           onShowHistory={showHistoricalRoast}
+          onUpdateResume={canUpdateResume ? () => setResumeUpdateOpen(true) : null}
         />
         <JamesAside
           target={target}
@@ -481,6 +695,7 @@ export function ResumeRoastWorkspace({
           analysisElapsedSeconds={analysisElapsedSeconds}
         />
       </div>
+      {resumeUpdate}
     </main>
   );
 }
@@ -500,8 +715,12 @@ function JamesChat({
   onChooseLevel,
   onChangeTarget,
   onRetry,
+  lastTarget,
+  suggestedTarget,
+  onReuseTarget,
   history,
-  onShowHistory
+  onShowHistory,
+  onUpdateResume
 }: {
   target: Partial<ResumeRoastTarget>;
   events: ResumeRoastStreamEvent[];
@@ -517,8 +736,12 @@ function JamesChat({
   onChooseLevel: (level: ResumeRoastTarget["level"]) => void;
   onChangeTarget: () => void;
   onRetry: () => void;
+  lastTarget: ResumeRoastTarget | null;
+  suggestedTarget: Partial<ResumeRoastTarget> | null;
+  onReuseTarget: (target: ResumeRoastTarget) => void;
   history: RoastRecord[];
   onShowHistory: (roast: RoastRecord) => void;
+  onUpdateResume: (() => void) | null;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const completionScrollTimer = useRef<number | null>(null);
@@ -593,9 +816,20 @@ function JamesChat({
             {roastComplete ? "Your review" : "Set the target"}
           </h1>
         </div>
-        <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-xs font-medium text-cream/48">
-          {loading ? "Analysing" : roastComplete ? "Complete" : "With James"}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {onUpdateResume && !loading ? (
+            <button
+              type="button"
+              onClick={onUpdateResume}
+              className="rounded-full border border-white/[0.12] bg-white/[0.035] px-3 py-1.5 text-xs font-semibold text-cream/76 transition hover:border-[var(--workspace-accent-border)] hover:bg-[var(--workspace-accent-soft)] hover:text-cream"
+            >
+              Update resume
+            </button>
+          ) : null}
+          <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-xs font-medium text-cream/48">
+            {loading ? "Analysing" : roastComplete ? "Complete" : "With James"}
+          </span>
+        </div>
       </header>
       <div
         ref={scrollRef}
@@ -627,10 +861,29 @@ function JamesChat({
             <Question
               text={ROLE_QUESTION}
               selected={target.role ? RESUME_ROAST_ROLE_LABELS[target.role] : null}
-              active={!target.role}
+              active={!target.role && !loading}
               options={RESUME_ROAST_ROLE_OPTIONS}
+              suggested={suggestedTarget?.role}
               onChoose={onChooseRole}
-            />
+            >
+              {lastTarget && !target.role && !loading ? (
+                <button
+                  type="button"
+                  onClick={() => onReuseTarget(lastTarget)}
+                  className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] px-4 py-3 text-left transition hover:bg-white/[0.08]"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-cream">
+                      Same as last time
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-cream/58">
+                      {targetLabel(lastTarget)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold text-cream/70">Roast it</span>
+                </button>
+              ) : null}
+            </Question>
           ) : null}
 
           {target.role && !showingPrevious && !roastComplete ? (
@@ -641,7 +894,7 @@ function JamesChat({
                   ? RESUME_ROAST_COMPANY_ENVIRONMENT_LABELS[target.companyEnvironment]
                   : null
               }
-              active={!target.companyEnvironment}
+              active={!target.companyEnvironment && !loading}
               options={RESUME_ROAST_COMPANY_ENVIRONMENT_OPTIONS}
               onChoose={onChooseCompany}
             />
@@ -651,8 +904,9 @@ function JamesChat({
             <Question
               text={LEVEL_QUESTION}
               selected={target.level ? RESUME_ROAST_LEVEL_LABELS[target.level] : null}
-              active={!target.level}
+              active={!target.level && !loading}
               options={RESUME_ROAST_LEVEL_OPTIONS}
+              suggested={suggestedTarget?.level}
               onChoose={onChooseLevel}
             />
           ) : null}
@@ -694,13 +948,21 @@ function JamesChat({
                     onClick={() => onShowHistory(roast)}
                     className="rounded-xl bg-white/[0.035] px-3.5 py-2.5 text-left text-sm text-cream/68 transition hover:bg-white/[0.07] hover:text-cream"
                   >
-                    <span className="block font-semibold leading-5">
-                      {roast.resumeFileName || "Resume version"}
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate font-semibold leading-5">
+                        {targetLabel(roast.target)}
+                      </span>
+                      <span className="shrink-0 text-xs font-semibold tabular-nums text-cream/70">
+                        {historyScore(roast.result)}
+                      </span>
                     </span>
-                    <span className="mt-1 block text-xs leading-4 text-cream/46">
-                      {roast.createdAt
-                        ? new Date(roast.createdAt).toLocaleDateString()
-                        : "Saved analysis"}
+                    <span className="mt-1 block truncate text-xs leading-4 text-cream/46">
+                      {[
+                        roast.resumeFileName || "Resume version",
+                        roast.createdAt
+                          ? new Date(roast.createdAt).toLocaleDateString()
+                          : "Saved analysis"
+                      ].join(" · ")}
                     </span>
                   </button>
                 ))}
@@ -888,17 +1150,23 @@ function Question<T extends string>({
   selected,
   active,
   options,
-  onChoose
+  suggested,
+  onChoose,
+  children
 }: {
   text: string;
   selected: string | null;
   active: boolean;
   options: readonly { value: T; label: string }[];
+  /** From the profile; marked, never pre-selected. */
+  suggested?: T | undefined;
   onChoose: (value: T) => void;
+  children?: ReactNode;
 }) {
   return (
     <div className="identity-stage-in">
       <JamesLine text={text} />
+      {children}
       {selected ? (
         <div className="mt-4 flex justify-end">
           <span className="rounded-2xl bg-[var(--workspace-accent)] px-4 py-2.5 text-sm font-semibold text-white">
@@ -913,9 +1181,18 @@ function Question<T extends string>({
               key={option.value}
               type="button"
               onClick={() => onChoose(option.value)}
-              className="rounded-full border border-white/[0.12] bg-white/[0.035] px-3.5 py-2 text-left text-xs font-medium text-cream/76 transition hover:border-[var(--workspace-accent-border)] hover:bg-[var(--workspace-accent-soft)] hover:text-cream"
+              className={`rounded-full border px-3.5 py-2 text-left text-xs font-medium transition hover:border-[var(--workspace-accent-border)] hover:bg-[var(--workspace-accent-soft)] hover:text-cream ${
+                option.value === suggested
+                  ? "border-[var(--workspace-accent-border)] bg-white/[0.035] text-cream"
+                  : "border-white/[0.12] bg-white/[0.035] text-cream/76"
+              }`}
             >
               {option.label}
+              {option.value === suggested ? (
+                <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cream/48">
+                  From profile
+                </span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -957,6 +1234,15 @@ function JamesLine({
   );
 }
 
+const DIMENSION_LABELS = Object.fromEntries(
+  RESUME_ROAST_DIMENSIONS.map((dimension) => [dimension.key, dimension.label])
+) as Record<ResumeRoastDimensionKey, string>;
+
+/** Staggers each result section in, in reading order. */
+function reveal(step: number): { className: string; style: CSSProperties } {
+  return { className: "identity-stage-in", style: { animationDelay: `${step * REVEAL_STEP_MS}ms` } };
+}
+
 function RoastCards({
   events,
   target
@@ -968,54 +1254,36 @@ function RoastCards({
   const problems = events.filter((event) => event.type === "problem");
   const strength = events.find((event) => event.type === "strength");
   const verdict = events.find((event) => event.type === "verdict");
+  const scorecard = events.find((event) => event.type === "scorecard")?.scorecard;
   const rewrite = events.find((event) => event.type === "rewrite");
   const actionPlan = events.find((event) => event.type === "action_plan")?.actionPlan ?? [];
   const selectedTarget = completeTarget(target);
+  let step = 0;
 
   return (
     <div className="space-y-10">
-      <section aria-labelledby="roast-weak-points">
-        <div className="mb-5 flex items-center gap-2 text-orange-100">
-          <Flame size={19} aria-hidden="true" />
-          <h2 id="roast-weak-points" className="text-lg font-bold text-cream">
-            Weak points
-          </h2>
-        </div>
-        {opening ? (
-          <p className="mb-4 text-base font-semibold leading-7 text-cream">
-            {opening.openingRoast}
-          </p>
-        ) : null}
-        <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
-          {problems.length ? (
-            problems.map((event, index) => (
-              <article
-                key={`${event.problem.evidenceAnchors.join("-")}-${index}`}
-                className="relative py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-red-300/60"
-              >
-                <p className="text-base font-bold leading-7 text-cream">{event.problem.joke}</p>
-                <p className="mt-2 text-sm leading-6 text-cream/78">{event.problem.issue}</p>
-                <p className="mt-2 text-sm leading-6 text-cream/55">
-                  {event.problem.recruiterImpact}
-                </p>
-              </article>
-            ))
-          ) : (
-            <article className="relative py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-emerald-300/60">
-              <p className="font-bold text-emerald-100">Annoyingly hard to roast.</p>
-              <p className="mt-2 text-sm leading-6 text-cream/65">
-                {strength?.strength.explanation ??
-                  "The resume gives James very little nonsense to work with."}
-              </p>
-            </article>
-          )}
-        </div>
-      </section>
+      {opening ? (
+        <p
+          {...reveal(step++)}
+          className="identity-stage-in text-lg font-bold leading-8 text-cream sm:text-xl sm:leading-9"
+        >
+          {opening.openingRoast}
+        </p>
+      ) : null}
 
-      {verdict ? (
+      {verdict && scorecard ? (
+        <div {...reveal(step++)}>
+          <ScorecardPanel
+            scorecard={scorecard}
+            explanation={verdict.verdict.explanation}
+            target={selectedTarget}
+          />
+        </div>
+      ) : verdict?.verdict.targetFitScore !== undefined ? (
         <section
+          {...reveal(step++)}
           aria-label={`Target fit score: ${verdict.verdict.targetFitScore} out of 100`}
-          className="border-y border-white/[0.1] bg-gradient-to-r from-[var(--workspace-accent-soft)] via-transparent to-transparent py-6 pl-5 pr-1"
+          className="identity-stage-in border-y border-white/[0.1] bg-gradient-to-r from-[var(--workspace-accent-soft)] via-transparent to-transparent py-6 pl-5 pr-1"
         >
           <div className="flex items-center justify-between gap-5">
             <div className="min-w-0">
@@ -1038,55 +1306,259 @@ function RoastCards({
             {verdict.verdict.explanation}
           </p>
           {selectedTarget ? (
-            <p className="mt-3 text-xs leading-5 text-cream/42">
-              For {RESUME_ROAST_LEVEL_LABELS[selectedTarget.level]}{" "}
-              {RESUME_ROAST_ROLE_LABELS[selectedTarget.role]} ·{" "}
-              {RESUME_ROAST_COMPANY_ENVIRONMENT_LABELS[selectedTarget.companyEnvironment]}
-            </p>
+            <p className="mt-3 text-xs leading-5 text-cream/42">For {targetLabel(selectedTarget)}</p>
           ) : null}
         </section>
       ) : null}
 
-      <section aria-labelledby="roast-fixes">
-        <div className="mb-4 flex items-center gap-2">
-          <Wrench size={19} className="text-[var(--workspace-accent)]" aria-hidden="true" />
-          <h2 id="roast-fixes" className="text-lg font-bold text-cream">
-            Ways to fix it
-          </h2>
-        </div>
+      <section aria-labelledby="roast-weak-points">
+        <SectionHeading id="roast-weak-points" icon={Flame} tone="text-orange-100">
+          What&rsquo;s costing you
+        </SectionHeading>
         <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
-          {problems.map((event, index) => (
-            <FixCard
-              key={`problem-fix-${index}`}
-              number={index + 1}
-              text={event.problem.improvement}
-            />
-          ))}
-          {rewrite ? (
-            <article className="py-6 pl-12 pr-1">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-cream/42">
-                Rewrite this
+          {problems.length ? (
+            problems.map((event, index) => (
+              <article
+                key={`${event.problem.evidenceAnchors.join("-")}-${index}`}
+                {...reveal(step++)}
+                className="identity-stage-in relative py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-red-300/60"
+              >
+                {event.problem.dimension ? (
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/42">
+                    {DIMENSION_LABELS[event.problem.dimension]}
+                  </p>
+                ) : null}
+                <p className="mt-1 text-base font-bold leading-7 text-cream">
+                  {event.problem.joke}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-cream/78">{event.problem.issue}</p>
+                <p className="mt-1 text-sm leading-6 text-cream/55">
+                  {event.problem.recruiterImpact}
+                </p>
+                {event.problem.quote ? (
+                  <blockquote className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3.5 py-2.5 text-sm italic leading-6 text-cream/60">
+                    &ldquo;{event.problem.quote}&rdquo;
+                  </blockquote>
+                ) : null}
+                <div className="mt-3 flex gap-2.5 rounded-xl bg-[var(--workspace-accent-soft)] px-3.5 py-3">
+                  <Wrench
+                    size={16}
+                    strokeWidth={1.9}
+                    aria-hidden="true"
+                    className="mt-1 shrink-0 text-[var(--workspace-accent)]"
+                  />
+                  <p className="text-sm font-semibold leading-6 text-cream">
+                    <span className="sr-only">Fix: </span>
+                    {event.problem.improvement}
+                  </p>
+                </div>
+              </article>
+            ))
+          ) : (
+            <article
+              {...reveal(step++)}
+              className="identity-stage-in relative py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-emerald-300/60"
+            >
+              <p className="font-bold text-emerald-100">Annoyingly hard to roast.</p>
+              <p className="mt-2 text-sm leading-6 text-cream/65">
+                The resume gives James very little nonsense to work with.
               </p>
-              <p className="mt-3 text-sm leading-6 text-cream/45 line-through decoration-orange-300/50">
-                {rewrite.rewrite.before}
-              </p>
-              <p className="mt-3 text-base font-semibold leading-7 text-cream">
-                {rewrite.rewrite.after}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-cream/55">{rewrite.rewrite.rationale}</p>
             </article>
-          ) : null}
-          {actionPlan.map((item) => (
-            <FixCard
-              key={`action-${item.priority}`}
-              number={problems.length + item.priority}
-              text={item.action}
-              detail={item.rationale}
-            />
-          ))}
+          )}
         </div>
       </section>
+
+      {strength ? (
+        <section aria-labelledby="roast-strength" {...reveal(step++)}>
+          <SectionHeading id="roast-strength" icon={ThumbsUp} tone="text-emerald-100">
+            What&rsquo;s working
+          </SectionHeading>
+          <div className="relative border-y border-white/[0.08] py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-emerald-300/60">
+            <p className="text-base font-bold leading-7 text-cream">
+              {strength.strength.headline}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-cream/72">
+              {strength.strength.explanation}
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      {rewrite ? (
+        <section aria-labelledby="roast-rewrite" {...reveal(step++)}>
+          <SectionHeading id="roast-rewrite" icon={PenLine}>
+            Rewrite this
+          </SectionHeading>
+          <div className="border-y border-white/[0.08] py-5 pr-1">
+            <p className="text-sm leading-6 text-cream/45 line-through decoration-orange-300/50">
+              {rewrite.rewrite.before}
+            </p>
+            <p className="mt-3 text-base font-semibold leading-7 text-cream">
+              <RewriteText text={rewrite.rewrite.after} />
+            </p>
+            <p className="mt-2 text-sm leading-6 text-cream/55">{rewrite.rewrite.rationale}</p>
+            {/\[[^\]]+\]/.test(rewrite.rewrite.after) ? (
+              <p className="mt-2 text-xs leading-5 text-cream/42">
+                Fill in the brackets with your real numbers.
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {actionPlan.length ? (
+        <section aria-labelledby="roast-fixes" {...reveal(step++)}>
+          <SectionHeading id="roast-fixes" icon={ListChecks}>
+            Before you send it
+          </SectionHeading>
+          <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
+            {actionPlan.map((item) => (
+              <FixCard
+                key={`action-${item.priority}`}
+                number={item.priority}
+                text={item.action}
+                detail={item.rationale}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
+  );
+}
+
+function SectionHeading({
+  id,
+  icon: Icon,
+  tone = "text-[var(--workspace-accent)]",
+  children
+}: {
+  id: string;
+  icon: LucideIcon;
+  tone?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex items-center gap-2">
+      <Icon size={19} className={tone} aria-hidden="true" />
+      <h2 id={id} className="text-lg font-bold text-cream">
+        {children}
+      </h2>
+    </div>
+  );
+}
+
+/** Highlights the [placeholders] the reader fills in with their own numbers. */
+function RewriteText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\[[^\]]+\])/).map((part, index) =>
+        /^\[[^\]]+\]$/.test(part) ? (
+          <mark
+            key={index}
+            className="rounded-md bg-[var(--workspace-accent-soft)] px-1 text-cream"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={index}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+function ScorecardPanel({
+  scorecard,
+  explanation,
+  target
+}: {
+  scorecard: ResumeRoastScorecard;
+  explanation: string;
+  target: ResumeRoastTarget | null;
+}) {
+  const meaning = resumeRoastScoreMeaning(scorecard.overall);
+  return (
+    <section
+      aria-label={`James's score: ${scorecard.overall} out of 10, ${meaning.label}`}
+      className="border-y border-white/[0.1] bg-gradient-to-r from-[var(--workspace-accent-soft)] via-transparent to-transparent py-6 pl-5 pr-1"
+    >
+      <div className="flex items-start justify-between gap-5">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-cream/48">
+            James&rsquo;s score
+          </p>
+          <p className="mt-2 text-4xl font-black tracking-tight text-cream">
+            {scorecard.overall}
+            <span className="text-lg font-semibold text-cream/45">/10</span>
+            <span className="ml-3 align-middle text-base font-bold tracking-normal text-cream/80">
+              {meaning.label}
+            </span>
+          </p>
+        </div>
+        <Gauge
+          size={38}
+          strokeWidth={1.7}
+          className="shrink-0 text-[var(--workspace-accent)]"
+          aria-hidden="true"
+        />
+      </div>
+      <p className="mt-4 max-w-xl text-sm leading-6 text-cream/72">{explanation}</p>
+      {target ? (
+        <p className="mt-2 text-xs leading-5 text-cream/42">For {targetLabel(target)}</p>
+      ) : null}
+
+      <dl className="mt-6 grid gap-4">
+        {RESUME_ROAST_DIMENSIONS.map(({ key, label }) => {
+          const dimension = scorecard.dimensions[key];
+          return (
+            <div key={key}>
+              <dt className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-cream/86">{label}</span>
+                <span
+                  className="flex shrink-0 items-center gap-1"
+                  role="img"
+                  aria-label={`${dimension.score} out of 5`}
+                >
+                  {[1, 2, 3, 4, 5].map((pip) => (
+                    <span
+                      key={pip}
+                      className={`h-1.5 w-5 rounded-full ${
+                        pip <= dimension.score ? "bg-[var(--workspace-accent)]" : "bg-white/[0.1]"
+                      }`}
+                    />
+                  ))}
+                </span>
+              </dt>
+              <dd className="mt-1 text-sm leading-6 text-cream/58">{dimension.note}</dd>
+            </div>
+          );
+        })}
+      </dl>
+
+      <details className="mt-5 text-sm">
+        <summary className="cursor-pointer text-xs font-semibold text-cream/58 transition hover:text-cream">
+          How James scores
+        </summary>
+        <div className="mt-3 space-y-3 text-xs leading-5 text-cream/58">
+          <p>
+            Each area is judged against written standards, the way a recruiter and then the
+            hiring manager would read it. The total is calculated from those five, so the same
+            resume and target always get the same score.
+          </p>
+          <ul className="space-y-1.5">
+            {RESUME_ROAST_SCORE_MEANINGS.map((entry) => (
+              <li key={entry.min}>
+                <span className="font-semibold text-cream/80">
+                  {entry.min === 1 ? "1–2" : `${entry.min}–${entry.min + 1}`} {entry.label}.
+                </span>{" "}
+                {entry.description}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </details>
+    </section>
   );
 }
 
@@ -1104,19 +1576,29 @@ function FixCard({ number, text, detail }: { number: number; text: string; detai
   );
 }
 
-function MissingResume() {
+function MissingResume({ onUpload }: { onUpload: (() => void) | null }) {
   return (
     <main className="resume-roast-page grid h-[calc(100dvh-4.25rem)] place-items-center bg-black px-4 text-cream">
       <DocumentTitle title="Resume Roast" />
       <div className="progress-maya-bubble w-full max-w-lg rounded-2xl p-7 text-center">
         <FileText className="mx-auto text-orange-200" />
         <p className="mt-4 text-xl font-semibold">James needs a resume first.</p>
-        <Link
-          href="/profile"
-          className="mt-6 inline-flex rounded-xl bg-cream px-4 py-2.5 text-sm font-bold text-black"
-        >
-          Go to Profile
-        </Link>
+        {onUpload ? (
+          <button
+            type="button"
+            onClick={onUpload}
+            className="mt-6 inline-flex rounded-xl bg-cream px-4 py-2.5 text-sm font-bold text-black"
+          >
+            Upload resume
+          </button>
+        ) : (
+          <Link
+            href="/profile"
+            className="mt-6 inline-flex rounded-xl bg-cream px-4 py-2.5 text-sm font-bold text-black"
+          >
+            Go to Profile
+          </Link>
+        )}
       </div>
     </main>
   );
@@ -1137,6 +1619,64 @@ function LoadFailure({ message, onRetry }: { message: string | null; onRetry: ()
       </div>
     </main>
   );
+}
+
+function targetLabel(target: ResumeRoastTarget): string {
+  return `${RESUME_ROAST_LEVEL_LABELS[target.level]} ${RESUME_ROAST_ROLE_LABELS[target.role]} · ${
+    RESUME_ROAST_COMPANY_ENVIRONMENT_LABELS[target.companyEnvironment]
+  }`;
+}
+
+function historyScore(result: ResumeRoastResult): string {
+  if (result.scorecard) return `${result.scorecard.overall}/10`;
+  return result.verdict.targetFitScore !== undefined ? `${result.verdict.targetFitScore}/100` : "";
+}
+
+/** Rebuilds the saved shape from a finished stream, for local history. */
+function roastRecordFromEvents(
+  events: ResumeRoastStreamEvent[],
+  target: ResumeRoastTarget
+): RoastRecord | null {
+  const find = <T extends ResumeRoastStreamEvent["type"]>(type: T) =>
+    events.find((event): event is Extract<ResumeRoastStreamEvent, { type: T }> => event.type === type);
+  const session = find("session");
+  const opening = find("opening_roast");
+  const strength = find("strength");
+  const verdict = find("verdict");
+  const actionPlan = find("action_plan");
+  if (!session || !opening || !strength || !verdict || !actionPlan) return null;
+  const spokenSummary = find("spoken_summary")?.spokenSummary;
+  const scorecard = find("scorecard")?.scorecard;
+  return {
+    id: session.roastId,
+    target,
+    result: {
+      openingRoast: opening.openingRoast,
+      ...(spokenSummary ? { spokenSummary } : {}),
+      strength: strength.strength,
+      problems: events.flatMap((event) => (event.type === "problem" ? [event.problem] : [])),
+      rewrite: find("rewrite")?.rewrite ?? null,
+      verdict: verdict.verdict,
+      ...(scorecard ? { scorecard } : {}),
+      actionPlan: actionPlan.actionPlan
+    },
+    createdAt: Date.now()
+  };
+}
+
+function wait(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(new DOMException("Aborted", "AbortError"));
+    const timer = window.setTimeout(resolve, ms);
+    signal.addEventListener(
+      "abort",
+      () => {
+        window.clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true }
+    );
+  });
 }
 
 function completeTarget(value: Partial<ResumeRoastTarget>): ResumeRoastTarget | null {

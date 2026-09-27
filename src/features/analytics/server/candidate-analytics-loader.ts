@@ -92,12 +92,14 @@ export async function buildCandidateAnalytics(
       ),
       null
     ),
+    // One read serves both the dashboard and the Progress briefing.
     recover(
       "roadmapPractice",
-      source("roadmapPractice", () => app.progressService.dashboard(ownerId, new Date(now))),
+      source("roadmapPractice", () => app.progressService.summary(ownerId, new Date(now))),
       null
     )
   ]);
+  const briefing = roadmapPractice?.briefing ?? null;
   const storyDiscipline = storyDisciplineForRole(profile.targetRole);
   // The same tracks the Practice page offers this role: Node.js Core Technical
   // and Applied Engineering for backend and full-stack, Architecture for those
@@ -106,7 +108,7 @@ export async function buildCandidateAnalytics(
   const architectureTrack =
     nodeTracks ||
     (storyDiscipline !== null && storyDisciplineDefinition(storyDiscipline).includesArchitecture);
-  const [corePractice, appliedPractice, architecturePractice, storyPractice, briefing, insights] =
+  const [corePractice, appliedPractice, architecturePractice, storyPractice, insights] =
     await Promise.all([
       recover(
         "corePractice",
@@ -148,13 +150,6 @@ export async function buildCandidateAnalytics(
             null
           )
         : Promise.resolve(null),
-      recover(
-        "progressBriefing",
-        source("progressBriefing", () =>
-          app.progressService.briefing(ownerId, { completedSessions: 0 }, new Date(now))
-        ),
-        null
-      ),
       recover(
         "interviewInsights",
         source("interviewInsights", () => app.interviewService.insights(ownerId)),
@@ -213,12 +208,20 @@ export async function buildCandidateAnalytics(
   const trackPractice = [corePractice, appliedPractice, architecturePractice, storyPractice].filter(
     (practice): practice is NonNullable<typeof practice> => practice !== null
   );
-  const progressBriefing = trackPractice.reduce(mergeBriefingPractice, roadmapBriefing);
-  progressBriefing.interview = { completedSessions: insights?.completedSessions ?? 0 };
-  const dashboardPractice = trackPractice.reduce<ReturnType<typeof mergeDashboardPractice> | null>(
+  // Merge over the full window, then keep the seven days the pages show.
+  const mergedBriefing = trackPractice.reduce(mergeBriefingPractice, roadmapBriefing);
+  const progressBriefing: ProgressBriefingOverview = {
+    ...mergedBriefing,
+    activity: mergedBriefing.activity.slice(-7),
+    interview: { completedSessions: insights?.completedSessions ?? 0 }
+  };
+  const mergedDashboard = trackPractice.reduce<ReturnType<typeof mergeDashboardPractice> | null>(
     mergeDashboardPractice,
-    roadmapPractice
+    roadmapPractice?.dashboard ?? null
   );
+  const dashboardPractice = mergedDashboard
+    ? { ...mergedDashboard, activity: mergedDashboard.activity.slice(-7) }
+    : null;
   return {
     summary: {
       dashboard: buildDashboardOverview(profile, reports, dashboardPractice, now, trailmate),

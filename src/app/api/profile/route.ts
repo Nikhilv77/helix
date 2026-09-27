@@ -6,50 +6,37 @@ import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
-import { LEVELS, ROLES } from "@/features/interviews/server/types";
-import { schedulePracticeHomeRefresh } from "@/features/practice/shared/server/refresh-practice-home";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const storySchema = z.object({
-  id: z.string().trim().min(1).max(80),
-  title: z.string().trim().min(2).max(100),
-  situation: z.string().trim().max(600),
-  action: z.string().trim().max(800),
-  outcome: z.string().trim().max(600),
-  skills: z.array(z.string().trim().min(1).max(40)).max(6)
-});
-
-const profileSchema = z.object({
-  targetRole: z.enum(ROLES).nullable(),
-  level: z.enum(LEVELS).nullable(),
-  targetCompany: z.string().trim().max(100),
-  targetDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
-  headline: z.string().trim().max(140),
-  context: z.string().trim().max(1600),
-  focusAreas: z.array(z.string().trim().min(1).max(40)).max(8),
-  stories: z.array(storySchema).max(8),
-  coverImage: z
-    .enum([
-      "/images/profile/covers/cover-1.png",
-      "/images/profile/covers/cover-2.png",
-      "/images/profile/covers/cover-3.png",
-      "/images/profile/covers/cover-4.png",
-      "/images/profile/covers/cover-5.png",
-      "/images/profile/covers/cover-6.png",
-      "/images/profile/covers/cover-7.png",
-      "/images/profile/covers/cover-8.png"
-    ])
-    .nullable(),
-  profileImage: z
-    .string()
-    .refine(isProfileAvatarSource, "Choose one of the available profile images")
-    .nullable()
-});
+/**
+ * The Profile page edits only its cover and avatar. Everything else on the
+ * profile (role, level, target, headline, summary, stories) is set by
+ * onboarding, preparation and resume confirmation, which also rebuild the
+ * practice plan; accepting it here would let a request change the plan's
+ * inputs without that work. Other keys in the body are ignored.
+ */
+const profileImagesSchema = z
+  .object({
+    coverImage: z
+      .enum([
+        "/images/profile/covers/cover-1.png",
+        "/images/profile/covers/cover-2.png",
+        "/images/profile/covers/cover-3.png",
+        "/images/profile/covers/cover-4.png",
+        "/images/profile/covers/cover-5.png",
+        "/images/profile/covers/cover-6.png",
+        "/images/profile/covers/cover-7.png",
+        "/images/profile/covers/cover-8.png"
+      ])
+      .nullable(),
+    profileImage: z
+      .string()
+      .refine(isProfileAvatarSource, "Choose one of the available profile images")
+      .nullable()
+  })
+  .partial();
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,16 +50,15 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const ownerId = await requireOwner();
-    const parsed = profileSchema.safeParse(await readJson(request));
+    const parsed = profileImagesSchema.safeParse(await readJson(request));
     if (!parsed.success) {
       throw new ApiRouteError(400, "BAD_REQUEST", "Profile validation failed", {
         messages: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
       });
     }
 
-    const profile = await getAppContainer().profileService.save(ownerId, parsed.data);
-    schedulePracticeHomeRefresh(ownerId);
-    return apiSuccess(profile);
+    // Images feed no practice or analytics projection, so nothing is rebuilt.
+    return apiSuccess(await getAppContainer().profileService.saveImages(ownerId, parsed.data));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

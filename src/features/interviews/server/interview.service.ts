@@ -89,6 +89,9 @@ import { interviewerNameForSetup } from "../domain/interviewer-persona";
 import { isTechnicalProjectsRound } from "../domain/technical-deep-dive";
 import { technicalProjectsMoveOnUtterance } from "./technical-projects-dialogue";
 import { SESSION_TTL_MS } from "./session-constants";
+
+/** At most this many pages are read to find a full page of interview rounds. */
+const INTERVIEW_ROUND_PAGE_LIMIT = 4;
 import {
   EMPTY_SYSTEM_DESIGN_CANVAS,
   systemDesignCanvasDocumentSchema,
@@ -289,9 +292,16 @@ export class InterviewService {
     limit: number,
     now: number
   ): Promise<InterviewReport[]> {
-    return (await this.store.listReportsByOwner(ownerId, limit, now)).filter(
-      (report) => !isResumableBlockAssessment(report.setup)
-    );
+    // Checkpoints are filtered after the read, so a busy practiser's latest
+    // page can be mostly checkpoints. Page back until `limit` real rounds are
+    // found, within a bound, instead of silently showing fewer (or none).
+    const rounds: InterviewReport[] = [];
+    for (let page = 0; page < INTERVIEW_ROUND_PAGE_LIMIT; page += 1) {
+      const batch = await this.store.listReportsByOwner(ownerId, limit, now, page * limit);
+      rounds.push(...batch.filter((report) => !isResumableBlockAssessment(report.setup)));
+      if (rounds.length >= limit || batch.length < limit) break;
+    }
+    return rounds.slice(0, limit);
   }
 
   /**
@@ -313,7 +323,15 @@ export class InterviewService {
     const combined = [...stored, ...additional]
       .sort((left, right) => right.startedAt - left.startedAt)
       .slice(0, boundedLimit);
-    return createReportsOverview(combined, now);
+    // An open round turns "expired" with no database write, so a saved
+    // projection needs to know when its statuses stop being true.
+    const nextExpiryAt =
+      combined
+        .filter((report) => report.status === "in_progress")
+        .map((report) => report.updatedAt + SESSION_TTL_MS)
+        .filter((expiry) => expiry > now)
+        .sort((left, right) => left - right)[0] ?? null;
+    return { ...createReportsOverview(combined, now), nextExpiryAt };
   }
 
   async report(ownerId: string, sessionId: string, now = Date.now()): Promise<InterviewReport> {

@@ -25,6 +25,39 @@ function candidate(overrides: Partial<HelperCandidate> = {}): HelperCandidate {
   };
 }
 
+describe("online-first ranking", () => {
+  it("puts people on Trailgrad now ahead of stronger mates who are away", () => {
+    const ranked = rankCandidates(
+      [
+        candidate({ ownerId: "away-expert", qualificationScore: 1, lastSeenAt: daysAgo(2) }),
+        candidate({
+          ownerId: "online-good",
+          qualificationScore: 0.7,
+          lastSeenAt: new Date(NOW.getTime() - 60_000)
+        }),
+        candidate({ ownerId: "never-seen", qualificationScore: 1, lastSeenAt: null })
+      ],
+      NOW
+    );
+    expect(ranked.map((helper) => [helper.ownerId, helper.online])).toEqual([
+      ["online-good", true],
+      ["away-expert", false],
+      ["never-seen", false]
+    ]);
+  });
+
+  it("counts someone as online only within the last few minutes", () => {
+    const [recent, stale] = rankCandidates(
+      [
+        candidate({ ownerId: "recent", lastSeenAt: new Date(NOW.getTime() - 2 * 60_000) }),
+        candidate({ ownerId: "stale", lastSeenAt: new Date(NOW.getTime() - 4 * 60_000) })
+      ],
+      NOW
+    );
+    expect([recent?.online, stale?.online]).toEqual([true, false]);
+  });
+});
+
 describe("helper scoring", () => {
   it("stays inside 0 and 1 at both extremes", () => {
     const best = scoreCandidate(

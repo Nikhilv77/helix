@@ -303,6 +303,26 @@ export class ProfileService {
     return withCompleteness(await this.get(ownerId));
   }
 
+  /**
+   * Cover and avatar only, the one thing the Profile page edits. Fields left
+   * out of `images` are not touched.
+   */
+  async saveImages(
+    ownerId: string,
+    images: { coverImage?: string | null; profileImage?: string | null }
+  ): Promise<CandidateProfile> {
+    const data = {
+      ...(images.coverImage !== undefined ? { coverImage: cleanNullable(images.coverImage) } : {}),
+      ...(images.profileImage !== undefined
+        ? { profileImage: cleanNullable(images.profileImage) }
+        : {})
+    };
+    if (Object.keys(data).length) {
+      await this.prisma.candidateProfile.update({ where: { ownerId }, data });
+    }
+    return this.get(ownerId);
+  }
+
   async workspaceAccent(ownerId: string): Promise<WorkspaceAccent> {
     const profile = await this.prisma.candidateProfile.findUnique({
       where: { ownerId },
@@ -378,10 +398,36 @@ export class ProfileService {
     `);
   }
 
+  /**
+   * Removes everything tied to this person. Most tables cascade from
+   * CandidateProfile; these are the ones that do not, because they reference
+   * a person by id without a foreign key (interview sessions, projects, and
+   * the Trailmate rows where they were the helper, blocker or reporter).
+   */
   async deleteAccountData(ownerId: string): Promise<void> {
+    const now = new Date();
     await this.prisma.$transaction([
       this.prisma.interviewSession.deleteMany({ where: { ownerId } }),
       this.prisma.project.deleteMany({ where: { ownerId } }),
+      this.prisma.helpBlock.deleteMany({ where: { OR: [{ ownerId }, { blockedId: ownerId }] } }),
+      this.prisma.helpReport.deleteMany({
+        where: { OR: [{ reporterId: ownerId }, { reportedId: ownerId }] }
+      }),
+      // A session they were helping in right now ends, so the learner is not
+      // left waiting on someone who no longer exists.
+      this.prisma.helpSession.updateMany({
+        where: { endedAt: null, request: { helperId: ownerId, status: "CLAIMED" } },
+        data: { endedAt: now, endedReason: "account_deleted" }
+      }),
+      this.prisma.helpRequest.updateMany({
+        where: { helperId: ownerId, status: "CLAIMED" },
+        data: { status: "CANCELLED", closedAt: now }
+      }),
+      // Learners keep their own history; the helper becomes anonymous.
+      this.prisma.helpRequest.updateMany({
+        where: { helperId: ownerId },
+        data: { helperId: null }
+      }),
       this.prisma.candidateProfile.deleteMany({ where: { ownerId } })
     ]);
   }

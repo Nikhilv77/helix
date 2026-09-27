@@ -1113,6 +1113,49 @@ describe("InterviewService resume round", () => {
     expect(ids).toContain("core-technical:assessment-1");
   });
 
+  it("pages past recent checkpoints so real rounds are never crowded out", async () => {
+    const { service } = harness([mcqQuestion]);
+    const interview = await service.start(setup, "user-1", 1_000);
+    for (const [index, startedAt] of [2_000, 3_000, 4_000].entries()) {
+      await service.start(
+        {
+          ...setup,
+          dsaBlockAssessment: {
+            kind: "dsa-block-assessment",
+            blockId: "11111111-1111-4111-8111-111111111111",
+            assessmentId: `2222222${index}-2222-4222-8222-222222222222`,
+            snapshotVersion: 1,
+            rubricVersion: 1
+          }
+        },
+        "user-1",
+        startedAt,
+        [mcqQuestion]
+      );
+    }
+
+    // The newest two sessions are both checkpoints; the round is further back.
+    const overview = await service.reportsOverview("user-1", 2, 5_000);
+
+    expect(overview.rounds.map((round) => round.sessionId)).toEqual([interview.state.id]);
+  });
+
+  it("says when an open round will expire, so saved reports can refresh", async () => {
+    const { service } = harness([mcqQuestion]);
+    await service.start(setup, "user-1", 1_000);
+
+    const overview = await service.reportsOverview("user-1", 50, 2_000);
+
+    expect(overview.inProgressRounds).toBe(1);
+    // The round's last activity plus the one-hour room lifetime.
+    expect(overview.nextExpiryAt).toBeGreaterThan(2_000);
+
+    await service.start(setup, "user-2", 1_000);
+    const later = await service.reportsOverview("user-2", 50, Number.MAX_SAFE_INTEGER);
+    // Once every open round has expired there is nothing left to wait for.
+    expect(later.nextExpiryAt).toBeNull();
+  });
+
   it.each<[string, Partial<InterviewSetup>]>([
     [
       "DSA",

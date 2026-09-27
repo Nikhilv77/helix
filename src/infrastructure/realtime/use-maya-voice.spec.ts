@@ -2,6 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ALL_TEACHER_LINES } from "@/lib/voice/teacher-lines";
+import {
+  RESUME_ROAST_FIXED_VOICE_LINES,
+  RESUME_ROAST_VOICE_PERSONA
+} from "@/lib/voice/resume-roast-lines";
 import { STATIC_VOICE_LINES } from "@/lib/avatars/static-voice.generated";
 import { ALL_PERSONAS, personaById } from "@/lib/avatars/personas";
 import { TTS_PROVIDERS, voiceIdentity } from "@/lib/avatars/voice-style";
@@ -57,7 +61,8 @@ describe("pre-generated teacher lines", () => {
       ...ALL_PERSONAS.map((persona) => `${persona.id}\n${persona.greeting}`),
       ...ALL_PERSONAS.flatMap((persona) =>
         ALL_TEACHER_LINES.map((text) => `${persona.id}\n${text}`)
-      )
+      ),
+      ...RESUME_ROAST_FIXED_VOICE_LINES.map((text) => `${RESUME_ROAST_VOICE_PERSONA}\n${text}`)
     ]);
     for (const line of STATIC_VOICE_LINES) {
       const persona = personaById(line.persona);

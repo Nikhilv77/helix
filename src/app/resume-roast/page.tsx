@@ -18,5 +18,11 @@ export default async function ResumeRoastPage() {
   const page = await loadResumeRoastPageData(authenticatedOwnerId(userId));
   if (!page.onboardingCompletedAt) redirect("/onboarding");
   if (!page.preparationCompletedAt) redirect("/");
-  return <ResumeRoastWorkspace resume={page.resume} initialState={page.state} />;
+  return (
+    <ResumeRoastWorkspace
+      resume={page.resume}
+      resumeTarget={{ targetRole: page.targetRole, level: page.level }}
+      initialState={page.state}
+    />
+  );
 }

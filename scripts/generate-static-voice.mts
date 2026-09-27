@@ -12,8 +12,8 @@
  * Both providers' files can coexist; the app plays the set matching the active
  * provider, so switching providers is instant once a set is generated.
  *
- * Lines: every persona's greeting, plus every fixed line in src/lib/voice/teacher-lines.ts for each
- * selectable teacher (the default teacher first). Progress is saved after each
+ * Lines: every persona's greeting, every fixed line in src/lib/voice/teacher-lines.ts for each
+ * selectable teacher (the default teacher first), and James's fixed Resume Roast lines. Progress is saved after each
  * file, so a run stopped by the daily quota resumes where it left off.
  *
  * Writes public/voice/<persona>-<hash>.mp3 and src/lib/avatars/static-voice.generated.ts.
@@ -23,6 +23,10 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ALL_TEACHER_LINES } from "../src/lib/voice/teacher-lines";
+import {
+  RESUME_ROAST_FIXED_VOICE_LINES,
+  RESUME_ROAST_VOICE_PERSONA
+} from "../src/lib/voice/resume-roast-lines";
 import {
   ALL_PERSONAS,
   DEFAULT_TEACHER_SELECTION_ID,
@@ -80,7 +84,10 @@ function jobs(): Job[] {
   const practice = teachers.flatMap((persona) =>
     ALL_TEACHER_LINES.map((text) => ({ persona, text }))
   );
-  return [...greetings, ...practice];
+  // Lines owned by one persona regardless of the learner's teacher.
+  const james = ALL_PERSONAS.find((persona) => persona.id === RESUME_ROAST_VOICE_PERSONA);
+  const roast = james ? RESUME_ROAST_FIXED_VOICE_LINES.map((text) => ({ persona: james, text })) : [];
+  return [...greetings, ...practice, ...roast];
 }
 
 function fileNameFor({ persona, text }: Job, forProvider: TtsProvider): string {

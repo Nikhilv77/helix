@@ -13,6 +13,7 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
+import { logHelpLifecycle } from "@/features/peer-help/server/help-lifecycle-log";
 
 const logger = new Logger("HelpRequest");
 /**
@@ -143,8 +144,9 @@ export async function POST(request: NextRequest) {
         : `They are working in ${parsed.data.language} with ${failing} failing ${
             failing === 1 ? "test" : "tests"
           }.`;
+    const invited = helpers.slice(0, MAX_HELP_INVITATIONS);
     const invitationsSent = await app.notificationService.deliverHelpRequestInvitations(
-      helpers.slice(0, MAX_HELP_INVITATIONS).map((helper) => helper.ownerId),
+      invited.map((helper) => helper.ownerId),
       {
         title: `${learner.label} asked for a mate for ${question.title}`,
         body,
@@ -189,12 +191,22 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    const onlineInvited = invited.filter((helper) => helper.online).length;
+    logHelpLifecycle({
+      event: "opened",
+      requestId: helpRequest.id,
+      eligibleHelpers: helpers.length,
+      invited: invitationsSent,
+      onlineInvited
+    });
+
     scheduleCandidateAnalyticsRefresh(ownerId);
     return apiSuccess({
       id: helpRequest.id,
       status: helpRequest.status,
       createdAt: helpRequest.createdAt.getTime(),
       invitationsSent,
+      onlineInvited,
       cooldownMs: RATE_LIMIT_POLICIES.helpRequest.windowMs
     });
   } catch (error) {

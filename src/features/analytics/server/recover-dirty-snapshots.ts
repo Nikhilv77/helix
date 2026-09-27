@@ -7,7 +7,7 @@ import { CANDIDATE_ANALYTICS_SCHEMA_VERSION } from "./candidate-analytics-snapsh
 import { PRACTICE_HOME_SCHEMA_VERSION } from "@/features/practice/shared/server/practice-home-snapshot.store";
 import { loadPracticeHomeView } from "@/features/practice/shared/server/practice-home-loader";
 import { refreshWorkspacePage } from "./refresh-workspace-pages";
-import type { WorkspacePage } from "./workspace-page-snapshot.store";
+import { WORKSPACE_PAGE_SCHEMA_VERSION, type WorkspacePage } from "./workspace-page-snapshot.store";
 
 type DirtyPage = { ownerId: string; kind: "analytics" | "practice" | "workspace"; page: string };
 const logger = new Logger("SnapshotRecovery");
@@ -47,7 +47,11 @@ export async function recoverDirtySnapshots(
       FROM "WorkspacePageSnapshot" snapshot JOIN eligible USING ("ownerId")
       WHERE snapshot."page" IN ('interviews', 'resume-roast', 'trailmate', 'reports')
         AND (snapshot."payload" IS NULL
-          OR snapshot."schemaVersion" <> CASE WHEN snapshot."page" = 'resume-roast' THEN 2 ELSE 1 END
+          OR snapshot."schemaVersion" <> CASE snapshot."page"
+            WHEN 'interviews' THEN ${WORKSPACE_PAGE_SCHEMA_VERSION.interviews}
+            WHEN 'resume-roast' THEN ${WORKSPACE_PAGE_SCHEMA_VERSION["resume-roast"]}
+            WHEN 'trailmate' THEN ${WORKSPACE_PAGE_SCHEMA_VERSION.trailmate}
+            ELSE ${WORKSPACE_PAGE_SCHEMA_VERSION.reports} END
           OR snapshot."dirtyVersion" <> snapshot."builtVersion")
     ), missing AS (
       SELECT eligible."ownerId", 'analytics'::text AS kind, ''::text AS page,
@@ -160,7 +164,7 @@ async function projectionPublished(job: DirtyPage): Promise<boolean> {
   });
   return Boolean(
     row?.payload &&
-    row.schemaVersion === (job.page === "resume-roast" ? 2 : 1) &&
+    row.schemaVersion === WORKSPACE_PAGE_SCHEMA_VERSION[job.page as WorkspacePage] &&
     row.dirtyVersion === row.builtVersion
   );
 }

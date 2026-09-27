@@ -7,18 +7,24 @@ describe("help history", () => {
       {
         invitationCount: 3,
         latestInvitationAt: new Date("2026-09-03T00:00:00.000Z"),
-        engagementCount: 2,
-        latestEngagementAt: new Date("2026-09-03T00:01:00.000Z")
+        latestAskedAt: new Date("2026-09-03T00:01:00.000Z"),
+        latestHelpedAt: null,
+        hasLiveEngagement: true
       }
     ]);
     const service = new HelpHistoryService({ $queryRaw: queryRaw } as unknown as PrismaService);
 
-    await expect(service.pollingStatus("owner-1")).resolves.toEqual({
-      version: "3:1788393600000:2:1788393660000"
+    await expect(service.pollingStatusWithMaintenance("owner-1")).resolves.toEqual({
+      version: "3:1788393600000:1788393660000:0",
+      needsMaintenance: true
     });
     expect(queryRaw).toHaveBeenCalledTimes(1);
     const query = queryRaw.mock.calls[0]![0] as { strings: string[]; values: unknown[] };
-    expect(query.strings.join(" ")).toContain('notification."createdAt" >');
+    const sql = query.strings.join(" ");
+    expect(sql).toContain('notification."createdAt" >');
+    // Bounded reads, not an aggregate over the whole help history.
+    expect(sql).toContain('ORDER BY request."updatedAt" DESC LIMIT 1');
+    expect(sql).not.toContain("COUNT(*) FILTER");
     expect(query.values).toContain("owner-1");
     expect(query.values.some((value) => value instanceof Date)).toBe(true);
   });
@@ -138,7 +144,8 @@ describe("help history", () => {
         }
       ],
       leaderboard: [],
-      profiles: [profile("owner-1", "Asha Verma", "Frontend candidate", AVATAR_1)]
+      profiles: [profile("owner-1", "Asha Verma", "Frontend candidate", AVATAR_1)],
+      online: 4
     });
     const prisma = {
       helpRequest: { findFirst: vi.fn().mockResolvedValue(null) },
@@ -158,10 +165,12 @@ describe("help history", () => {
       positiveHelps: 1,
       availabilityCredits: 1,
       activeConversation: null,
-      topHelpers: []
+      topHelpers: [],
+      topHelpersTotal: 0,
+      onlineMates: 4
     });
-    // Counters, leaderboard, and the viewer's profile: one statement each.
-    expect(queryRaw).toHaveBeenCalledTimes(3);
+    // Counters, leaderboard, the viewer's profile and who is online: one statement each.
+    expect(queryRaw).toHaveBeenCalledTimes(4);
   });
 
   it("aggregates the leaderboard in SQL and shares it for 45 seconds", async () => {
@@ -316,6 +325,7 @@ function rawQuery(responses: {
   counts?: unknown[];
   leaderboard?: unknown[];
   profiles?: ProfileRow[];
+  online?: number;
 }) {
   return vi.fn(async ({ sql, values }: { sql: string; values: unknown[] }) => {
     if (sql.includes(PROFILE_SQL)) {
@@ -323,6 +333,7 @@ function rawQuery(responses: {
     }
     if (sql.includes("request_counts")) return responses.counts ?? [];
     if (sql.includes(LEADERBOARD_SQL)) return responses.leaderboard ?? [];
+    if (sql.includes('FROM "HelpPresence"')) return [{ count: responses.online ?? 0 }];
     throw new Error(`Unexpected query: ${sql}`);
   });
 }

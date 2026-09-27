@@ -70,26 +70,13 @@ export class ProgressService {
     interview: ProgressBriefingOverview["interview"],
     now: Date = new Date()
   ): Promise<ProgressBriefingOverview> {
-    const windowStart = startOfUtcDay(new Date(now.getTime() - (WINDOW_DAYS - 1) * DAY_MS));
-    const [roadmap, attempts] = await Promise.all([
-      this.prisma.userRoadmap.findUnique({
-        where: { ownerId_role: { ownerId, role: FRONTEND_ROADMAP_ROLE } },
-        select: { completedQuestions: true }
-      }),
-      this.prisma.userQuestionAttempt.findMany({
-        where: { ownerId, createdAt: { gte: windowStart } },
-        orderBy: { createdAt: "desc" },
-        select: { status: true, createdAt: true }
-      })
-    ]);
-    const activity = buildActivity(attempts, windowStart, now);
-
+    const { roadmap, attempts, activity, streak } = await this.readActivity(ownerId, now);
     return {
       totals: {
         totalAttempts: attempts.length,
         completedQuestions: roadmap?.completedQuestions ?? 0
       },
-      streak: buildStreak(attempts, now),
+      streak,
       activity: activity.slice(-7),
       interview
     };
@@ -105,6 +92,63 @@ export class ProgressService {
     now: Date = new Date(),
     cacheNextQuestion?: DashboardNextQuestionCache
   ): Promise<ProgressDashboardOverview> {
+    const { dashboard } = await this.summary(ownerId, now, cacheNextQuestion);
+    return { ...dashboard, activity: dashboard.activity.slice(-7) };
+  }
+
+  /**
+   * Both roadmap projections from one roadmap read and one attempts read.
+   * Activity covers the whole window so other practice tracks can be merged
+   * in before anything is cut down to the seven days on screen; cutting
+   * first capped any streak spanning tracks at seven days.
+   */
+  async summary(
+    ownerId: string,
+    now: Date = new Date(),
+    cacheNextQuestion?: DashboardNextQuestionCache
+  ): Promise<{ briefing: ProgressBriefingOverview; dashboard: ProgressDashboardOverview }> {
+    const { roadmap, attempts, activity, streak } = await this.readActivity(ownerId, now);
+    const nextUp = roadmap
+      ? await (cacheNextQuestion
+          ? cacheNextQuestion(roadmap, async () =>
+              buildDashboardNextUp(await this.findDashboardNextQuestion(roadmap))
+            )
+          : this.findDashboardNextQuestion(roadmap).then(buildDashboardNextUp))
+      : null;
+
+    return {
+      briefing: {
+        totals: {
+          totalAttempts: attempts.length,
+          completedQuestions: roadmap?.completedQuestions ?? 0
+        },
+        streak,
+        activity,
+        interview: { completedSessions: 0 }
+      },
+      dashboard: {
+        totals: {
+          completedQuestions: roadmap?.completedQuestions ?? 0,
+          totalQuestions: roadmap?.totalQuestions ?? 0,
+          completionPercent: percent(
+            roadmap?.completedQuestions ?? 0,
+            roadmap?.totalQuestions ?? 0
+          ),
+          totalAttempts: attempts.length,
+          solvedThisWeek: solvedSince(activity, startOfUtcWeek(now))
+        },
+        streak: {
+          currentDays: streak.currentDays,
+          lastActiveAt: streak.lastActiveAt
+        },
+        activity,
+        nextUp
+      }
+    };
+  }
+
+  /** The roadmap counters and the window's attempts, read in parallel. */
+  private async readActivity(ownerId: string, now: Date) {
     const windowStart = startOfUtcDay(new Date(now.getTime() - (WINDOW_DAYS - 1) * DAY_MS));
     const [roadmap, attempts] = await Promise.all([
       this.prisma.userRoadmap.findUnique({
@@ -124,30 +168,11 @@ export class ProgressService {
         select: { status: true, createdAt: true }
       })
     ]);
-    const activity = buildActivity(attempts, windowStart, now);
-    const streak = buildStreak(attempts, now);
-    const nextUp = roadmap
-      ? await (cacheNextQuestion
-          ? cacheNextQuestion(roadmap, async () =>
-              buildDashboardNextUp(await this.findDashboardNextQuestion(roadmap))
-            )
-          : this.findDashboardNextQuestion(roadmap).then(buildDashboardNextUp))
-      : null;
-
     return {
-      totals: {
-        completedQuestions: roadmap?.completedQuestions ?? 0,
-        totalQuestions: roadmap?.totalQuestions ?? 0,
-        completionPercent: percent(roadmap?.completedQuestions ?? 0, roadmap?.totalQuestions ?? 0),
-        totalAttempts: attempts.length,
-        solvedThisWeek: solvedSince(activity, startOfUtcWeek(now))
-      },
-      streak: {
-        currentDays: streak.currentDays,
-        lastActiveAt: streak.lastActiveAt
-      },
-      activity: activity.slice(-7),
-      nextUp
+      roadmap,
+      attempts,
+      activity: buildActivity(attempts, windowStart, now),
+      streak: buildStreak(attempts, now)
     };
   }
 

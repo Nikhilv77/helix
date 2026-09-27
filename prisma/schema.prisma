@@ -589,6 +589,7 @@ model CandidateProfile {
   resumeRoasts                            ResumeRoast[]                          @relation("CandidateResumeRoasts")
   helpRequests                            HelpRequest[]                          @relation("HelpRequestsAsked")
   helpRequestDeclines                     HelpRequestDecline[]                   @relation("HelpRequestsDeclined")
+  helpPresence                            HelpPresence?                          @relation("CandidateHelpPresence")
   notifications                           Notification[]                         @relation("CandidateNotifications")
 
   @@index([updatedAt])
@@ -1794,6 +1795,21 @@ model HelpRequest {
   @@index([questionSlug, status])
   @@index([learnerId, createdAt])
   @@index([helperId, createdAt])
+  /// Newest change per participant, read by the 15-second help status check.
+  /// Partial indexes on live rows (OPEN/CLAIMED) are added in the migration.
+  @@index([learnerId, updatedAt])
+  @@index([helperId, updatedAt])
+}
+
+/// When a signed-in person last had a Trailgrad tab open, recorded by the
+/// help status check at most once a minute. Kept apart from CandidateProfile
+/// so this frequent write never touches that wide, trigger-watched row.
+model HelpPresence {
+  ownerId    String           @id
+  lastSeenAt DateTime
+  owner      CandidateProfile @relation("CandidateHelpPresence", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@index([lastSeenAt])
 }
 
 /// A helper passing on one request without changing it for anybody else.
@@ -2066,6 +2082,8 @@ model ResumeRoastTarget {
   owner              CandidateProfile @relation("CandidateResumeRoastTarget", fields: [ownerId], references: [ownerId], onDelete: Cascade)
 }
 
+/// Append-only roast history. The migration adds a partial unique index
+/// (ResumeRoast_one_generating_per_owner) allowing one GENERATING row per owner.
 model ResumeRoast {
   id                     String                           @id @default(uuid()) @db.Uuid
   ownerId                String

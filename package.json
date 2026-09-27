@@ -26,6 +26,7 @@
     "applied-engineering:publish": "pnpm db:verify:dev && tsx scripts/applied-engineering-publish.ts",
     "architecture-design:publish": "pnpm db:verify:dev && tsx scripts/architecture-design-publish.ts",
     "interview:quality": "pnpm db:verify:dev && tsx scripts/interview-quality-eval.ts",
+    "resume-roast:eval": "pnpm db:verify:dev && tsx scripts/resume-roast-eval.ts",
     "dsa-cases:verify": "tsx scripts/dsa-cases/generate.mjs",
     "compatibility:audit": "pnpm db:verify:dev && node --env-file-if-exists=.env --env-file=.env.local scripts/audit-compatibility-data.mjs",
     "seed:preflight": "pnpm db:verify:dev && node --env-file-if-exists=.env --env-file=.env.local scripts/preflight-seed.mjs",

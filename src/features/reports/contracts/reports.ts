@@ -47,6 +47,8 @@ export interface ReportsOverview {
   best: ReportRoundRow | null;
   /** Full data for the most recent interview with answer evidence. */
   latestCompletedReport?: InterviewReport | null;
+  /** When the next open round expires, which changes this overview. */
+  nextExpiryAt?: number | null;
 }
 
 export interface ReportFamilyParameter {

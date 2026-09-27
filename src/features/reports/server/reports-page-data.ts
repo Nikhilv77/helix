@@ -44,6 +44,9 @@ export async function buildReportsPageData(ownerId: string, now = Date.now()) {
 
   return {
     cacheable: true,
+    // An open round flips to "expired" without a database write, so rebuild
+    // then. The quota needs no expiry: the page counts it against "now".
+    expiresAt: reports.nextExpiryAt ? new Date(reports.nextExpiryAt) : null,
     data: {
       reports,
       candidate: {

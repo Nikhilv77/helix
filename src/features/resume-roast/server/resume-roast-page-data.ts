@@ -1,11 +1,14 @@
-import type { CandidateResume } from "@/lib/shared/types";
+import type { CandidateProfile, CandidateResume } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
-import type { ResumeRoastState } from "./resume-roast.service";
+import { RESUME_ROAST_GENERATION_STALE_MS, type ResumeRoastState } from "./resume-roast.service";
 
 export interface ResumeRoastPageData {
   onboardingCompletedAt: number | null;
   preparationCompletedAt: number | null;
   resume: CandidateResume | null;
+  /** What the in-page resume upload needs to re-read a new file. */
+  targetRole: CandidateProfile["targetRole"];
+  level: CandidateProfile["level"];
   state: ResumeRoastState;
 }
 
@@ -17,6 +20,16 @@ export async function loadResumeRoastPageData(ownerId: string): Promise<ResumeRo
   );
 }
 
+/** Rebuilds the prepared page after a roast settles, so the next visit is warm. */
+export async function refreshResumeRoastPageData(ownerId: string): Promise<void> {
+  await getAppContainer().workspacePageSnapshotStore.readOrBuild(
+    ownerId,
+    "resume-roast",
+    () => buildResumeRoastPageData(ownerId),
+    { requireFresh: true }
+  );
+}
+
 export async function buildResumeRoastPageData(ownerId: string) {
   const app = getAppContainer();
   const profilePromise = app.profileService.get(ownerId);
@@ -24,10 +37,17 @@ export async function buildResumeRoastPageData(ownerId: string) {
   const [profile, state] = await Promise.all([profilePromise, statePromise]);
   return {
     cacheable: true,
+    // A running roast is only reported until it could have finished; a
+    // killed function must not leave the page showing "Analysing" forever.
+    expiresAt: state.inProgress
+      ? new Date(state.inProgress.startedAt + RESUME_ROAST_GENERATION_STALE_MS)
+      : null,
     data: {
       onboardingCompletedAt: profile.onboardingCompletedAt,
       preparationCompletedAt: profile.preparationOnboarding.completedAt,
       resume: profile.resume,
+      targetRole: profile.targetRole,
+      level: profile.level,
       state
     } satisfies ResumeRoastPageData
   };

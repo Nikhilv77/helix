@@ -13,13 +13,30 @@ export interface BuiltWorkspacePage<T> {
 
 // interviews 2: history includes Architecture assessments.
 // reports 2: interview rounds plus Node.js assessment reports, each counted once.
-const SCHEMA_VERSION: Record<WorkspacePage, number> = {
+// resume-roast 4: in-progress generation, rubric scorecards, and the profile
+// target the in-page resume upload needs.
+// trailmate 3: overview carries the online-mates count and leaderboard size.
+export const WORKSPACE_PAGE_SCHEMA_VERSION: Record<WorkspacePage, number> = {
   interviews: 2,
-  "resume-roast": 2,
-  trailmate: 1,
+  "resume-roast": 4,
+  trailmate: 3,
   reports: 2
 };
+const SCHEMA_VERSION = WORKSPACE_PAGE_SCHEMA_VERSION;
+/**
+ * Pages that may show the previous payload while a rebuild runs. Resume Roast
+ * opts out: its sources change only when the user acts on that page (a new
+ * roast, a new resume), and a reload must show that change, not undo it.
+ */
+const SERVE_STALE_WHILE_REBUILDING: Record<WorkspacePage, boolean> = {
+  interviews: true,
+  "resume-roast": false,
+  trailmate: true,
+  reports: true
+};
 const logger = new Logger("WorkspacePageSnapshot");
+const FRESH_WAIT_TIMED_OUT: unique symbol = Symbol("fresh-wait-timed-out");
+const FRESH_WAIT_FAILED: unique symbol = Symbol("fresh-wait-failed");
 
 /** One owner-scoped read for warm workspace pages; source-table triggers mark rows dirty. */
 export class WorkspacePageSnapshotStore {
@@ -32,7 +49,7 @@ export class WorkspacePageSnapshotStore {
     ownerId: string,
     page: WorkspacePage,
     build: () => Promise<BuiltWorkspacePage<T>>,
-    options: { requireFresh?: boolean } = {}
+    options: ReadOptions = {}
   ): Promise<T> {
     const key = `${ownerId}:${page}:${options.requireFresh ? "fresh" : "read"}`;
     const existing = this.inFlight.get(key) as Promise<T> | undefined;
@@ -49,7 +66,7 @@ export class WorkspacePageSnapshotStore {
     ownerId: string,
     page: WorkspacePage,
     build: () => Promise<BuiltWorkspacePage<T>>,
-    options: { requireFresh?: boolean } = {}
+    options: ReadOptions = {}
   ): Promise<T> {
     // Prisma's generated client can change while `next dev` retains an older
     // process-wide client. Keep the page usable until that process restarts.
@@ -72,6 +89,7 @@ export class WorkspacePageSnapshotStore {
     const key = `${ownerId}:${page}`;
     if (
       !options.requireFresh &&
+      SERVE_STALE_WHILE_REBUILDING[page] &&
       snapshot?.payload !== null &&
       snapshot?.payload !== undefined &&
       snapshot.schemaVersion === SCHEMA_VERSION[page] &&
@@ -80,6 +98,15 @@ export class WorkspacePageSnapshotStore {
           snapshot.expiresAt !== undefined &&
           snapshot.expiresAt.getTime() <= Date.now()))
     ) {
+      if (options.waitForFreshMs) {
+        return this.freshWithin(
+          ownerId,
+          page,
+          build,
+          snapshot.payload as T,
+          options.waitForFreshMs
+        );
+      }
       if (!this.expiryRefreshInFlight.has(key)) {
         this.expiryRefreshInFlight.add(key);
         after(async () => {
@@ -173,6 +200,65 @@ export class WorkspacePageSnapshotStore {
 
     return (await build()).data;
   }
+
+  /**
+   * Races the rebuild against a budget: a rebuild that finishes in time is
+   * served, otherwise the previous payload is, and the rebuild carries on
+   * after the response.
+   */
+  private async freshWithin<T>(
+    ownerId: string,
+    page: WorkspacePage,
+    build: () => Promise<BuiltWorkspacePage<T>>,
+    previous: T,
+    budgetMs: number
+  ): Promise<T> {
+    const settled: Promise<T | typeof FRESH_WAIT_FAILED> = this.readOrBuild(
+      ownerId,
+      page,
+      build,
+      { requireFresh: true }
+    ).catch(
+      (error: unknown) => {
+        logger.error({
+          event: "workspace_page_background_refresh_failed",
+          ownerId,
+          page,
+          reason: error instanceof Error ? error.message : String(error)
+        });
+        return FRESH_WAIT_FAILED;
+      }
+    );
+    try {
+      after(() => settled);
+    } catch {
+      // Outside a request there is nothing to keep alive.
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<typeof FRESH_WAIT_TIMED_OUT>((resolve) => {
+      timer = setTimeout(() => resolve(FRESH_WAIT_TIMED_OUT), budgetMs);
+    });
+    const result: T | typeof FRESH_WAIT_FAILED | typeof FRESH_WAIT_TIMED_OUT = await Promise.race([
+      settled,
+      timedOut
+    ]);
+    clearTimeout(timer);
+    if (result === FRESH_WAIT_TIMED_OUT) {
+      logger.warn({ event: "workspace_page_fresh_wait_exceeded", page, budgetMs });
+      return previous;
+    }
+    return result === FRESH_WAIT_FAILED ? previous : result;
+  }
+}
+
+interface ReadOptions {
+  requireFresh?: boolean;
+  /**
+   * When the saved payload is out of date, wait up to this long for the
+   * rebuild before serving it anyway. For pages people open right after the
+   * action that changed them.
+   */
+  waitForFreshMs?: number;
 }
 
 function hasPrismaCode(error: unknown, code: string): boolean {

@@ -26,6 +26,7 @@ export function resumeRoastResultEvents(input: {
     ...result.problems.map((problem) => ({ type: "problem" as const, problem })),
     ...(result.rewrite ? [{ type: "rewrite" as const, rewrite: result.rewrite }] : []),
     { type: "verdict", verdict: result.verdict },
+    ...(result.scorecard ? [{ type: "scorecard" as const, scorecard: result.scorecard }] : []),
     { type: "action_plan", actionPlan: result.actionPlan },
     { type: "done" }
   ];

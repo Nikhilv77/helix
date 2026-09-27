@@ -59,7 +59,7 @@ describe("ProgressView", () => {
     const spoken = voiceMocks.speak.mock.calls[0]?.[0] as string;
     // A one-day streak is the "building" band; its exact numbers are written below.
     expect(TEACHER_LINES.progress.building).toContain(spoken);
-    expect(screen.getByText(/You completed 1 focused block/)).toBeInTheDocument();
+    expect(screen.getByText(/You solved 1 question in the last 7 days/)).toBeInTheDocument();
   });
 
   it("keeps opened attempts in the simple empty state until the first solve", () => {
@@ -86,6 +86,45 @@ describe("ProgressView", () => {
     expect(screen.getByText("Start here.")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Contains Duplicate" })).toBeTruthy();
     expect(screen.queryByText("Pace.")).toBeNull();
-    expect(screen.queryByText("Continuity.")).toBeNull();
+    expect(screen.queryByText("Consistency.")).toBeNull();
+  });
+
+  it("never greets a nameless learner as \"there\"", () => {
+    render(
+      <ProgressView
+        overview={{ ...overview, totals: { totalAttempts: 0, completedQuestions: 0 } }}
+        firstName=""
+        starterQuestions={[]}
+      />
+    );
+    expect(screen.getByText(/^You haven't solved a practice question yet/)).toBeTruthy();
+    expect(screen.queryByText(/^there,/i)).toBeNull();
+  });
+
+  it("counts solved questions in plain words", () => {
+    render(
+      <ProgressView
+        overview={{
+          ...overview,
+          totals: { totalAttempts: 9, completedQuestions: 6 },
+          streak: { ...overview.streak, currentDays: 4, longestDays: 4 },
+          activity: [
+            { date: "2026-08-30", solved: 2, attempts: 2 },
+            { date: "2026-08-31", solved: 1, attempts: 2 },
+            { date: "2026-09-01", solved: 2, attempts: 3 },
+            { date: "2026-09-02", solved: 1, attempts: 2 }
+          ]
+        }}
+        firstName="Arjun"
+        starterQuestions={[]}
+      />
+    );
+    expect(screen.getByText(/Here's your last 7 days, Arjun/)).toBeTruthy();
+    expect(
+      screen.getByText(/You solved 6 questions in the last 7 days, over 4 active days, about 1.5 a day/)
+    ).toBeTruthy();
+    expect(screen.getByText(/you're on a 4-day streak/)).toBeTruthy();
+    expect(screen.getByText(/Aim for 1 question next time/)).toBeTruthy();
+    expect(screen.queryByText(/focused block/)).toBeNull();
   });
 });

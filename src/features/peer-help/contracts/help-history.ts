@@ -72,6 +72,10 @@ export interface HelpOverview {
   availabilityCredits: number;
   activeConversation: ActivePeerHelp | null;
   topHelpers: TopPeerHelper[];
+  /** Everyone on the leaderboard (at most 100), for the "View all" list. */
+  topHelpersTotal: number;
+  /** Other mates with Trailgrad open in the last few minutes. */
+  onlineMates: number;
 }
 
 export type HelpDashboardOverview = Pick<

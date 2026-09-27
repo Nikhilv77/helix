@@ -25,6 +25,17 @@ export function hintsUsedFor(slug: string): number {
   return counts.get(slug) ?? 0;
 }
 
+export const DSA_NEXT_HINT_EVENT = "trailgrad:dsa-next-hint";
+
+/**
+ * Asks the problem panel (the other column) to open its hints and reveal the
+ * next one; used when a Trailmate request ends without a mate.
+ */
+export function requestNextHint(slug: string): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(DSA_NEXT_HINT_EVENT, { detail: { slug } }));
+}
+
 /**
  * Only for tests. The store is per browser session and bounded by the number of
  * questions visited, so it is never cleared in normal use.

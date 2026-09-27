@@ -221,7 +221,13 @@ function fakePrisma(profiles: Record<string, ProfilePreference> = {}) {
     }
   };
 
-  return { prisma: { notification, candidateProfile } as unknown as PrismaService, rows, profiles };
+  // Array-form transactions run their already-started operations in order.
+  const $transaction = async (operations: Promise<unknown>[]) => Promise.all(operations);
+  return {
+    prisma: { notification, candidateProfile, $transaction } as unknown as PrismaService,
+    rows,
+    profiles
+  };
 }
 
 const opened = {
@@ -546,6 +552,19 @@ describe("inbox", () => {
 });
 
 describe("preferences", () => {
+  it("withdraws pending help invitations when help is turned off", async () => {
+    const { prisma, rows } = fakePrisma({ "helper-1": true });
+    const service = new NotificationService(prisma);
+    await service.deliver(opened);
+    expect(rows.some((row) => row.kind === "HELP_REQUEST_OPENED")).toBe(true);
+
+    await service.setHelpNotifications("helper-1", false);
+
+    expect(rows.some((row) => row.ownerId === "helper-1" && row.kind === "HELP_REQUEST_OPENED")).toBe(
+      false
+    );
+  });
+
   it("round-trips the help opt-out", async () => {
     const { prisma } = fakePrisma({ "helper-1": true });
     const service = new NotificationService(prisma);

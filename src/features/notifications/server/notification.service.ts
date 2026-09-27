@@ -576,10 +576,24 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Turning help off also withdraws invitations already in the inbox: a helper
+   * who opted out can no longer claim them (eligibility requires the setting),
+   * so leaving them there would offer requests that fail on click.
+   */
   async setHelpNotifications(ownerId: string, enabled: boolean): Promise<void> {
-    await this.prisma.candidateProfile.updateMany({
-      where: { ownerId },
-      data: { helpNotificationsEnabled: enabled }
-    });
+    await this.prisma.$transaction([
+      this.prisma.candidateProfile.updateMany({
+        where: { ownerId },
+        data: { helpNotificationsEnabled: enabled }
+      }),
+      ...(enabled
+        ? []
+        : [
+            this.prisma.notification.deleteMany({
+              where: { ownerId, kind: NotificationKind.HELP_REQUEST_OPENED }
+            })
+          ])
+    ]);
   }
 }

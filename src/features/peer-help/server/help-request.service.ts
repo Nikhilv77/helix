@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "@/server/database/prisma.service";
+import { logHelpLifecycle } from "./help-lifecycle-log";
 import {
   MIN_HELPER_ELIGIBILITY_SCORE,
   type EligibilityRequest,
@@ -225,7 +226,13 @@ export class HelpRequestService {
       await this.throwClaimFailure(requestId, helperId);
     }
 
-    return this.byId(requestId);
+    const request = await this.byId(requestId);
+    logHelpLifecycle({
+      event: "claimed",
+      requestId,
+      waitMs: (request.claimedAt ?? now).getTime() - request.createdAt.getTime()
+    });
+    return request;
   }
 
   /**
@@ -361,7 +368,7 @@ export class HelpRequestService {
    * rather than stranding the learner with a helper who is never coming.
    */
   async release(requestId: string, helperId: string) {
-    return this.prisma.$transaction(async (transaction) => {
+    const request = await this.prisma.$transaction(async (transaction) => {
       const existing = await this.lockRequest(transaction, requestId);
 
       if (!existing) throw new HelpRequestError("NOT_FOUND");
@@ -394,11 +401,13 @@ export class HelpRequestService {
 
       return this.byIdWith(transaction, requestId);
     });
+    logHelpLifecycle({ event: "released", requestId });
+    return request;
   }
 
   /** Mark a claimed request as helped and close its room in one transaction. */
   async resolve(requestId: string, helperId: string) {
-    return this.prisma.$transaction(async (transaction) => {
+    const request = await this.prisma.$transaction(async (transaction) => {
       const existing = await this.lockRequest(transaction, requestId);
       if (!existing) throw new HelpRequestError("NOT_FOUND");
       if (existing.status !== HelpRequestStatus.CLAIMED || existing.helperId !== helperId) {
@@ -417,11 +426,20 @@ export class HelpRequestService {
 
       return this.byIdWith(transaction, requestId);
     });
+    logHelpLifecycle({
+      event: "resolved",
+      requestId,
+      sessionMs:
+        request.claimedAt && request.resolvedAt
+          ? request.resolvedAt.getTime() - request.claimedAt.getTime()
+          : null
+    });
+    return request;
   }
 
   /** The learner withdrawing, closing an attached room in the same commit. */
   async cancel(requestId: string, learnerId: string) {
-    return this.prisma.$transaction(async (transaction) => {
+    const request = await this.prisma.$transaction(async (transaction) => {
       const existing = await this.lockRequest(transaction, requestId);
       if (!existing) throw new HelpRequestError("NOT_FOUND");
       if (
@@ -443,6 +461,13 @@ export class HelpRequestService {
 
       return this.byIdWith(transaction, requestId);
     });
+    logHelpLifecycle({
+      event: "cancelled",
+      requestId,
+      waitMs: (request.closedAt ?? new Date()).getTime() - request.createdAt.getTime(),
+      wasClaimed: request.claimedAt !== null
+    });
+    return request;
   }
 
   /**
@@ -541,7 +566,7 @@ export class HelpRequestService {
    * the OPEN row guard; neither operation can overwrite the other's result.
    */
   async expireStaleAndReport(now = new Date()) {
-    return this.prisma.$queryRaw<Array<{ id: string; learnerId: string; questionSlug: string }>>`
+    const expired = await this.prisma.$queryRaw<Array<{ id: string; learnerId: string; questionSlug: string }>>`
       UPDATE "HelpRequest"
       SET "status" = 'EXPIRED'::"HelpRequestStatus",
           "closedAt" = ${now},
@@ -550,11 +575,13 @@ export class HelpRequestService {
         AND "expiresAt" <= ${now}
       RETURNING "id", "learnerId", "questionSlug"
     `;
+    for (const row of expired) logHelpLifecycle({ event: "expired", requestId: row.id });
+    return expired;
   }
 
   /** User-driven expiry keeps an active learner correct between daily sweeps. */
   async expireStaleForLearner(learnerId: string, now = new Date()) {
-    return this.prisma.$queryRaw<Array<{ id: string; learnerId: string; questionSlug: string }>>`
+    const expired = await this.prisma.$queryRaw<Array<{ id: string; learnerId: string; questionSlug: string }>>`
       UPDATE "HelpRequest"
       SET "status" = 'EXPIRED'::"HelpRequestStatus",
           "closedAt" = ${now},
@@ -564,6 +591,8 @@ export class HelpRequestService {
         AND "learnerId" = ${learnerId}
       RETURNING "id", "learnerId", "questionSlug"
     `;
+    for (const row of expired) logHelpLifecycle({ event: "expired", requestId: row.id });
+    return expired;
   }
 
   /** The learner's own live request for a question, if any. */

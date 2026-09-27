@@ -153,6 +153,7 @@ export function DsaQuestionWorkspace({
       }
       selection={selection}
       startedAt={startedAt.current}
+      hasHints={Boolean(question.hints?.length)}
     />
   );
 

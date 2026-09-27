@@ -3118,10 +3118,42 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "james",
+    "text": "What kind of company are we trying to impress?",
+    "voice": "aura-2-neptune-en",
+    "style": "aura-v1",
+    "src": "/voice/james-776956e98270.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "james",
+    "text": "Perfect. I’ll start analysing it now. Give me a second—I’m checking what the confidence forgot to prove.",
+    "voice": "aura-2-neptune-en",
+    "style": "aura-v1",
+    "src": "/voice/james-78fee0564da4.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "james",
     "text": "Good to meet you. I'm James. We'll work through the interview in a clear order, one question at a time, so you always know what to focus on.",
     "voice": "aura-2-neptune-en",
     "style": "aura-v1",
     "src": "/voice/james-895c2f27b243.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "james",
+    "text": "What level are you applying for?",
+    "voice": "aura-2-neptune-en",
+    "style": "aura-v1",
+    "src": "/voice/james-af2ce1be2db6.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "james",
+    "text": "Okay, I’ve got your resume. Three quick questions, then we’ll get into it. Which position are you targeting?",
+    "voice": "aura-2-neptune-en",
+    "style": "aura-v1",
+    "src": "/voice/james-d7a7793152c8.mp3"
   },
   {
     "provider": "deepgram",

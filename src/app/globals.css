@@ -2178,6 +2178,38 @@ html[data-theme="light"] .trailmate-page button[class*="bg-black"] [class*="text
   color: #ffffff !important;
 }
 
+/* Calm ground for the message over an empty section's faded outline. It is
+   drawn in the page canvas colour, so one rule serves both themes. */
+.trailmate-empty-veil {
+  background: radial-gradient(
+    closest-side,
+    var(--workspace-canvas, #000) 55%,
+    color-mix(in srgb, var(--workspace-canvas, #000) 72%, transparent) 78%,
+    transparent 100%
+  );
+}
+
+/* Empty-state next steps are links, so they opt into the same decisive dark
+   pill that Trailmate's buttons get in light mode. */
+html.light .trailmate-page .trailmate-empty-action,
+html[data-theme="light"] .trailmate-page .trailmate-empty-action {
+  border-color: #111827 !important;
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .trailmate-page .trailmate-empty-action [class*="text-cream"],
+html[data-theme="light"] .trailmate-page .trailmate-empty-action [class*="text-cream"] {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* The faded outlines behind empty sections need a little more ink on paper
+   than the generic bg-white override gives, or they vanish under the fade. */
+html.light .trailmate-page .trailmate-preview-shape,
+html[data-theme="light"] .trailmate-page .trailmate-preview-shape {
+  background: rgba(15, 23, 42, 0.08) !important;
+}
+
 html.light .trailmate-page textarea,
 html[data-theme="light"] .trailmate-page textarea {
   border-color: rgba(15, 23, 42, 0.12) !important;
@@ -2237,6 +2269,13 @@ html[data-theme="light"] .trailmate-badge-modal [class~="text-cream"] {
 html.light .trailmate-badge-modal [class*="border-white/"],
 html[data-theme="light"] .trailmate-badge-modal [class*="border-white/"] {
   border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* The podium gold is tuned for graphite; on paper it needs a deeper amber. */
+html.light .trailmate-badge-modal .trailmate-podium-rank,
+html[data-theme="light"] .trailmate-badge-modal .trailmate-podium-rank {
+  border-color: rgba(180, 120, 20, 0.45) !important;
+  color: #9a6b12 !important;
 }
 
 html.light .trailmate-badge-modal [class*="bg-black"],

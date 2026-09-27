@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
+const hints = vi.hoisted(() => ({ requestNextHint: vi.fn() }));
 vi.mock("@/features/practice/dsa/domain/hint-tracker", () => ({
-  hintsUsedFor: () => 0
+  hintsUsedFor: () => 0,
+  requestNextHint: hints.requestNextHint
 }));
 
 vi.mock("../help/helper-ready-toast", () => ({ HelperReadyToast: () => null }));
@@ -91,6 +93,99 @@ describe("AskSomeone", () => {
       await vi.advanceTimersByTimeAsync(14_000);
     });
     expect(screen.getByText("Invitations sent to 2 Trailmates — waiting")).toBeTruthy();
+  });
+
+  it("tells the learner how many invited mates are online", async () => {
+    let created = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (input === "/api/help/request" && init?.method === "POST") {
+          created = true;
+          return Promise.resolve(
+            jsonResponse({
+              success: true,
+              data: {
+                id: "00000000-0000-4000-8000-000000000001",
+                status: "OPEN",
+                invitationsSent: 5,
+                onlineInvited: 2,
+                cooldownMs: 10 * 60_000
+              }
+            })
+          );
+        }
+        return Promise.resolve(
+          jsonResponse({
+            success: true,
+            data: { id: created ? "00000000-0000-4000-8000-000000000001" : null, status: created ? "OPEN" : null }
+          })
+        );
+      })
+    );
+    vi.useFakeTimers();
+    render(
+      <AskSomeone
+        slug="contains-duplicate"
+        title="Contains Duplicate"
+        language="javascript"
+        code="return true;"
+        testOutput={null}
+        failingTests={null}
+        selection={null}
+        startedAt={Date.now()}
+      />
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Ask a mate" }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    expect(screen.getByText("Invitations sent to 5 Trailmates, 2 online now — waiting")).toBeTruthy();
+  });
+
+  it("explains an unanswered request and offers the next hint", async () => {
+    let expired = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          jsonResponse({
+            success: true,
+            data: expired
+              ? { id: null, status: null, ratingRequestId: null }
+              : { id: "00000000-0000-4000-8000-000000000001", status: "OPEN", helper: null }
+          })
+        )
+      )
+    );
+    render(
+      <AskSomeone
+        slug="contains-duplicate"
+        title="Contains Duplicate"
+        language="javascript"
+        code="return true;"
+        testOutput={null}
+        failingTests={null}
+        selection={null}
+        startedAt={Date.now()}
+        hasHints
+      />
+    );
+    await screen.findByText(/waiting/);
+
+    expired = true;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(await screen.findByText("No Trailmate was free this time")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show next hint" }));
+    expect(hints.requestNextHint).toHaveBeenCalledWith("contains-duplicate");
+    expect(screen.getByRole("button", { name: "Ask a mate" })).toBeTruthy();
   });
 
   it("shows a blurred toast when the server finds no helper", async () => {

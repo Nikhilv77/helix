@@ -277,9 +277,10 @@ class ReportWriter {
 }
 
 function drawReport(writer: ReportWriter, briefing: ReportPdfBriefing) {
-  const readiness = briefing.readinessScore == null ? "still forming" : `${briefing.readinessScore}`;
-  const strongest = safeLabel(briefing.strongestLabel, "ownership");
-  const focus = safeLabel(briefing.gapLabel, "clearer answer endings");
+  const readiness = briefing.readinessScore;
+  // Empty labels mean there is not enough data; sentences about them are skipped.
+  const strongest = briefing.strongestLabel.trim();
+  const focus = briefing.gapLabel.trim();
   const findings = buildFindings(briefing);
 
   writer.label("Trailgrad interview intelligence");
@@ -294,20 +295,30 @@ function drawReport(writer: ReportWriter, briefing: ReportPdfBriefing) {
   writer.rule();
 
   writer.heading("Detailed latest report");
-  writer.label("Latest round score");
+  writer.label("Readiness score");
   writer.bigScore(briefing.roundScore, briefing.scoreExplanation);
-  writer.label("Six evaluation parameters");
+  writer.label("Your top areas by score");
   writer.scoreRow(briefing.competencyBars);
   writer.rule();
 
   writer.heading("Executive assessment");
-  writer.paragraph(`${briefing.summaryText} The strongest signal in this round was ${strongest}: ${briefing.strongestText}`, { after: 8 });
-  writer.paragraph(`The clearest opportunity is ${focus}. ${briefing.gapText} ${briefing.pressureText}`, { after: 16 });
+  writer.paragraph(
+    [briefing.summaryText, strongest ? `${strongest}: ${briefing.strongestText}` : briefing.strongestText].join(" "),
+    { after: 8 }
+  );
+  writer.paragraph(
+    [focus ? `The biggest thing to work on is ${focus}.` : null, briefing.gapText, briefing.pressureText]
+      .filter(Boolean)
+      .join(" "),
+    { after: 16 }
+  );
   writer.rule();
 
-  writer.heading("Key findings");
-  findings.forEach((finding, index) => writer.finding(index + 1, finding.label, finding.title, finding.body, finding.accent));
-  writer.rule();
+  if (findings.length) {
+    writer.heading("Key findings");
+    findings.forEach((finding, index) => writer.finding(index + 1, finding.label, finding.title, finding.body, finding.accent));
+    writer.rule();
+  }
 
   writer.heading("Parameter evidence");
   briefing.competencyBars.forEach((parameter, index) =>
@@ -327,14 +338,24 @@ function drawReport(writer: ReportWriter, briefing: ReportPdfBriefing) {
   if (writer.remaining < 182) writer.startPage();
   writer.heading("Overall interpretation");
   writer.paragraph(
-    `Your current readiness signal is ${readiness}. The experience behind your answers is likely stronger than the way it is landing today. Keep ${strongest.toLowerCase()} as the foundation, then make ${focus.toLowerCase()} more explicit so your outcomes are easier to understand and remember.`,
+    [
+      readiness == null
+        ? "You don't have a readiness score yet; your first scored round sets it."
+        : `Your readiness score is ${readiness}/100.`,
+      strongest ? `Build on ${strongest.toLowerCase()}.` : null,
+      focus
+        ? `Then work on ${focus.toLowerCase()}, so your results are easy to hear and remember.`
+        : null
+    ]
+      .filter(Boolean)
+      .join(" "),
     { after: 18 }
   );
   writer.rule();
 
   writer.heading("Recommended practice focus");
   writer.paragraph(
-    `${briefing.nextAction} For the next 5–10 answers, make the outcome sentence non-negotiable: say what changed, why it mattered, and what you learned. ${briefing.latestText ? `Latest round: ${briefing.latestText}` : "Your first scored round will establish the baseline."}`,
+    `${briefing.nextAction} For your next 5–10 answers, always finish with the outcome: what changed, why it mattered, and what you learned. ${briefing.latestText ? `Latest round: ${briefing.latestText}` : "Your first scored round will establish the baseline."}`,
     { after: 8 }
   );
 
@@ -346,32 +367,45 @@ function drawReport(writer: ReportWriter, briefing: ReportPdfBriefing) {
 }
 
 function buildFindings(briefing: ReportPdfBriefing) {
-  const lowerScoring = briefing.competencyBars.slice().sort((left, right) => left.score - right.score)
-    .filter((item) => item.label.toLowerCase() !== briefing.gapLabel.toLowerCase());
+  const gapLabel = briefing.gapLabel.trim();
+  const strongestLabel = briefing.strongestLabel.trim();
+  const lowerScoring = briefing.competencyBars
+    .slice()
+    .sort((left, right) => left.score - right.score)
+    .filter(
+      (item) =>
+        item.label.toLowerCase() !== gapLabel.toLowerCase() &&
+        item.label.toLowerCase() !== strongestLabel.toLowerCase()
+    );
   const second = lowerScoring[0];
 
+  // Findings come only from recorded evidence; with none, the section is short.
   return [
-    {
-      label: briefing.gapLabel,
-      title: findingTitle(briefing.gapLabel),
-      body: briefing.gapText || "Make the key point and the result unmistakable before moving to background detail.",
-      accent: palette.muted
-    },
-    {
-      label: second?.label ?? "Clarity",
-      title: second ? findingTitle(second.label) : "State the point before the background.",
-      body: second
-        ? practiceCopy(second.label, second.score)
-        : "Lead with your conclusion, decision, or position. Then give the minimum context that proves it.",
-      accent: palette.muted
-    },
-    {
-      label: briefing.strongestLabel,
-      title: `Keep ${safeLabel(briefing.strongestLabel, "your strongest signal").toLowerCase()} visible.`,
-      body: briefing.strongestText || "Your role and decision-making were easy to identify. Keep anchoring answers in the choices you personally made.",
-      accent: palette.muted
-    }
-  ];
+    gapLabel
+      ? {
+          label: gapLabel,
+          title: findingTitle(gapLabel),
+          body: briefing.gapText,
+          accent: palette.muted
+        }
+      : null,
+    second
+      ? {
+          label: second.label,
+          title: findingTitle(second.label),
+          body: practiceCopy(second.label, second.score),
+          accent: palette.muted
+        }
+      : null,
+    strongestLabel
+      ? {
+          label: strongestLabel,
+          title: `Keep ${strongestLabel.toLowerCase()} front and centre.`,
+          body: briefing.strongestText,
+          accent: palette.muted
+        }
+      : null
+  ].filter((finding): finding is NonNullable<typeof finding> => finding !== null);
 }
 
 function findingTitle(label: string) {
@@ -380,12 +414,12 @@ function findingTitle(label: string) {
   if (normalized.includes("clarity")) return "State the point before the background.";
   if (normalized.includes("structure")) return "Use one consistent narrative path.";
   if (normalized.includes("ownership")) return "Make your personal contribution explicit.";
-  return `Strengthen your ${label.toLowerCase()} signal.`;
+  return `Work on your ${label.toLowerCase()}.`;
 }
 
 function practiceCopy(label: string, score: number) {
-  const level = score >= 75 ? "already shows up consistently" : score >= 50 ? "is starting to develop" : "needs a more deliberate practice loop";
-  return `Your ${label.toLowerCase()} signal ${level}. Use one concise example and end by naming the result, trade-off, or learning that mattered.`;
+  const level = score >= 75 ? "already shows up consistently" : score >= 50 ? "is coming along" : "needs focused practice";
+  return `Your ${label.toLowerCase()} ${level}. Use one short example and end by naming the result, trade-off, or lesson that mattered.`;
 }
 
 function signalLabel(score: number) {
@@ -401,10 +435,6 @@ function fallbackScores(): ReportPdfCompetency[] {
     { label: "Impact", score: 0, level: "missing" },
     { label: "Ownership", score: 0, level: "missing" }
   ];
-}
-
-function safeLabel(value: string, fallback: string) {
-  return value.trim() || fallback;
 }
 
 function displayName(value: string) {

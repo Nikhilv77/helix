@@ -256,16 +256,16 @@ export function getAppContainer(): AppContainer {
   const interviewEvaluationAi = resilientInterviewAi();
   const generationAi =
     interviewAi === geminiAi ? geminiAi : new FallbackAiService(geminiAi, interviewAi);
-  // Resume Roast responses are sizeable, but a wedged provider must not hold
-  // James on "Almost there" for a full minute. Give Gemini the quick first
-  // attempt, then spend the remaining latency budget on the configured Groq
-  // fallback. One failed failover must not trigger a hidden third request.
+  // A healthy Gemini answers a roast in about 4-5 s, so a request still open
+  // at 15 s is wedged: hand it to the configured Groq fallback while the user
+  // is still watching "Analysing". One failed failover must not trigger a
+  // hidden third request. Both passes (score and roast) share this cooldown.
   const resumeRoastAi =
     interviewAi === geminiAi
       ? geminiAi
       : new FallbackAiService(geminiAi, interviewAi, 60_000, Date.now, {
-          primaryTimeoutMs: 30_000,
-          fallbackTimeoutMs: 25_000,
+          primaryTimeoutMs: 15_000,
+          fallbackTimeoutMs: 20_000,
           recoverPrimaryAfterFallbackFailure: false
         });
 

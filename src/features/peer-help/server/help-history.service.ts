@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { HELPER_ONLINE_WINDOW_MS } from "./helper-matching";
 
 import type {
   ActivePeerHelp,
@@ -19,7 +20,9 @@ import { DEFAULT_TTL_MS, HelpRequestStatus } from "./help-request.types";
 export const HELP_HISTORY_DEFAULT_LIMIT = 10;
 export const HELP_HISTORY_MAX_LIMIT = 25;
 const TOP_HELPERS_CACHE_MS = 45_000;
-const TOP_HELPERS_CACHE_LIMIT = 10;
+/** The full leaderboard; the page shows the top five and opens the rest. */
+export const TOP_HELPERS_CACHE_LIMIT = 100;
+const TOP_HELPERS_ON_PAGE = 5;
 
 interface OverviewCountsRow {
   helpReceived: number;
@@ -39,9 +42,9 @@ interface TopHelperAggregateRow {
 interface HelpPollingStatusRow {
   invitationCount: number;
   latestInvitationAt: Date | null;
-  engagementCount: number;
-  latestEngagementAt: Date | null;
-  liveEngagementCount: number;
+  latestAskedAt: Date | null;
+  latestHelpedAt: Date | null;
+  hasLiveEngagement: boolean;
 }
 
 interface HistoryCursor {
@@ -73,8 +76,38 @@ export class HelpHistoryService {
     ownerId: string
   ): Promise<{ version: string; needsMaintenance: boolean }> {
     const invitationCutoff = new Date(Date.now() - DEFAULT_TTL_MS);
+    // Every open workspace tab runs this every 15 seconds, so each part is a
+    // bounded index read: invitations inside the live window, and each side's
+    // newest change rather than an aggregate over the whole help history. A
+    // request moving to or from this person moves one of those maxima, which
+    // is all the version needs to notice.
     const rows = await this.prisma.$queryRaw<HelpPollingStatusRow[]>(Prisma.sql`
-      WITH invitations AS (
+      SELECT
+        invitations."invitationCount",
+        invitations."latestInvitationAt",
+        (
+          SELECT request."updatedAt" FROM "HelpRequest" request
+          WHERE request."learnerId" = ${ownerId}
+          ORDER BY request."updatedAt" DESC LIMIT 1
+        ) AS "latestAskedAt",
+        (
+          SELECT request."updatedAt" FROM "HelpRequest" request
+          WHERE request."helperId" = ${ownerId}
+          ORDER BY request."updatedAt" DESC LIMIT 1
+        ) AS "latestHelpedAt",
+        (
+          EXISTS (
+            SELECT 1 FROM "HelpRequest" request
+            WHERE request."learnerId" = ${ownerId}
+              AND request."status" IN ('OPEN'::"HelpRequestStatus", 'CLAIMED'::"HelpRequestStatus")
+          )
+          OR EXISTS (
+            SELECT 1 FROM "HelpRequest" request
+            WHERE request."helperId" = ${ownerId}
+              AND request."status" IN ('OPEN'::"HelpRequestStatus", 'CLAIMED'::"HelpRequestStatus")
+          )
+        ) AS "hasLiveEngagement"
+      FROM (
         SELECT
           COUNT(*)::int AS "invitationCount",
           MAX(notification."createdAt") AS "latestInvitationAt"
@@ -82,55 +115,73 @@ export class HelpHistoryService {
         WHERE notification."ownerId" = ${ownerId}
           AND notification."kind" = 'HELP_REQUEST_OPENED'::"NotificationKind"
           AND notification."createdAt" > ${invitationCutoff}
-      ),
-      engagements AS (
-        SELECT
-          COUNT(*)::int AS "engagementCount",
-          MAX(request."updatedAt") AS "latestEngagementAt",
-          COUNT(*) FILTER (WHERE request."status" IN (
-            'OPEN'::"HelpRequestStatus", 'CLAIMED'::"HelpRequestStatus"
-          ))::int AS "liveEngagementCount"
-        FROM "HelpRequest" request
-        WHERE request."learnerId" = ${ownerId}
-           OR request."helperId" = ${ownerId}
-      )
-      SELECT invitations.*, engagements.*
-      FROM invitations
-      CROSS JOIN engagements
+      ) AS invitations
     `);
     const row = rows[0] ?? {
       invitationCount: 0,
       latestInvitationAt: null,
-      engagementCount: 0,
-      latestEngagementAt: null,
-      liveEngagementCount: 0
+      latestAskedAt: null,
+      latestHelpedAt: null,
+      hasLiveEngagement: false
     };
 
     return {
       version: [
         row.invitationCount,
         row.latestInvitationAt?.getTime() ?? 0,
-        row.engagementCount,
-        row.latestEngagementAt?.getTime() ?? 0
+        row.latestAskedAt?.getTime() ?? 0,
+        row.latestHelpedAt?.getTime() ?? 0
       ].join(":"),
-      needsMaintenance: row.liveEngagementCount > 0
+      needsMaintenance: row.hasLiveEngagement
     };
   }
 
+  /**
+   * Marks this person as having Trailgrad open. The status check calls it at
+   * most once a minute per person; the WHERE clause makes extra calls from
+   * other instances no-ops, so it is one small upsert per active minute.
+   */
+  async touchPresence(ownerId: string, now = new Date()): Promise<void> {
+    await this.prisma.$executeRaw(Prisma.sql`
+      INSERT INTO "HelpPresence" ("ownerId", "lastSeenAt")
+      SELECT ${ownerId}, ${now}
+      WHERE EXISTS (SELECT 1 FROM "CandidateProfile" WHERE "ownerId" = ${ownerId})
+      ON CONFLICT ("ownerId") DO UPDATE SET "lastSeenAt" = EXCLUDED."lastSeenAt"
+      WHERE "HelpPresence"."lastSeenAt" < EXCLUDED."lastSeenAt" - INTERVAL '50 seconds'
+    `);
+  }
+
   async overview(ownerId: string): Promise<HelpOverview> {
-    const [counts, activeConversation, topHelpers, viewer] = await Promise.all([
+    const [counts, activeConversation, board, viewer, onlineMates] = await Promise.all([
       this.overviewCounts(ownerId),
       this.activeConversation(ownerId),
-      this.topHelpers(),
-      this.participant(ownerId)
+      // One cached read serves both the page's top five and the total.
+      this.topHelpers(TOP_HELPERS_CACHE_LIMIT),
+      this.participant(ownerId),
+      this.onlineMates(ownerId)
     ]);
 
     return {
       viewer,
       ...counts,
       activeConversation,
-      topHelpers
+      topHelpers: board.slice(0, TOP_HELPERS_ON_PAGE),
+      topHelpersTotal: board.length,
+      onlineMates
     };
+  }
+
+  /** Mates who accept help requests and had Trailgrad open just now. */
+  async onlineMates(ownerId: string, now = new Date()): Promise<number> {
+    const rows = await this.prisma.$queryRaw<Array<{ count: number }>>(Prisma.sql`
+      SELECT COUNT(*)::int AS count
+      FROM "HelpPresence" presence
+      JOIN "CandidateProfile" profile ON profile."ownerId" = presence."ownerId"
+      WHERE presence."lastSeenAt" > ${new Date(now.getTime() - HELPER_ONLINE_WINDOW_MS)}
+        AND presence."ownerId" <> ${ownerId}
+        AND profile."helpNotificationsEnabled" = true
+    `);
+    return rows[0]?.count ?? 0;
   }
 
   /** Lightweight read for the home dashboard; skips rankings and recognition queries. */

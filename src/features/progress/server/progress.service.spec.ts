@@ -27,7 +27,7 @@ describe("ProgressService briefing", () => {
 
     expect(findUnique).toHaveBeenCalledWith({
       where: { ownerId_role: { ownerId: "owner-1", role: "fullstack" } },
-      select: { completedQuestions: true }
+      select: expect.objectContaining({ completedQuestions: true })
     });
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -40,6 +40,41 @@ describe("ProgressService briefing", () => {
     expect(result.activity).toHaveLength(7);
     expect(result.activity.at(-1)).toEqual({ date: "2026-09-02", solved: 1, attempts: 1 });
     expect(Object.keys(result).sort()).toEqual(["activity", "interview", "streak", "totals"]);
+  });
+});
+
+describe("ProgressService summary", () => {
+  it("serves the dashboard and briefing from one read, over the whole window", async () => {
+    const now = new Date("2026-09-02T12:00:00.000Z");
+    const findUnique = vi.fn().mockResolvedValue({
+      id: "roadmap-1",
+      nextQuestionKey: null,
+      updatedAt: now,
+      recalculatedAt: null,
+      totalQuestions: 10,
+      completedQuestions: 10
+    });
+    const findMany = vi.fn().mockResolvedValue([
+      {
+        status: RoadmapQuestionAttemptStatus.COMPLETED,
+        createdAt: new Date("2026-08-20T08:00:00.000Z")
+      }
+    ]);
+    const prisma = {
+      userRoadmap: { findUnique },
+      userQuestionAttempt: { findMany },
+      userQuestionProgress: { findFirst: vi.fn() }
+    } as unknown as PrismaService;
+
+    const { briefing, dashboard } = await new ProgressService(prisma).summary("owner-1", now);
+
+    expect(findUnique).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledTimes(1);
+    // Other tracks merge into these days before the pages keep the last 7.
+    expect(briefing.activity).toHaveLength(126);
+    expect(dashboard.activity).toBe(briefing.activity);
+    expect(briefing.activity.find((day) => day.date === "2026-08-20")?.solved).toBe(1);
+    expect(dashboard.totals).toMatchObject({ completedQuestions: 10, completionPercent: 100 });
   });
 });
 

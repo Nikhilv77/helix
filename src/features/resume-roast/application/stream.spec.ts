@@ -68,6 +68,32 @@ describe("Resume Roast SSE contract", () => {
     ]);
   });
 
+  it("streams the rubric scorecard right after the verdict", () => {
+    const dimension = { score: 3, note: "Fine.", evidenceAnchors: [] };
+    const events = resumeRoastResultEvents({
+      roastId: "88888888-8888-4888-8888-888888888888",
+      replayed: false,
+      target,
+      result: {
+        ...result,
+        verdict: { band: "solid", explanation: "You'd probably get shortlisted." },
+        scorecard: {
+          rubricVersion: "rubric-v1",
+          overall: 6,
+          dimensions: {
+            roleFit: dimension,
+            impact: dimension,
+            ownership: dimension,
+            technical: dimension,
+            readability: dimension
+          }
+        }
+      }
+    });
+    const types = events.map((event) => event.type);
+    expect(types.indexOf("scorecard")).toBe(types.indexOf("verdict") + 1);
+  });
+
   it("round-trips frames split across arbitrary stream chunks", () => {
     const encoded = resumeRoastResultEvents({
       roastId: "11111111-1111-4111-8111-111111111111",

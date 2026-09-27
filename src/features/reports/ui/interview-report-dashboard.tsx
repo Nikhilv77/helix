@@ -301,12 +301,15 @@ function CodeExerciseSummary({ exercise }: { exercise: InterviewReport["codeExer
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-cream/42">
             Code score
           </p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums text-cream">
-            {score === null || score === undefined ? "Not scored" : score}
-            {score !== null && score !== undefined ? (
+          {score === null || score === undefined ? (
+            // A status, not a number, so it reads at label weight.
+            <p className="mt-2 text-lg font-semibold text-cream/72">Not scored</p>
+          ) : (
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-cream">
+              {score}
               <span className="ml-1 text-sm text-cream/42">/100</span>
-            ) : null}
-          </p>
+            </p>
+          )}
         </div>
       </div>
     </section>

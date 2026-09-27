@@ -42,6 +42,22 @@ export interface ResumeRoastGeneration {
   generationToken: string;
 }
 
+/** A generation another request (tab, refresh, retry) already has running. */
+export interface ActiveResumeRoastGeneration {
+  roastId: string;
+  target: ResumeRoastTarget;
+  startedAt: Date;
+}
+
+export type CreateResumeRoastGenerationResult =
+  | ({ kind: "created" } & ResumeRoastGeneration)
+  | { kind: "conflict" };
+
+export type ResumeRoastGenerationStatus =
+  | { status: "generating"; target: ResumeRoastTarget; startedAt: Date }
+  | { status: "ready"; roast: StoredResumeRoast }
+  | { status: "failed" };
+
 type RoastRecord = {
   id: string;
   ownerId: string;
@@ -125,17 +141,101 @@ export class ResumeRoastStore {
     });
   }
 
-  async createGeneration(input: CreateResumeRoastInput): Promise<ResumeRoastGeneration> {
+  /**
+   * A partial unique index allows one GENERATING row per owner, so a second
+   * tab or a double submit gets `conflict` and joins the running roast.
+   */
+  async createGeneration(input: CreateResumeRoastInput): Promise<CreateResumeRoastGenerationResult> {
     const parsed = parseCreateInput(input);
     const generationToken = randomUUID();
-    const created = await this.prisma.resumeRoast.create({
-      data: {
-        ...parsed,
-        status: ResumeRoastStatus.GENERATING,
-        generationToken
-      }
+    try {
+      const created = await this.prisma.resumeRoast.create({
+        data: {
+          ...parsed,
+          status: ResumeRoastStatus.GENERATING,
+          generationToken
+        },
+        select: { id: true }
+      });
+      return { kind: "created", roastId: created.id, generationToken };
+    } catch (error) {
+      if (hasPrismaCode(error, "P2002")) return { kind: "conflict" };
+      throw error;
+    }
+  }
+
+  async getActiveGeneration(
+    ownerId: string,
+    startedAfter: Date
+  ): Promise<ActiveResumeRoastGeneration | null> {
+    const record = await this.prisma.resumeRoast.findFirst({
+      where: { ownerId, status: ResumeRoastStatus.GENERATING, createdAt: { gt: startedAfter } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, role: true, companyEnvironment: true, level: true, createdAt: true }
     });
-    return { roastId: created.id, generationToken };
+    return record
+      ? { roastId: record.id, target: parseTarget(record), startedAt: record.createdAt }
+      : null;
+  }
+
+  /**
+   * A function killed mid-generation (deploy, crash, hard timeout) leaves its
+   * row GENERATING. Anything older than the generation budget can't finish.
+   */
+  async failStaleGenerations(ownerId: string, startedBefore: Date): Promise<number> {
+    const updated = await this.prisma.resumeRoast.updateMany({
+      where: { ownerId, status: ResumeRoastStatus.GENERATING, createdAt: { lte: startedBefore } },
+      data: { status: ResumeRoastStatus.FAILED, generationToken: null, result: Prisma.DbNull }
+    });
+    return updated.count;
+  }
+
+  async getGenerationStatus(
+    ownerId: string,
+    roastId: string,
+    startedAfter: Date
+  ): Promise<ResumeRoastGenerationStatus | null> {
+    const record = await this.prisma.resumeRoast.findFirst({ where: { id: roastId, ownerId } });
+    if (!record) return null;
+    if (record.status === ResumeRoastStatus.GENERATING) {
+      return record.createdAt > startedAfter
+        ? { status: "generating", target: parseTarget(record), startedAt: record.createdAt }
+        : { status: "failed" };
+    }
+    const ready = readyFromRecord(record);
+    return ready ? { status: "ready", roast: ready } : { status: "failed" };
+  }
+
+  /**
+   * The newest saved scorecard for this exact resume version, target and
+   * rubric. Reusing it keeps a re-roast's score identical to the first one.
+   */
+  async getReusableAssessment(
+    ownerId: string,
+    resumeProfileVersionId: string,
+    target: ResumeRoastTarget,
+    rubricVersion: string
+  ): Promise<Pick<ResumeRoastResult, "scorecard" | "verdict"> | null> {
+    const records = await this.prisma.resumeRoast.findMany({
+      where: {
+        ownerId,
+        resumeProfileVersionId,
+        status: ResumeRoastStatus.READY,
+        role: target.role,
+        companyEnvironment: target.companyEnvironment,
+        level: target.level
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { result: true }
+    });
+    for (const record of records) {
+      const result = parseStoredResult(record.result);
+      if (result?.scorecard?.rubricVersion === rubricVersion) {
+        return { scorecard: result.scorecard, verdict: result.verdict };
+      }
+    }
+    return null;
   }
 
   async complete(
@@ -166,7 +266,9 @@ export class ResumeRoastStore {
           ownerId,
           kind: NotificationKind.RESUME_ROAST_COMPLETED,
           title: "James has analysed your resume",
-          body: `Your target-fit score is ${parsed.verdict.targetFitScore}/100. Open the analysis to see James’s feedback.`,
+          body: parsed.scorecard
+            ? `James scored it ${parsed.scorecard.overall}/10 for your target. Open it to see what to fix first.`
+            : `Your target-fit score is ${parsed.verdict.targetFitScore ?? 0}/100. Open the analysis to see James’s feedback.`,
           href: "/resume-roast",
           subjectId: roastId
         },
@@ -249,6 +351,10 @@ function parseStoredResult(result: Prisma.JsonValue | null): ResumeRoastResult |
   if (result === null) return null;
   const parsed = ResumeRoastResultSchema.safeParse(result);
   return parsed.success ? parsed.data : null;
+}
+
+function hasPrismaCode(error: unknown, code: string): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === code;
 }
 
 function toJson(value: ResumeRoastResult): Prisma.InputJsonValue {

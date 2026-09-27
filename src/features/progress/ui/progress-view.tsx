@@ -209,22 +209,25 @@ function buildProgressBriefing(
   const longestStreak = overview.streak.longestDays;
   const target = sustainableSessionTarget(recentSolved, activeDays);
   const hasPracticeProgress = overview.totals.completedQuestions > 0;
-  const name = firstName.trim() || "there";
+  const name = firstName.trim();
+  // "Arjun, you…" with a name; "You…" without one, never "there, you…".
+  const addressed = (sentence: string) =>
+    name ? `${name}, ${sentence}` : sentence.charAt(0).toUpperCase() + sentence.slice(1);
 
   if (!hasPracticeProgress) {
     const hasInterviewEvidence = overview.interview.completedSessions > 0;
     return {
       hasPracticeProgress,
-      greeting:
-        name +
-        (hasInterviewEvidence
-          ? ", you haven't solved a practice question yet. Your interview gives us a starting signal, and one completed question will begin your progress history."
-          : ", you haven't solved a practice question yet. Complete one question below to start tracking your progress."),
+      greeting: addressed(
+        hasInterviewEvidence
+          ? "you haven't solved a practice question yet. Your interview gave me a first read on you, and your first solved question starts your progress here."
+          : "you haven't solved a practice question yet. Solve one of these and I'll start tracking how you're doing."
+      ),
       insights: [
         {
           icon: Target,
           label: "Start here",
-          text: "Choose any suggested question. Your pace and consistency will appear after your first solve."
+          text: "Pick any question below. After your first solve, you'll see your pace and how often you're coming back."
         }
       ],
       voiceLine: pickLine(
@@ -243,10 +246,9 @@ function buildProgressBriefing(
 
   return {
     hasPracticeProgress,
-    greeting:
-      "Good, " +
-      name +
-      ". I looked at how often you returned, the pace you actually sustained, and whether that pace is repeatable. Here is the progress signal that matters right now.",
+    greeting: name
+      ? `Here's your last 7 days, ${name}: how much you got done, how often you showed up, and what to do next.`
+      : "Here's your last 7 days: how much you got done, how often you showed up, and what to do next.",
     insights: [
       {
         icon: TrendingUp,
@@ -255,7 +257,7 @@ function buildProgressBriefing(
       },
       {
         icon: Flame,
-        label: "Continuity",
+        label: "Consistency",
         text: continuity
       },
       {
@@ -281,97 +283,53 @@ function spokenProgressLine(recentSolved: number, currentStreak: number): string
 function paceCopy(recentSolved: number, activeDays: number): string {
   if (recentSolved === 0) {
     if (activeDays > 0) {
-      return (
-        "You were active on " +
-        activeDays +
-        " of the last 7 days, but no focused block was completed. The effort is visible, but there is not a completion pace to protect yet."
-      );
+      return `You practised on ${activeDays} of the last 7 days but didn't finish a question. Finishing one is what starts to count.`;
     }
-    return "There were no completed blocks in the last 7 days, so your earlier work is not yet showing up as a repeatable pace.";
+    return "You haven't solved anything in the last 7 days. Your earlier work still counts; it just isn't a pace yet.";
+  }
+
+  if (recentSolved === 1) {
+    return `You solved 1 question in the last 7 days, across ${activeDays} active ${pluralize("day", activeDays)}. A good start. Do it again before you try for more.`;
   }
 
   const perActiveDay = recentSolved / Math.max(activeDays, 1);
-  if (recentSolved === 1) {
-    return (
-      "You completed 1 focused block while showing activity on " +
-      activeDays +
-      " of the last 7 days. That is a useful starting point, but it is not yet a stable completion pace—repeat it before increasing the volume."
-    );
-  }
-
   return (
-    "You completed " +
-    recentSolved +
-    " focused blocks across " +
-    activeDays +
-    " active " +
-    pluralize("day", activeDays) +
-    " in the last 7 days, averaging " +
-    formatPace(perActiveDay) +
-    " per active day. " +
+    `You solved ${recentSolved} questions in the last 7 days, over ${activeDays} active ${pluralize("day", activeDays)}, about ${formatPace(perActiveDay)} a day. ` +
     (activeDays >= 4
-      ? "That is consistent enough to use as your current baseline; protect the schedule before adding volume."
-      : "Treat this as an early baseline and repeat it for another week before trying to move faster.")
+      ? "That's a real routine. Keep it before adding more."
+      : "Good. Repeat it next week before you push harder.")
   );
 }
 
 function continuityCopy(activeDays: number, currentStreak: number, longestStreak: number): string {
   if (currentStreak > 0) {
     return (
-      "You practiced on " +
-      activeDays +
-      " of the last 7 days and are on a " +
-      currentStreak +
-      "-day streak. " +
+      `You showed up on ${activeDays} of the last 7 days and you're on a ${currentStreak}-day streak. ` +
       (currentStreak >= 3
-        ? "The return pattern is becoming credible; keep the next session close to the same size."
-        : "The next useful signal is another active day, not a longer session.")
+        ? "It's turning into a habit. Keep the next session about the same size."
+        : "What matters now is coming back tomorrow, not doing a longer session.")
     );
   }
   if (longestStreak > 0) {
-    return (
-      "You practiced on " +
-      activeDays +
-      " of the last 7 days, but there is no active streak. Your best run so far is " +
-      longestStreak +
-      " " +
-      pluralize("day", longestStreak) +
-      "; restart with a similar-sized block instead of trying to catch up."
-    );
+    return `You showed up on ${activeDays} of the last 7 days, but your streak has ended. Your best so far is ${longestStreak} ${pluralize("day", longestStreak)}. Start again with a normal-sized session; don't try to catch up.`;
   }
   if (activeDays > 0) {
-    return (
-      "You practiced on " +
-      activeDays +
-      " of the last 7 days. One more return will tell me more about your consistency than one ambitious session."
-    );
+    return `You showed up on ${activeDays} of the last 7 days. Coming back again soon tells me more than one big session would.`;
   }
-  return "There is no recent continuity to measure yet. The next completed session is a restart, not a catch-up task.";
+  return "Nothing in the last 7 days yet. Your next session is a fresh start, not something to catch up on.";
 }
 
 function nextMoveCopy(activeDays: number, currentStreak: number, target: number): string {
   if (activeDays <= 1) {
-    return "Complete one focused block on your next planned day, then stop. Repeat that rhythm until you have 3 active days before increasing the target.";
+    return "Solve one question on your next practice day, then stop. Once you've had 3 active days, add more.";
   }
   if (currentStreak >= 3) {
-    return (
-      "Keep the next session at " +
-      target +
-      " focused " +
-      pluralize("completion", target) +
-      ". Your priority is protecting the return pattern, not doing extra work."
-    );
+    return `Aim for ${target} ${pluralize("question", target)} next time. Keeping the streak going matters more than doing extra.`;
   }
   if (currentStreak > 0) {
-    return "Return for one focused block while the streak is active. Keep it short enough that another session tomorrow still feels realistic.";
+    return "Do one question while your streak is alive. Keep it short enough that tomorrow still feels easy.";
   }
-  return (
-    "Restart with " +
-    target +
-    " focused " +
-    pluralize("completion", target) +
-    ", then schedule the next return before adding more volume."
-  );
+  return `Start again with ${target} ${pluralize("question", target)}, and decide now when your next session will be.`;
 }
 
 function sustainableSessionTarget(recentSolved: number, activeDays: number): number {

@@ -32,7 +32,7 @@ type ReportBriefingCopy = ReportPdfBriefing & {
   preparedVoiceLine: string;
 };
 
-function buildBriefingCopy(
+export function buildBriefingCopy(
   overview: ReportsOverview,
   candidate: ReportCandidate,
   teacherName: string
@@ -40,41 +40,50 @@ function buildBriefingCopy(
   const score = overview.readinessScore ?? overview.latestScore;
   const verdict =
     score == null
-      ? "Your interview signal is forming."
+      ? "Not enough to score yet."
       : score >= 78
-        ? "Your interview signal is getting strong."
+        ? "You're close to interview-ready."
         : score >= 55
-          ? "Your interview signal is developing."
-          : "Your interview signal is still early.";
+          ? "You're getting there."
+          : "It's early days.";
 
   const delta = overview.scoreDelta;
   const trend =
     delta == null
-      ? `The pattern is still forming because ${teacherName} needs a little more round history.`
+      ? `${teacherName} needs a couple more scored rounds to see which way you're heading.`
       : delta > 4
-        ? `You are improving: your signal is up ${delta} points from your first scored round.`
+        ? `You're improving: up ${delta} points since your first scored round.`
         : delta < -4
-          ? `You are slipping a bit: your signal is down ${Math.abs(delta)} points from your first scored round.`
-          : "Your signal is steady right now, which means the next few rounds matter.";
+          ? `You've slipped ${Math.abs(delta)} points since your first scored round.`
+          : "You're holding steady, so your next few rounds will decide the direction.";
 
-  const strongest = overview.best?.strongest ?? overview.competencies[0]?.label ?? "Ownership";
-  const strongestText =
-    overview.competencies[0]?.nextStep ??
-    overview.best?.nextStep ??
-    "You sound strongest when you make your role, decision, and impact easy to see.";
+  // Competencies arrive most-asked and weakest first (the order gaps need),
+  // so the strength is picked explicitly: the best average among answered.
+  const strongestArea = overview.competencies
+    .filter((item) => item.answered > 0)
+    .sort((left, right) => right.averageScore - left.averageScore)[0];
+  // Label and sentence must describe the same skill, so both come from data.
+  const strongest = strongestArea?.label ?? overview.best?.strongest ?? null;
+  const strongestText = strongestArea
+    ? `Your best area so far, averaging ${Math.round(strongestArea.averageScore)}/100 across ${strongestArea.rounds} ${strongestArea.rounds === 1 ? "round" : "rounds"}.`
+    : strongest
+      ? "It stood out in your best round so far."
+      : "Answer a few more questions and your strongest area will show up here.";
   const gap = overview.recurringGaps[0];
-  const gapLabel = gap?.label ?? overview.latest?.recommendedFocus ?? "Answer endings";
+  const gapLabel = gap?.label ?? overview.latest?.recommendedFocus ?? null;
   const gapText =
     gap?.nextStep ??
     overview.latest?.nextStep ??
-    "Close more answers with the result, metric, tradeoff, or learning so the story lands.";
+    "Nothing weak has come up more than once. Keep ending answers with a concrete result.";
   const perRound = overview.pressure.perRound;
   const pressureText =
-    perRound >= 3
-      ? `${teacherName} had to probe a lot: about ${perRound.toFixed(1)} follow-ups per scored round.`
-      : perRound >= 1
-        ? `${teacherName} had to probe a little: about ${perRound.toFixed(1)} follow-ups per scored round.`
-        : `${teacherName} did not need many follow-ups yet, so the next report will be clearer after more rounds.`;
+    overview.scoredRounds === 0
+      ? "No follow-up questions to count yet."
+      : perRound >= 3
+        ? `${teacherName} asked a lot of follow-ups: about ${perRound.toFixed(1)} per scored round. Aim to answer fully the first time.`
+        : perRound >= 1
+          ? `${teacherName} asked a few follow-ups: about ${perRound.toFixed(1)} per scored round.`
+          : `${teacherName} rarely needed a follow-up, so your answers mostly stood on their own.`;
   const latestText = overview.latest
     ? `${roundShortLabel(overview.latest.roundType)} round, ${overview.latest.evidenceScore ?? score ?? 0}/100, ${formatDuration(overview.latest.durationMs)}, ${formatShortDate(overview.latest.startedAt)}.`
     : null;
@@ -85,8 +94,14 @@ function buildBriefingCopy(
   const nextAction =
     gap?.nextStep ??
     overview.latest?.nextStep ??
-    "Run one focused round and make every answer end with a concrete outcome.";
-  const summaryText = `${teacherName} would put it simply: ${trend} Your strongest signal is ${strongest}. The repeat gap is ${gapLabel}.`;
+    "Run one more round and end every answer with a concrete result.";
+  const summaryText = [
+    `${teacherName}'s short version: ${trend}`,
+    strongest ? `Your strongest area is ${strongest}.` : null,
+    gapLabel ? `The thing that keeps coming up is ${gapLabel}.` : null
+  ]
+    .filter(Boolean)
+    .join(" ");
   const competencyBars = overview.competencies
     .filter((item) => item.answered > 0)
     .slice()
@@ -107,14 +122,15 @@ function buildBriefingCopy(
     roundScore: score,
     scoreExplanation:
       score === null
-        ? "Complete an interview to establish this score."
-        : "This readiness score is the average of your recent scored interview rounds.",
+        ? "Finish an interview to get this score."
+        : "The average of your five most recent scored rounds.",
     verdict,
     trend,
     summaryText,
-    strongestLabel: strongest,
+    // Empty when there is no data yet; readers skip the label, never invent one.
+    strongestLabel: strongest ?? "",
     strongestText,
-    gapLabel,
+    gapLabel: gapLabel ?? "",
     gapText,
     pressureText,
     nextAction,
@@ -387,14 +403,18 @@ export function ReportBriefingStage({
               <div className="relative space-y-5 pl-8 before:absolute before:left-[0.44rem] before:top-3 before:h-[calc(100%-1.5rem)] before:w-px before:bg-cream/18">
                 <ReportFinding
                   icon={Signal}
-                  label="Strongest signal"
-                  text={`${briefing.strongestLabel}: ${briefing.strongestText}`}
+                  label="Strongest area"
+                  text={
+                    briefing.strongestLabel
+                      ? `${briefing.strongestLabel}: ${briefing.strongestText}`
+                      : briefing.strongestText
+                  }
                   delay={1700}
                 />
                 <ReportFinding
                   icon={TriangleAlert}
-                  label="Repeat gap"
-                  text={`${briefing.gapLabel}: ${briefing.gapText}`}
+                  label="Keeps coming up"
+                  text={briefing.gapLabel ? `${briefing.gapLabel}: ${briefing.gapText}` : briefing.gapText}
                   delay={1950}
                 />
                 <ReportFinding
@@ -441,7 +461,7 @@ export function ReportBriefingStage({
             </p>
             <p className="mx-auto mt-6 max-w-3xl text-base leading-7 text-cream/64 sm:text-lg sm:leading-8 lg:mx-0">
               <WordReveal
-                text="Read it slowly, keep the strong signal, and use the weakness section as your next practice target. This is meant to help you understand what is working, what needs attention, and where your next round should get sharper."
+                text="Start with what's working, then take the weak spots into your next practice session. Everything in it comes from your own answers."
                 active
                 delay={820}
                 stagger={62}
@@ -539,7 +559,7 @@ export function ReportEmptyStage({
             </p>
             <p className="relative mt-3 text-sm leading-6 text-cream/60 sm:text-base sm:leading-7">
               <WordReveal
-                text="One conversation gives you a clear read on what sounds strong, what needs evidence, and where to practise next."
+                text="One interview is enough for a first read on what's working and what to practise next."
                 active
                 delay={520}
                 stagger={36}

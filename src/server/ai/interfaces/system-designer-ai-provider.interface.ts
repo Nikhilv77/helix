@@ -33,6 +33,11 @@ export interface GenerateStructuredRequest<T> {
   schema: ZodType<T, ZodTypeDef, unknown>;
   modelClass: AiModelClass;
   temperature?: number;
+  /**
+   * Fixed sampling seed for calls whose output must repeat for the same input
+   * (scoring). Providers apply it on a best-effort basis.
+   */
+  seed?: number;
   attachments?: AiInlineAttachment[];
   /** Overrides AI_TIMEOUT_MS so a caller with its own deadline can stay inside it. */
   timeoutMs?: number;

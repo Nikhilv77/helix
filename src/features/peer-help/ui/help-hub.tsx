@@ -14,7 +14,7 @@ import {
   UsersRound,
   X
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { DocumentTitle } from "@/components/document-title";
@@ -72,6 +72,7 @@ export function HelpHub({
     given: null
   });
   const [badgeOpen, setBadgeOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const historyRequests = useRef<Record<HelpHistorySide, number>>({ received: 0, given: 0 });
   const activeRequestId = overview.activeConversation?.requestId ?? null;
 
@@ -140,11 +141,14 @@ export function HelpHub({
     };
   }, [activeRequestId]);
 
+  const modalOpen = badgeOpen || leaderboardOpen;
   useEffect(() => {
-    if (!badgeOpen) return;
+    if (!modalOpen) return;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setBadgeOpen(false);
+      if (event.key !== "Escape") return;
+      setBadgeOpen(false);
+      setLeaderboardOpen(false);
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", closeOnEscape);
@@ -152,7 +156,7 @@ export function HelpHub({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [badgeOpen]);
+  }, [modalOpen]);
 
   if (overview.activeConversation) {
     return <ActiveConversationView conversation={overview.activeConversation} />;
@@ -165,7 +169,11 @@ export function HelpHub({
 
       <UserRecognition overview={overview} onBadgeClick={() => setBadgeOpen(true)} />
 
-      <TopHelpers helpers={overview.topHelpers} />
+      <TopHelpers
+        helpers={overview.topHelpers}
+        total={overview.topHelpersTotal ?? overview.topHelpers.length}
+        onViewAll={() => setLeaderboardOpen(true)}
+      />
 
       <RelationshipHistory
         id="people-helped"
@@ -196,6 +204,7 @@ export function HelpHub({
       {badgeOpen ? (
         <BadgeRankingToast overview={overview} onClose={() => setBadgeOpen(false)} />
       ) : null}
+      {leaderboardOpen ? <LeaderboardModal onClose={() => setLeaderboardOpen(false)} /> : null}
     </main>
   );
 }
@@ -217,8 +226,19 @@ function UserRecognition({
         {overview.viewer.label}
       </p>
       <p className="mt-1 text-[12px] text-cream/42">
-        Supported {overview.peopleHelped} {overview.peopleHelped === 1 ? "person" : "people"}
+        {overview.peopleHelped
+          ? `Supported ${overview.peopleHelped} ${overview.peopleHelped === 1 ? "person" : "people"}`
+          : "Ready to help"}
       </p>
+      {overview.onlineMates ? (
+        <p className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-cream/52">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--workspace-accent)]"
+          />
+          {overview.onlineMates} {overview.onlineMates === 1 ? "mate" : "mates"} online now
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={onBadgeClick}
@@ -376,7 +396,15 @@ function ActiveConversationView({
   );
 }
 
-function TopHelpers({ helpers }: { helpers: TopPeerHelper[] }) {
+function TopHelpers({
+  helpers,
+  total,
+  onViewAll
+}: {
+  helpers: TopPeerHelper[];
+  total: number;
+  onViewAll: () => void;
+}) {
   return (
     <section className="mt-12 sm:mt-14" aria-labelledby="top-helpers-title">
       <SectionHeading
@@ -426,9 +454,15 @@ function TopHelpers({ helpers }: { helpers: TopPeerHelper[] }) {
               </article>
             );
           })}
+          {total > helpers.length ? <ViewAllTile total={total} onClick={onViewAll} /> : null}
         </div>
       ) : (
-        <CleanEmptyState message="Community rankings appear after completed peer sessions." />
+        <PreviewEmptyState
+          preview={<RankingPreview />}
+          title="Nobody’s on the board yet"
+          message="Help one person through a problem and you could be the first Top Trailmate."
+          footnote="First Assist → Trusted Mate → Trail Guide"
+        />
       )}
     </section>
   );
@@ -492,12 +526,19 @@ function RelationshipHistory({
           ))}
         </div>
       ) : (
-        <CleanEmptyState
+        <PreviewEmptyState
+          preview={<HistoryPreview />}
+          title={
+            side === "given"
+              ? "The people you support will appear here"
+              : "The people who support you will appear here"
+          }
           message={
             side === "given"
-              ? "The people you support will appear here."
-              : "The people who support you will appear here."
+              ? "Mates are invited to questions they’ve already solved, so every question you solve is one more you can help with."
+              : "Stuck on a question? Use Ask a mate beside Run code, and someone who solved it can join you."
           }
+          action={{ href: "/practice", label: "Go to practice" }}
         />
       )}
 
@@ -667,11 +708,346 @@ function ParticipantAvatar({ item }: { item: HelpHistoryItem }) {
   );
 }
 
-function CleanEmptyState({ message }: { message: string }) {
+/** Fills the grid's last slot and opens the full leaderboard. */
+function ViewAllTile({ total, onClick }: { total: number; onClick: () => void }) {
   return (
-    <p className="mt-5 rounded-[1.2rem] border border-dashed border-white/[0.17] bg-black px-5 py-9 text-center text-[12.5px] text-cream/42">
-      {message}
-    </p>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-haspopup="dialog"
+      className="trailmate-ranking-card group flex min-h-[10.5rem] flex-col items-center justify-center rounded-[1.25rem] bg-[rgba(20,21,24,0.72)] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(24,25,28,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40 sm:p-5"
+    >
+      <span className="grid h-12 w-12 place-items-center rounded-full border border-white/[0.14] text-cream/60 transition group-hover:border-white/30 group-hover:text-cream">
+        <UsersRound size={18} aria-hidden="true" />
+      </span>
+      <span className="mt-4 text-sm font-semibold text-cream">View all Top Trailmates</span>
+      <span className="mt-1 inline-flex items-center gap-1 text-[11.5px] text-cream/40">
+        See the top {Math.min(total, 100)}
+        <ChevronRight
+          size={13}
+          className="transition group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </span>
+    </button>
+  );
+}
+
+type LeaderboardState =
+  { status: "loading" } | { status: "ready"; helpers: TopPeerHelper[] } | { status: "error" };
+
+/** The top 100, in the same modal language as the badge ranking. */
+function LeaderboardModal({ onClose }: { onClose: () => void }) {
+  const [state, setState] = useState<LeaderboardState>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setState({ status: "loading" });
+    void fetch("/api/help/leaderboard", { signal: controller.signal })
+      .then((response) => response.json().then((payload) => ({ response, payload })))
+      .then(({ response, payload }) => {
+        if (!response.ok || !payload?.success) throw new Error("leaderboard");
+        setState({ status: "ready", helpers: payload.data.helpers as TopPeerHelper[] });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setState({ status: "error" });
+      });
+    return () => controller.abort();
+  }, [attempt]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="trailmate-badge-backdrop fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center overflow-y-auto bg-black/[0.82] px-4 py-6"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leaderboard-title"
+        tabIndex={-1}
+        ref={(node) => node?.focus({ preventScroll: true })}
+        className="trailmate-badge-modal my-auto flex outline-none max-h-[min(44rem,calc(100dvh-3rem))] w-full max-w-2xl flex-col rounded-[1.5rem] bg-[rgba(20,21,24,0.94)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_30px_100px_rgba(0,0,0,0.85)] backdrop-blur-2xl"
+      >
+        <header className="flex shrink-0 items-start justify-between gap-5 border-b border-white/[0.08] p-5 sm:p-6">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-full border border-[#efcf84]/25 bg-[#efcf84]/[0.07] text-[#efcf84]">
+              <Award size={19} aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/35">
+                Community
+              </p>
+              <h2 id="leaderboard-title" className="mt-1 text-xl font-semibold text-cream">
+                Top Trailmates
+              </h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close Top Trailmates"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.09] text-cream/45 transition hover:border-white/20 hover:text-cream"
+          >
+            <X size={15} aria-hidden="true" />
+          </button>
+        </header>
+
+        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6">
+          <p className="text-[12.5px] leading-5 text-cream/45">
+            Ranked by how often people thanked them, then by how many they helped.
+          </p>
+          {state.status === "ready" ? (
+            <ol className="mt-4 space-y-1.5">
+              {state.helpers.map((helper, index) => (
+                <LeaderboardRow
+                  key={`${helper.participant.label}-${index}`}
+                  helper={helper}
+                  rank={index + 1}
+                />
+              ))}
+            </ol>
+          ) : state.status === "error" ? (
+            <div className="mt-6 rounded-xl border border-white/[0.13] bg-black px-5 py-8 text-center">
+              <p className="text-[13px] text-cream/60">The leaderboard didn’t load.</p>
+              <button
+                type="button"
+                onClick={() => setAttempt((current) => current + 1)}
+                className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.2] bg-black px-3.5 py-2 text-[12px] font-semibold text-cream/75 transition hover:border-white/35 hover:text-cream"
+              >
+                Try again
+              </button>
+            </div>
+          ) : (
+            <ol aria-label="Loading Top Trailmates" className="mt-4 space-y-1.5">
+              {Array.from({ length: 6 }, (_, index) => (
+                <li
+                  key={index}
+                  className="flex items-center gap-3 rounded-xl border border-white/[0.13] bg-black px-3.5 py-3"
+                >
+                  <span className="trailmate-preview-shape h-7 w-7 rounded-full bg-white/[0.07]" />
+                  <span className="trailmate-preview-shape h-9 w-9 rounded-full bg-white/[0.07]" />
+                  <span className="flex-1">
+                    <PreviewBar className="h-2.5 w-32" />
+                    <PreviewBar className="mt-2 h-2 w-48" />
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        {state.status === "ready" ? (
+          <footer className="shrink-0 border-t border-white/[0.08] px-5 py-3.5 text-[11px] text-cream/35 sm:px-6">
+            Showing the top {state.helpers.length}
+          </footer>
+        ) : null}
+      </section>
+    </div>,
+    document.body
+  );
+}
+
+function LeaderboardRow({ helper, rank }: { helper: TopPeerHelper; rank: number }) {
+  const impact = helper.helpedCount
+    ? Math.round((helper.thankedCount / helper.helpedCount) * 100)
+    : 0;
+  const podium = rank <= 3;
+  return (
+    <li
+      className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 ${
+        podium ? "border-[#efcf84]/25 bg-[#efcf84]/[0.055]" : "border-white/[0.13] bg-black"
+      }`}
+    >
+      <span
+        className={`grid h-7 min-w-7 shrink-0 place-items-center rounded-full border px-1.5 text-[11px] font-semibold tabular-nums ${
+          podium
+            ? "trailmate-podium-rank border-[#efcf84]/40 text-[#efcf84]"
+            : "border-white/[0.1] text-cream/45"
+        }`}
+      >
+        {rank}
+      </span>
+      <PeerAvatar
+        participant={helper.participant}
+        className="h-9 w-9 rounded-full ring-1 ring-white/10"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold text-cream">{helper.participant.label}</p>
+        <p className="mt-0.5 hidden truncate text-[11px] text-cream/38 sm:block">
+          {helper.participant.headline ?? "A dependable peer in the practice community."}
+        </p>
+      </div>
+      <dl className="flex shrink-0 items-center gap-3 text-right sm:gap-4">
+        <LeaderboardStat label="People" value={helper.helpedCount} />
+        <LeaderboardStat label="Thanks" value={helper.thankedCount} />
+        <LeaderboardStat label="Impact" value={`${impact}%`} className="hidden sm:block" />
+      </dl>
+    </li>
+  );
+}
+
+function LeaderboardStat({
+  label,
+  value,
+  className = ""
+}: {
+  label: string;
+  value: number | string;
+  className?: string;
+}) {
+  return (
+    <div className={`min-w-9 sm:min-w-10 ${className}`}>
+      <dt className="text-[9px] uppercase tracking-[0.12em] text-cream/28">{label}</dt>
+      <dd className="mt-0.5 text-[13px] font-semibold tabular-nums text-cream/78">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * An empty section drawn as a faded outline of what will fill it, with the
+ * next step on top. The outline uses the real card classes, so it follows
+ * both themes, and a mask fades it so it never reads as real data.
+ */
+function PreviewEmptyState({
+  preview,
+  title,
+  message,
+  footnote,
+  action
+}: {
+  preview: ReactNode;
+  title: string;
+  message: string;
+  footnote?: string;
+  action?: { href: string; label: string };
+}) {
+  return (
+    <div className="relative mt-5">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none select-none opacity-60"
+        style={{
+          maskImage: "linear-gradient(to bottom, black 0%, transparent 92%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 92%)"
+        }}
+      >
+        {preview}
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center">
+        <span
+          aria-hidden="true"
+          className="trailmate-empty-veil pointer-events-none absolute left-1/2 top-1/2 h-[140%] w-[min(48rem,100%)] -translate-x-1/2 -translate-y-1/2"
+        />
+        <div className="relative flex flex-col items-center">
+          <p className="text-[15px] font-semibold tracking-[-0.01em] text-cream">{title}</p>
+          <p className="mt-1.5 max-w-md text-[12.5px] leading-5 text-cream/48">{message}</p>
+          {footnote ? (
+            <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/32">
+              {footnote}
+            </p>
+          ) : null}
+          {action ? (
+            <Link
+              href={action.href}
+              className="trailmate-empty-action group mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.2] bg-black px-3.5 py-2 text-[12px] font-semibold text-cream/75 transition hover:border-white/35 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40"
+            >
+              {action.label}
+              <ChevronRight
+                size={13}
+                className="text-cream/35 transition group-hover:translate-x-0.5 group-hover:text-cream/60"
+                aria-hidden="true"
+              />
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A text-shaped bar for the empty-state outlines. */
+function PreviewBar({ className }: { className: string }) {
+  return (
+    <span className={`trailmate-preview-shape block rounded-full bg-white/[0.07] ${className}`} />
+  );
+}
+
+function RankingPreview() {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {[0, 1, 2].map((index) => (
+        <div
+          key={index}
+          className={`trailmate-ranking-card rounded-[1.25rem] bg-[rgba(20,21,24,0.72)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] sm:p-5 ${
+            index === 1 ? "hidden md:block" : index === 2 ? "hidden xl:block" : ""
+          }`}
+        >
+          <div className="flex items-start gap-3.5">
+            <span className="trailmate-preview-shape h-12 w-12 shrink-0 rounded-full bg-white/[0.06] ring-1 ring-white/10" />
+            <div className="min-w-0 flex-1 pt-1">
+              <PreviewBar className="h-3 w-28" />
+              <PreviewBar className="mt-2.5 h-2 w-40" />
+            </div>
+            <span className="h-7 w-7 shrink-0 rounded-full border border-white/[0.11]" />
+          </div>
+          <div className="mt-5 grid grid-cols-3 border-t border-white/[0.14] pt-4">
+            {[0, 1, 2].map((stat) => (
+              <div
+                key={stat}
+                className={`flex flex-col items-center gap-1.5 ${stat ? "border-l border-white/[0.13]" : ""}`}
+              >
+                <PreviewBar className="h-2.5 w-7" />
+                <PreviewBar className="h-1.5 w-10" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HistoryPreview() {
+  return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      {[0, 1].map((index) => (
+        <div
+          key={index}
+          className={`trailmate-history-card rounded-[1.25rem] bg-[rgba(16,17,20,0.78)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] sm:p-5 ${
+            index === 1 ? "hidden lg:block" : ""
+          }`}
+        >
+          <div className="flex items-start gap-4">
+            <span className="trailmate-preview-shape h-12 w-12 shrink-0 rounded-full bg-white/[0.06] ring-1 ring-white/20" />
+            <div className="min-w-0 flex-1 pt-1">
+              <PreviewBar className="h-3 w-32" />
+              <PreviewBar className="mt-2.5 h-2 w-48" />
+            </div>
+            <span className="hidden h-5 w-20 shrink-0 rounded-full border border-white/[0.17] sm:block" />
+          </div>
+          <div className="mt-5 rounded-xl border border-white/[0.13] bg-white/[0.018] p-3.5">
+            <PreviewBar className="h-1.5 w-20" />
+            <div className="mt-3 flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <PreviewBar className="h-3 w-36" />
+                <PreviewBar className="mt-2 h-2 w-24" />
+              </div>
+              <span className="h-9 w-9 shrink-0 rounded-full border border-white/[0.18]" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <PreviewBar className="h-2 w-20" />
+            <PreviewBar className="h-2 w-14" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

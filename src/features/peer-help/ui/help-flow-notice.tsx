@@ -11,11 +11,14 @@ export function HelpFlowNotice({
   eyebrow = "Invitation not sent",
   title,
   message,
+  action,
   onClose
 }: {
   eyebrow?: string;
   title: string;
   message: string;
+  /** Replaces "Got it" with a next step; the close button still dismisses. */
+  action?: { label: string; onClick: () => void };
   onClose: () => void;
 }) {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
@@ -69,10 +72,13 @@ export function HelpFlowNotice({
           <button
             type="button"
             autoFocus
-            onClick={onClose}
+            onClick={() => {
+              action?.onClick();
+              onClose();
+            }}
             className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#17181a] transition hover:bg-white"
           >
-            Got it
+            {action?.label ?? "Got it"}
           </button>
         </div>
       </aside>

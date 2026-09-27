@@ -9,6 +9,8 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 export const unstable_dynamicStaleTime = 30;
 export const maxDuration = 60;
+/** A normal rebuild takes well under a second next to the database. */
+const REPORTS_FRESH_WAIT_MS = 2_000;
 export const metadata = privatePageMetadata(
   "Reports",
   "Every Trailgrad interview round you have run, scored and compared side by side."
@@ -21,8 +23,13 @@ export default async function ReportsPage() {
   const ownerId = authenticatedOwnerId(userId);
   const container = getAppContainer();
   const now = Date.now();
-  const page = await container.workspacePageSnapshotStore.readOrBuild(ownerId, "reports", () =>
-    buildReportsPageData(ownerId, now)
+  // People open Reports straight after a round. Waiting briefly for the
+  // rebuild keeps the round they just finished from being missing.
+  const page = await container.workspacePageSnapshotStore.readOrBuild(
+    ownerId,
+    "reports",
+    () => buildReportsPageData(ownerId, now),
+    { waitForFreshMs: REPORTS_FRESH_WAIT_MS }
   );
   const quota = {
     used: Math.min(

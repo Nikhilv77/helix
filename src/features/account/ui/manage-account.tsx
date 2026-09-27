@@ -282,7 +282,7 @@ export function ManageAccount({ profile }: { profile: ManageAccountProfile }) {
               <NotificationPreferenceRow
                 icon={Users}
                 title="Trailmate requests"
-                description="Let learners ask you to join questions you have already completed."
+                description="Let learners ask you to help with questions you've already solved. Turning this off also clears invitations you haven't answered."
                 enabled={notificationPreferences.helpNotificationsEnabled}
                 saving={savingPreference === "helpNotificationsEnabled"}
                 onToggle={() => void onNotificationPreferenceChange("helpNotificationsEnabled")}
@@ -768,8 +768,8 @@ function DeleteAccountWarningModal({
           id="delete-account-warning-description"
           className="mt-3 max-w-sm text-[0.9rem] leading-[1.6] text-[#667085] dark:text-[#b4b4ba]"
         >
-          Your profile, practice progress, interviews, and account will be permanently deleted.
-          This cannot be undone.
+          Your profile, practice progress, interviews, Trailmate history, and account will be
+          permanently deleted. This cannot be undone.
         </p>
 
         <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-end">

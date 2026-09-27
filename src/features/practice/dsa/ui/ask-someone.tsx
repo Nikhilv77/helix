@@ -4,7 +4,7 @@ import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidati
 
 import { Check, Loader2, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { hintsUsedFor } from "@/features/practice/dsa/domain/hint-tracker";
+import { hintsUsedFor, requestNextHint } from "@/features/practice/dsa/domain/hint-tracker";
 import { HelperReadyToast } from "@/features/peer-help/ui/helper-ready-toast";
 import { HelpFlowNotice } from "@/features/peer-help/ui/help-flow-notice";
 import { HelpRating } from "@/features/peer-help/ui/help-rating";
@@ -20,7 +20,9 @@ import {
 
 type LiveRequest = { id: string; status: string | null; helper: HelpHistoryParticipant | null };
 type HelpNotice =
-  { kind: "cooldown"; title: string } | { kind: "error"; title: string; message: string };
+  | { kind: "cooldown"; title: string }
+  | { kind: "error"; title: string; message: string }
+  | { kind: "expired"; title: string; message: string };
 
 const DELIVERY_SECONDS = 15;
 const DEFAULT_COOLDOWN_MS = 10 * 60_000;
@@ -45,7 +47,8 @@ export function AskSomeone({
   runStatus = null,
   tests = null,
   selection,
-  startedAt
+  startedAt,
+  hasHints = false
 }: {
   slug: string;
   title: string;
@@ -58,6 +61,8 @@ export function AskSomeone({
   selection: CodeSelection | null;
   /** When this attempt began, so the request can report time spent. */
   startedAt: number;
+  /** The problem panel has hints to fall back on when no mate is free. */
+  hasHints?: boolean;
 }) {
   const router = useRouter();
   const [live, setLive] = useState<LiveRequest | null>(null);
@@ -67,6 +72,10 @@ export function AskSomeone({
   const [notice, setNotice] = useState<HelpNotice | null>(null);
   const [deliverySeconds, setDeliverySeconds] = useState<number | null>(null);
   const [invitationsSent, setInvitationsSent] = useState(0);
+  const [onlineInvited, setOnlineInvited] = useState<number | null>(null);
+  // The last status this page saw, so an open request that disappears
+  // without a rating is recognised as having expired unanswered.
+  const lastStatus = useRef<string | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   // Read inside callbacks so a slow request still reports the code as it was
@@ -97,6 +106,7 @@ export function AskSomeone({
             status: payload.data.status,
             helper: payload.data.helper ?? null
           });
+          lastStatus.current = payload.data.status ?? null;
         } else if (payload.data.ratingRequestId) {
           setRateFor(payload.data.ratingRequestId);
         }
@@ -124,8 +134,19 @@ export function AskSomeone({
     setLive(nextLive);
     if (!nextLive && payload.data.ratingRequestId) {
       setRateFor(payload.data.ratingRequestId);
+    } else if (!nextLive && lastStatus.current === "OPEN") {
+      // Nobody claimed it in the window. Say so, and point at the next
+      // thing that can help right now instead of silently resetting.
+      setNotice({
+        kind: "expired",
+        title: "No Trailmate was free this time",
+        message: hasHints
+          ? "Nobody picked it up in the 10 minutes. The hints for this question walk you through it one step at a time, and you can ask a mate again shortly."
+          : "Nobody picked it up in the 10 minutes. Try again a little later, when more mates are online."
+      });
     }
-  }, [slug]);
+    lastStatus.current = nextLive?.status ?? null;
+  }, [hasHints, slug]);
 
   // Keep every live transition authoritative. A helper claim can return to OPEN
   // if they never enter the room, so CLAIMED must keep listening too. The
@@ -209,6 +230,7 @@ export function AskSomeone({
           id: string;
           status: string;
           invitationsSent?: number;
+          onlineInvited?: number;
           cooldownMs?: number;
         };
         error?: {
@@ -251,6 +273,8 @@ export function AskSomeone({
       const cooldownMs = payload.data.cooldownMs ?? 0;
       if (cooldownMs > 0) beginCooldown(cooldownMs);
       setInvitationsSent(Math.max(1, payload.data.invitationsSent ?? 1));
+      setOnlineInvited(payload.data.onlineInvited ?? null);
+      lastStatus.current = "OPEN";
       setLive({ id: payload.data.id, status: payload.data.status, helper: null });
       setDeliverySeconds(DELIVERY_SECONDS);
     } catch (caught) {
@@ -295,7 +319,18 @@ export function AskSomeone({
 
   const noticeToast = notice ? (
     <HelpFlowNotice
-      eyebrow={notice.kind === "cooldown" ? "Please wait" : undefined}
+      eyebrow={
+        notice.kind === "cooldown"
+          ? "Please wait"
+          : notice.kind === "expired"
+            ? "Request expired"
+            : undefined
+      }
+      action={
+        notice.kind === "expired" && hasHints
+          ? { label: "Show next hint", onClick: () => requestNextHint(slug) }
+          : undefined
+      }
       title={notice.title}
       message={
         notice.kind === "cooldown"
@@ -363,9 +398,7 @@ export function AskSomeone({
             ) : (
               <>
                 <Check size={13} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
-                {invitationsSent === 1
-                  ? "Invitation sent to 1 Trailmate — waiting"
-                  : `Invitations sent to ${invitationsSent} Trailmates — waiting`}
+                {waitingLabel(invitationsSent, onlineInvited)}
               </>
             )}
           </span>
@@ -405,6 +438,15 @@ export function AskSomeone({
       {noticeToast}
     </>
   );
+}
+
+/** Honest about reach: invitations appear in-app, so who is online matters. */
+function waitingLabel(invited: number, online: number | null): string {
+  const sent =
+    invited === 1 ? "Invitation sent to 1 Trailmate" : `Invitations sent to ${invited} Trailmates`;
+  if (online === null) return `${sent} — waiting`;
+  if (online === 0) return `${sent}, none online right now — waiting`;
+  return `${sent}, ${online} online now — waiting`;
 }
 
 function formatCooldown(totalSeconds: number): string {

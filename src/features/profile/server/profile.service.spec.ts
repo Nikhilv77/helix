@@ -246,3 +246,57 @@ describe("ProfileService resume confirmation", () => {
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+describe("ProfileService image save", () => {
+  it("writes only the images it was given and never role, level or story fields", async () => {
+    const update = vi.fn().mockResolvedValue({});
+    const findUnique = vi.fn().mockResolvedValue(null);
+    const service = new ProfileService({
+      candidateProfile: { update, findUnique }
+    } as unknown as PrismaService);
+
+    await service.saveImages("owner-1", { profileImage: "/images/profile/avatars/avatar-02.jpg" });
+    expect(update).toHaveBeenCalledWith({
+      where: { ownerId: "owner-1" },
+      data: { profileImage: "/images/profile/avatars/avatar-02.jpg" }
+    });
+
+    update.mockClear();
+    await service.saveImages("owner-1", {});
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("ProfileService account deletion", () => {
+  it("also removes the Trailmate rows that do not cascade from the profile", async () => {
+    const op = (name: string) => vi.fn((args: unknown) => ({ name, args }));
+    const prisma = {
+      interviewSession: { deleteMany: op("interviewSession.deleteMany") },
+      project: { deleteMany: op("project.deleteMany") },
+      helpBlock: { deleteMany: op("helpBlock.deleteMany") },
+      helpReport: { deleteMany: op("helpReport.deleteMany") },
+      helpSession: { updateMany: op("helpSession.updateMany") },
+      helpRequest: { updateMany: op("helpRequest.updateMany") },
+      candidateProfile: { deleteMany: op("candidateProfile.deleteMany") },
+      $transaction: vi.fn(async (operations: unknown[]) => operations)
+    };
+
+    await new ProfileService(prisma as unknown as PrismaService).deleteAccountData("owner-1");
+
+    const [operations] = prisma.$transaction.mock.calls[0] as [Array<{ name: string; args: unknown }>];
+    expect(operations.map((operation) => operation.name)).toEqual([
+      "interviewSession.deleteMany",
+      "project.deleteMany",
+      "helpBlock.deleteMany",
+      "helpReport.deleteMany",
+      "helpSession.updateMany",
+      "helpRequest.updateMany",
+      "helpRequest.updateMany",
+      "candidateProfile.deleteMany"
+    ]);
+    expect(operations[2]!.args).toEqual({
+      where: { OR: [{ ownerId: "owner-1" }, { blockedId: "owner-1" }] }
+    });
+    expect(operations[6]!.args).toEqual({ where: { helperId: "owner-1" }, data: { helperId: null } });
+  });
+});

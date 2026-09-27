@@ -189,6 +189,7 @@ export class GeminiProvider implements SystemDesignerAIProvider {
         systemInstruction: request.systemInstruction,
         abortSignal,
         temperature: request.temperature ?? DEFAULT_TEMPERATURE,
+        ...(request.seed !== undefined ? { seed: request.seed } : {}),
         responseMimeType: "application/json",
         responseJsonSchema: toGeminiResponseSchema(request.schema)
       }

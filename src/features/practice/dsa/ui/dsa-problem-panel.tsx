@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { AlertTriangle, ChevronDown, Lightbulb, Sparkles, Target } from "lucide-react";
 import { DsaQuestionNotes } from "@/features/interviews/ui/dsa/dsa-question-notes";
-import { recordHintsUsed } from "@/features/practice/dsa/domain/hint-tracker";
+import { DSA_NEXT_HINT_EVENT, recordHintsUsed } from "@/features/practice/dsa/domain/hint-tracker";
 import type { DsaQuestion } from "@/features/practice/dsa/domain/dsa";
 
 type PanelTab = "description" | "hints" | "review" | "notes";
@@ -29,6 +29,17 @@ export function DsaProblemPanel({ question }: { question: DsaQuestion }) {
     setTab("description");
     setRevealedHints(0);
   }, [question.slug]);
+
+  useEffect(() => {
+    const total = question.hints?.length ?? 0;
+    const showNextHint = (event: Event) => {
+      if ((event as CustomEvent<{ slug?: string }>).detail?.slug !== question.slug || !total) return;
+      setTab("hints");
+      setRevealedHints((count) => Math.min(count + 1, total));
+    };
+    window.addEventListener(DSA_NEXT_HINT_EVENT, showNextHint);
+    return () => window.removeEventListener(DSA_NEXT_HINT_EVENT, showNextHint);
+  }, [question.hints?.length, question.slug]);
 
   return (
     <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#141619]">

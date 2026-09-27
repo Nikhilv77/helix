@@ -22,12 +22,22 @@ export interface HelperCandidate {
   exactQuestionScore: number;
   /** Best score in the learner's requested language, or 0 when none exists. */
   languageScore: number;
+  /** When this person last had Trailgrad open; null if never recorded. */
+  lastSeenAt?: Date | null;
 }
 
 export interface RankedHelper extends HelperCandidate {
   /** 0..1. Exposed so a ranking can be explained rather than just trusted. */
   score: number;
+  /** Had Trailgrad open within the last few minutes, so could answer now. */
+  online: boolean;
 }
+
+/**
+ * "Online" means a visible Trailgrad tab within this window. The status poll
+ * that records presence runs every 15 s and writes at most once a minute.
+ */
+export const HELPER_ONLINE_WINDOW_MS = 3 * 60_000;
 
 /**
  * Weights for the five signals that exist. They sum to 1 so the score stays
@@ -61,9 +71,20 @@ export function rankCandidates(
   now: Date = new Date()
 ): RankedHelper[] {
   return candidates
-    .map((candidate) => ({ ...candidate, score: scoreCandidate(candidate, now) }))
-    .sort((a, b) =>
-      b.score === a.score ? b.completedAt.getTime() - a.completedAt.getTime() : b.score - a.score
+    .map((candidate) => ({
+      ...candidate,
+      score: scoreCandidate(candidate, now),
+      online:
+        candidate.lastSeenAt != null &&
+        now.getTime() - candidate.lastSeenAt.getTime() <= HELPER_ONLINE_WINDOW_MS
+    }))
+    .sort(
+      (a, b) =>
+        // A request lasts ten minutes and invitations appear in-app, so the
+        // people who are on Trailgrad now go first; evidence ranks within.
+        Number(b.online) - Number(a.online) ||
+        b.score - a.score ||
+        b.completedAt.getTime() - a.completedAt.getTime()
     );
 }
 
@@ -90,6 +111,7 @@ interface CandidateRow {
   qualificationScore: number;
   exactQuestionScore: number;
   languageScore: number;
+  lastSeenAt: Date | null;
 }
 
 export class HelperMatchingService {
@@ -120,9 +142,11 @@ export class HelperMatchingService {
              signals."totalCompletions",
              eligibility.score AS "qualificationScore",
              signals."exactQuestionScore",
-             signals."languageScore"
+             signals."languageScore",
+             presence."lastSeenAt"
       FROM "CandidateProfile" profile
       CROSS JOIN target
+      LEFT JOIN "HelpPresence" presence ON presence."ownerId" = profile."ownerId"
       CROSS JOIN LATERAL (
         SELECT "helpHelperEligibilityScore"(
           profile."ownerId",

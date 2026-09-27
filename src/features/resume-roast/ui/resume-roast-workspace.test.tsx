@@ -45,6 +45,34 @@ vi.mock("@/infrastructure/realtime/use-maya-voice", () => ({
   })
 }));
 
+// The upload itself is covered with Profile; here it only hands back a profile.
+vi.mock("@/features/profile/ui/resume-update-modal", () => ({
+  ResumeUpdateModal: ({
+    open,
+    profile,
+    onUpdated
+  }: {
+    open: boolean;
+    profile: { resume: CandidateResume | null };
+    onUpdated: (profile: { resume: CandidateResume }) => void;
+  }) =>
+    open ? (
+      <button
+        type="button"
+        onClick={() =>
+          onUpdated({
+            resume: {
+              ...(profile.resume ?? updatedResumeBase),
+              fileName: "resume-v2.pdf"
+            }
+          })
+        }
+      >
+        Finish upload
+      </button>
+    ) : null
+}));
+
 vi.mock("@/features/reports/ui/report-maya-avatar", () => ({
   ReportMayaAvatar: ({ personaId }: { personaId?: string }) => (
     <div data-testid="live-avatar">{personaId}</div>
@@ -92,6 +120,10 @@ const resume: CandidateResume = {
   interviewKit: null
 };
 
+const updatedResumeBase: CandidateResume = resume;
+
+const resumeTarget = { targetRole: "backend", level: "5-plus" } as const;
+
 const result: ResumeRoastResult = {
   openingRoast: "Your impact metrics have entered witness protection.",
   spokenSummary:
@@ -132,6 +164,33 @@ const result: ResumeRoastResult = {
 
 const roastId = "d754aa0d-c1fb-42b8-85f6-b1063f54fc9c";
 
+/** A rubric-era result: the score comes from the scorecard, not the verdict. */
+const scoredResult: ResumeRoastResult = {
+  ...result,
+  problems: [
+    {
+      ...result.problems[0]!,
+      dimension: "impact",
+      quote: "Improved API performance."
+    }
+  ],
+  verdict: {
+    band: "solid",
+    explanation: "You'd get shortlisted, but the performance bullet makes them guess."
+  },
+  scorecard: {
+    rubricVersion: "rubric-v1",
+    overall: 7,
+    dimensions: {
+      roleFit: { score: 4, note: "Clearly backend work.", evidenceAnchors: [] },
+      impact: { score: 2, note: "Performance claims with no numbers.", evidenceAnchors: [] },
+      ownership: { score: 4, note: "Owned the payments migration.", evidenceAnchors: [] },
+      technical: { score: 4, note: "TypeScript and PostgreSQL in real work.", evidenceAnchors: [] },
+      readability: { score: 4, note: "Short and easy to skim.", evidenceAnchors: [] }
+    }
+  }
+};
+
 function jsonResponse(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -139,8 +198,8 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
-function streamResponse() {
-  const body = resumeRoastResultEvents({ roastId, replayed: false, target, result })
+function streamResponse(roastResult: ResumeRoastResult = result) {
+  const body = resumeRoastResultEvents({ roastId, replayed: false, target, result: roastResult })
     .map(encodeResumeRoastStreamEvent)
     .join("");
   return new Response(body, { headers: { "content-type": "text/event-stream" } });
@@ -162,7 +221,9 @@ function readyState(
       hasResume: true,
       target: previousRoast?.target ?? null,
       suggestedTarget: null,
-      previousRoast
+      previousRoast,
+      history: previousRoast ? [{ ...previousRoast, createdAt: 1 }] : [],
+      inProgress: null
     }
   };
 }
@@ -205,6 +266,57 @@ describe("ResumeRoastWorkspace", () => {
     }
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("swaps in an updated resume without leaving the page", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(readyState({ id: roastId, target, result })))
+      .mockResolvedValueOnce(jsonResponse(readyState()));
+
+    render(<ResumeRoastWorkspace resume={resume} resumeTarget={resumeTarget} />);
+    expect(await screen.findByText("nikhil-resume.pdf")).toBeVisible();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Update resume" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Finish upload" }));
+
+    expect(await screen.findByText("resume-v2.pdf")).toBeVisible();
+    // The new version has no roast yet, so James asks the questions again.
+    expect(await screen.findByRole("button", { name: "Backend Engineer" })).toBeVisible();
+    expect(screen.queryByText((text) => text.includes(result.openingRoast))).toBeNull();
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
+  });
+
+  it("hides resume updates without a profile target, and while analysing", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(readyState()))
+      .mockImplementationOnce(() => new Promise<Response>(() => undefined));
+
+    const { rerender } = render(<ResumeRoastWorkspace resume={resume} />);
+    await screen.findByText("nikhil-resume.pdf");
+    expect(screen.queryByRole("button", { name: "Update resume" })).toBeNull();
+
+    rerender(<ResumeRoastWorkspace resume={resume} resumeTarget={resumeTarget} />);
+    expect(screen.getByRole("button", { name: "Update resume" })).toBeVisible();
+    await chooseTarget();
+    await screen.findByText("Analysing · 0s");
+    expect(screen.queryByRole("button", { name: "Update resume" })).toBeNull();
+  });
+
+  it("lets users without a resume upload one right here", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: { hasResume: false, target: null, suggestedTarget: null, previousRoast: null }
+        })
+      )
+      .mockResolvedValueOnce(jsonResponse(readyState()));
+
+    render(<ResumeRoastWorkspace resume={null} resumeTarget={resumeTarget} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Upload resume" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Finish upload" }));
+    expect(await screen.findByText("resume-v2.pdf")).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Go to Profile" })).toBeNull();
   });
 
   it("sends users without a stored resume to Profile", async () => {
@@ -258,13 +370,16 @@ describe("ResumeRoastWorkspace", () => {
     );
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Backend Engineer" }));
+    // The profile's role is marked, never pre-selected.
+    const suggested = await screen.findByRole("button", { name: /^Backend Engineer/ });
+    expect(suggested).toHaveTextContent("From profile");
+    fireEvent.click(suggested);
     expect(
       await screen.findAllByText("What kind of company are we trying to impress?")
     ).toHaveLength(2);
     fireEvent.click(await screen.findByRole("button", { name: "Product company" }));
     expect(await screen.findAllByText("What level are you applying for?")).toHaveLength(2);
-    fireEvent.click(await screen.findByRole("button", { name: "Senior" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Senior/ }));
 
     expect(await screen.findByText((text) => text.includes(result.openingRoast))).toBeVisible();
     expect(
@@ -274,8 +389,9 @@ describe("ResumeRoastWorkspace", () => {
       await screen.findByText((text) => text.includes(result.actionPlan[0]!.action))
     ).toBeVisible();
     expect(await screen.findByLabelText("Target fit score: 62 out of 100")).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Weak points" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Ways to fix it" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "What’s costing you" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "What’s working" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Before you send it" })).toBeVisible();
     expect(screen.queryByText("James is speaking")).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete roast" })).toBeNull();
     const transcript = screen.getByLabelText("James transcript");
@@ -378,9 +494,10 @@ describe("ResumeRoastWorkspace", () => {
 
   it("uses staged elapsed-time copy without promising a fixed completion time", () => {
     expect(resumeRoastProgressMessage(0)).toBe("James is reading your resume…");
-    expect(resumeRoastProgressMessage(14)).toBe("James is reading your resume…");
-    expect(resumeRoastProgressMessage(15)).toBe("Still working—good feedback takes a moment.");
-    expect(resumeRoastProgressMessage(29)).toBe("Still working—good feedback takes a moment.");
+    expect(resumeRoastProgressMessage(3)).toBe("Scoring it the way a recruiter would…");
+    expect(resumeRoastProgressMessage(7)).toBe("Writing the roast…");
+    expect(resumeRoastProgressMessage(15)).toBe("Still working. Good feedback takes a moment.");
+    expect(resumeRoastProgressMessage(29)).toBe("Still working. Good feedback takes a moment.");
     expect(resumeRoastProgressMessage(30)).toBe("Almost there…");
   });
 
@@ -437,6 +554,122 @@ describe("ResumeRoastWorkspace", () => {
     callback?.();
 
     expect(scrollToMock).not.toHaveBeenCalled();
+  });
+
+  it("shows the rubric scorecard with each jab next to its fix and source", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(readyState()))
+      .mockResolvedValueOnce(streamResponse(scoredResult));
+
+    render(<ResumeRoastWorkspace resume={resume} />);
+    await chooseTarget();
+
+    const score = await screen.findByLabelText("James's score: 7 out of 10, Would shortlist");
+    expect(score).toBeVisible();
+    expect(within(score).getByText("Performance claims with no numbers.")).toBeVisible();
+    expect(within(score).getByRole("img", { name: "2 out of 5" })).toBeVisible();
+    expect(within(score).getByText("How James scores")).toBeVisible();
+    expect(screen.getByText("Proof of impact", { selector: "p" })).toBeVisible();
+    expect(screen.getByText("“Improved API performance.”")).toBeVisible();
+    expect(screen.getByText(scoredResult.problems[0]!.improvement)).toBeVisible();
+    // Placeholders in the rewrite are highlighted for the person to fill in.
+    expect(screen.getByText("[verified amount]").tagName).toBe("MARK");
+    expect(screen.getByText("Fill in the brackets with your real numbers.")).toBeVisible();
+  });
+
+  it("adds a finished roast to history with its target and score", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(readyState()))
+      .mockResolvedValueOnce(streamResponse(scoredResult));
+
+    render(<ResumeRoastWorkspace resume={resume} />);
+    await chooseTarget();
+
+    expect(await screen.findByText("Resume Roast history (1)")).toBeVisible();
+    expect(screen.getByText("Senior Backend Engineer · Product company")).toBeInTheDocument();
+    expect(screen.getByText("7/10")).toBeInTheDocument();
+  });
+
+  it("offers the last target as a one-click roast", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(readyState({ id: roastId, target, result })))
+      .mockResolvedValueOnce(streamResponse());
+
+    render(<ResumeRoastWorkspace resume={resume} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Start a fresh analysis" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Same as last time/ }));
+
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1]?.[1]?.body))).toEqual({ target });
+  });
+
+  it("follows a roast that was already running when the page loaded", async () => {
+    const startedAt = Date.now() - 3_000;
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ data: { status: "generating", inProgress: {} } }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            status: "ready",
+            roast: { id: roastId, target, result: scoredResult, createdAt: startedAt }
+          }
+        })
+      );
+
+    render(
+      <ResumeRoastWorkspace
+        resume={resume}
+        initialState={{
+          ...readyState().data,
+          inProgress: { roastId, target, startedAt }
+        }}
+      />
+    );
+
+    // No questions: it resumes the running analysis, counting from its start.
+    expect(await screen.findByText(/^Analysing · [3-9]s$/)).toBeVisible();
+    expect(
+      await screen.findByLabelText("James's score: 7 out of 10, Would shortlist", {}, { timeout: 4_000 })
+    ).toBeVisible();
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe(`/api/resume-roast?roastId=${roastId}`);
+    expect(vi.mocked(fetch).mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
+  });
+
+  it("joins the running roast when another tab already started one", async () => {
+    const startedAt = Date.now();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(readyState()))
+      .mockResolvedValueOnce(jsonResponse({ data: { inProgress: { roastId, target, startedAt } } }, 202))
+      .mockResolvedValueOnce(
+        jsonResponse({ data: { status: "ready", roast: { id: roastId, target, result: scoredResult } } })
+      );
+
+    render(<ResumeRoastWorkspace resume={resume} />);
+    await chooseTarget();
+
+    expect(
+      await screen.findByLabelText("James's score: 7 out of 10, Would shortlist", {}, { timeout: 4_000 })
+    ).toBeVisible();
+    expect(vi.mocked(fetch).mock.calls[2]?.[0]).toBe(`/api/resume-roast?roastId=${roastId}`);
+  });
+
+  it("explains a followed roast that failed and offers a retry", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ data: { status: "failed" } }));
+
+    render(
+      <ResumeRoastWorkspace
+        resume={resume}
+        initialState={{
+          ...readyState().data,
+          inProgress: { roastId, target, startedAt: Date.now() }
+        }}
+      />
+    );
+
+    expect(
+      await screen.findAllByText("James is temporarily unavailable. Try again.", {}, { timeout: 4_000 })
+    ).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
   });
 
   it.each([

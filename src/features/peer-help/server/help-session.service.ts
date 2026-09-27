@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "@/server/database/prisma.service";
+import { logHelpLifecycle } from "./help-lifecycle-log";
 import { HelpRequestError, HelpRequestStatus } from "./help-request.types";
 
 /**
@@ -466,6 +467,7 @@ export class HelpSessionService {
       data: { learnerRating: rating }
     });
 
+    if (count > 0) logHelpLifecycle({ event: "rated", requestId, rating });
     return count > 0;
   }
 

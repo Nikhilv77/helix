@@ -61,8 +61,16 @@ export interface SessionStore {
   /** Restores a deliberately resumable durable session to the live-room window. */
   reactivateOwned(id: string, ownerId: string): Promise<VersionedInterviewSession | null>;
   listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]>;
-  /** Transcript-free read model used by the cross-session reports index. */
-  listReportsByOwner(ownerId: string, limit: number, now?: number): Promise<InterviewReport[]>;
+  /**
+   * Transcript-free read model used by the cross-session reports index,
+   * newest first. `offset` pages further back through the same order.
+   */
+  listReportsByOwner(
+    ownerId: string,
+    limit: number,
+    now?: number,
+    offset?: number
+  ): Promise<InterviewReport[]>;
   /** Moves sessions proven by a signed anonymous-browser identity to its account. */
   reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number>;
   getDesignCanvas(sessionId: string, ownerId: string): Promise<VersionedSystemDesignCanvas | null>;
@@ -206,9 +214,10 @@ export class MemorySessionStore implements SessionStore {
   async listReportsByOwner(
     ownerId: string,
     limit: number,
-    now = Date.now()
+    now = Date.now(),
+    offset = 0
   ): Promise<InterviewReport[]> {
-    return (await this.listByOwner(ownerId, limit)).map((session) =>
+    return (await this.listByOwner(ownerId, offset + limit)).slice(offset).map((session) =>
       readInterviewReportSnapshot(
         createInterviewReportSnapshot(session, now),
         session.touchedAt,
@@ -494,11 +503,14 @@ export class PrismaSessionStore implements SessionStore {
   async listReportsByOwner(
     ownerId: string,
     limit: number,
-    now = Date.now()
+    now = Date.now(),
+    offset = 0
   ): Promise<InterviewReport[]> {
     const rows = await this.prisma.interviewSession.findMany({
       where: { ownerId },
-      orderBy: { startedAt: "desc" },
+      // The id tie-break keeps pages stable when two rounds share a start time.
+      orderBy: [{ startedAt: "desc" }, { id: "desc" }],
+      skip: offset,
       take: limit,
       select: { id: true, reportSnapshot: true, touchedAt: true }
     });

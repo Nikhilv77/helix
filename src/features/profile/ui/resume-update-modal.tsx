@@ -22,7 +22,8 @@ export function ResumeUpdateModal({
   onUpdated
 }: {
   open: boolean;
-  profile: CandidateProfile;
+  /** Only what re-reading a file needs, so other pages can offer the update too. */
+  profile: Pick<CandidateProfile, "targetRole" | "level" | "resume">;
   onClose: () => void;
   onUpdated: (profile: CandidateProfile) => void;
 }) {

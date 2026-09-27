@@ -41,3 +41,35 @@ describe("mergeBriefingPractice", () => {
     expect(merged.streak).toMatchObject({ currentDays: 2, longestDays: 2, lastActiveAt: 1_000 });
   });
 });
+
+describe("cross-track streaks", () => {
+  it("counts a streak longer than a week when the full window is merged", () => {
+    const days = Array.from({ length: 14 }, (_, index) => {
+      const date = new Date(Date.UTC(2026, 8, 1 + index)).toISOString().slice(0, 10);
+      return { date, solved: 0, attempts: 0 };
+    });
+    // Ten days in a row, alternating tracks: neither track alone has a streak.
+    const dsa = days.map((day, index) => ({ ...day, solved: index >= 4 && index % 2 === 0 ? 1 : 0 }));
+    const core = days.map((day, index) => ({ ...day, solved: index >= 4 && index % 2 === 1 ? 1 : 0 }));
+    const briefing = mergeBriefingPractice(
+      {
+        totals: { totalAttempts: 5, completedQuestions: 5 },
+        streak: { currentDays: 1, longestDays: 1, activeDays: 5, lastActiveAt: null, lastSolvedAt: null },
+        activity: dsa,
+        interview: { completedSessions: 0 }
+      },
+      {
+        totalQuestions: 20,
+        completedQuestions: 5,
+        totalAttempts: 5,
+        solvedThisWeek: 3,
+        currentStreakDays: 1,
+        lastActiveAt: null,
+        activity: core,
+        nextUp: null
+      }
+    );
+    expect(briefing.streak.currentDays).toBe(10);
+    expect(briefing.streak.longestDays).toBe(10);
+  });
+});

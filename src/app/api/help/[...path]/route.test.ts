@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
   requestDelete: vi.fn(async () => Response.json({ handler: "request-delete" })),
   requestIdPost: vi.fn(async () => Response.json({ handler: "request-id-post" })),
   roomGet: vi.fn(async () => Response.json({ handler: "room-get" })),
-  roomPut: vi.fn(async () => Response.json({ handler: "room-put" }))
+  roomPut: vi.fn(async () => Response.json({ handler: "room-put" })),
+  leaderboardGet: vi.fn(async () => Response.json({ handler: "leaderboard-get" }))
 }));
 
 vi.mock("../request/handler", () => ({
@@ -17,12 +18,14 @@ vi.mock("../request/handler", () => ({
 }));
 vi.mock("../request/[id]/handler", () => ({ POST: mocks.requestIdPost }));
 vi.mock("../room/[id]/handler", () => ({ GET: mocks.roomGet, PUT: mocks.roomPut }));
+vi.mock("../leaderboard/handler", () => ({ GET: mocks.leaderboardGet }));
 
 import { DELETE, GET, POST, PUT } from "./route";
 
 describe("consolidated help route", () => {
   it.each([
     [GET, "GET", ["request"], mocks.requestGet],
+    [GET, "GET", ["leaderboard"], mocks.leaderboardGet],
     [POST, "POST", ["request"], mocks.requestPost],
     [DELETE, "DELETE", ["request"], mocks.requestDelete]
   ])("dispatches %s /%s", async (route, method, path, handler) => {

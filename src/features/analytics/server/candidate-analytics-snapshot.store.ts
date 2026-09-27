@@ -55,7 +55,16 @@ export class CandidateAnalyticsSnapshotStore {
   async readSummary(
     ownerId: string,
     build: Builder,
-    options: { requireFresh?: boolean } = {}
+    options: {
+      requireFresh?: boolean;
+      /**
+       * When the saved summary is out of date, wait up to this long for the
+       * rebuild before falling back to it. For pages people open right after
+       * practising, where the previous numbers would contradict what they
+       * just did.
+       */
+      waitForFreshMs?: number;
+    } = {}
   ): Promise<CandidateAnalyticsSummary> {
     if (!this.prisma.candidateAnalyticsSnapshot) return (await build()).summary;
 
@@ -78,6 +87,10 @@ export class CandidateAnalyticsSnapshotStore {
     }
     if (row?.payload && fresh(row)) return row.payload as unknown as CandidateAnalyticsSummary;
     if (!options.requireFresh && row?.payload && row.schemaVersion === SCHEMA_VERSION) {
+      const previous = row.payload as unknown as CandidateAnalyticsSummary;
+      if (options.waitForFreshMs) {
+        return this.freshWithin(ownerId, build, previous, options.waitForFreshMs);
+      }
       // Summary pages may show the last valid projection while changed evidence
       // is rebuilt. The dirty version remains durable until publication wins.
       after(async () => {
@@ -94,6 +107,42 @@ export class CandidateAnalyticsSnapshotStore {
       return row.payload as unknown as CandidateAnalyticsSummary;
     }
     return (await this.publishOnce(ownerId, build)).summary;
+  }
+
+  /**
+   * Races the rebuild against a budget. A rebuild that finishes in time and
+   * read every source is served; otherwise the previous summary is, and the
+   * rebuild carries on after the response.
+   */
+  private async freshWithin(
+    ownerId: string,
+    build: Builder,
+    previous: CandidateAnalyticsSummary,
+    budgetMs: number
+  ): Promise<CandidateAnalyticsSummary> {
+    const pending = this.publishOnce(ownerId, build);
+    const settled = pending.catch((error: unknown) => {
+      logger.error({
+        event: "candidate.analytics_background_refresh_failed",
+        ownerId,
+        reason: error instanceof Error ? error.message : String(error)
+      });
+      return null;
+    });
+    try {
+      after(() => settled);
+    } catch {
+      // Outside a request there is nothing to keep alive.
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), budgetMs);
+    });
+    const result = await Promise.race([settled, timedOut]);
+    clearTimeout(timer);
+    if (result?.cacheable) return result.summary;
+    if (!result) logger.warn({ event: "candidate.analytics_fresh_wait_exceeded", budgetMs });
+    return previous;
   }
 
   private publishOnce(ownerId: string, build: Builder): Promise<BuiltAnalytics> {

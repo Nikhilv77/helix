@@ -257,6 +257,7 @@ export class GroqProvider implements SystemDesignerAIProvider {
       body: JSON.stringify({
         model: this.model,
         temperature: request.temperature ?? DEFAULT_TEMPERATURE,
+        ...(request.seed !== undefined ? { seed: request.seed } : {}),
         messages: [
           { role: "system", content: request.systemInstruction },
           { role: "user", content: request.prompt }

@@ -80,6 +80,16 @@ function makePrisma(initialRows: Row[] = []) {
   >();
   const create = vi.fn(
     async ({ data }: { data: Omit<Row, "id" | "createdAt" | "updatedAt" | "result"> }) => {
+      // Mirrors the partial unique index: one GENERATING row per owner.
+      if (
+        data.status === ResumeRoastStatus.GENERATING &&
+        rows.some(
+          (candidate) =>
+            candidate.ownerId === data.ownerId && candidate.status === ResumeRoastStatus.GENERATING
+        )
+      ) {
+        throw Object.assign(new Error("Unique constraint failed"), { code: "P2002" });
+      }
       const created = row({
         ...data,
         id: `${String(rows.length + 3).padStart(8, "0")}-3333-4333-8333-333333333333`,
@@ -114,10 +124,11 @@ function makePrisma(initialRows: Row[] = []) {
             .filter((candidate) => matches(candidate, where))
             .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0] ?? null
       ),
-      findMany: vi.fn(async ({ where }: { where: Record<string, unknown> }) =>
+      findMany: vi.fn(async ({ where, take }: { where: Record<string, unknown>; take?: number }) =>
         [...rows]
           .filter((candidate) => matches(candidate, where))
           .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+          .slice(0, take ?? rows.length)
           .map((candidate) => ({
             ...candidate,
             resumeProfileVersion: { resumeFileName: "candidate.pdf" }
@@ -173,9 +184,17 @@ function makePrisma(initialRows: Row[] = []) {
 }
 
 function matches(candidate: Row, where: Record<string, unknown>): boolean {
-  return Object.entries(where).every(
-    ([field, expected]) => candidate[field as keyof Row] === expected
-  );
+  return Object.entries(where).every(([field, expected]) => {
+    const actual = candidate[field as keyof Row];
+    if (expected && typeof expected === "object" && !(expected instanceof Date)) {
+      const range = expected as { gt?: Date; lte?: Date };
+      if (!(actual instanceof Date)) return false;
+      if (range.gt && !(actual > range.gt)) return false;
+      if (range.lte && !(actual <= range.lte)) return false;
+      return true;
+    }
+    return actual === expected;
+  });
 }
 
 describe("ResumeRoastStore", () => {
@@ -249,12 +268,105 @@ describe("ResumeRoastStore", () => {
     const store = new ResumeRoastStore(prisma);
 
     const first = await store.createGeneration(input);
+    if (first.kind !== "created") throw new Error("expected a created generation");
+    await store.complete("user-a", first.roastId, first.generationToken, validResult);
     const second = await store.createGeneration(input);
+    if (second.kind !== "created") throw new Error("expected a created generation");
 
     expect(first.roastId).not.toBe(second.roastId);
     expect(first.generationToken).not.toBe(second.generationToken);
     expect(rows).toHaveLength(2);
     expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it("allows only one running generation per owner", async () => {
+    const { prisma } = makePrisma();
+    const store = new ResumeRoastStore(prisma);
+
+    await expect(store.createGeneration(input)).resolves.toMatchObject({ kind: "created" });
+    await expect(store.createGeneration(input)).resolves.toEqual({ kind: "conflict" });
+    await expect(
+      store.createGeneration({ ...input, ownerId: "user-b" })
+    ).resolves.toMatchObject({ kind: "created" });
+  });
+
+  it("reports running generations and fails ones that can no longer finish", async () => {
+    const { prisma, rows } = makePrisma([
+      row({
+        status: ResumeRoastStatus.GENERATING,
+        generationToken: "66666666-6666-4666-8666-666666666666",
+        result: null,
+        createdAt: new Date(NOW.getTime() - 120_000)
+      })
+    ]);
+    const store = new ResumeRoastStore(prisma);
+    const staleBefore = new Date(NOW.getTime() - 90_000);
+
+    await expect(store.getActiveGeneration("user-a", staleBefore)).resolves.toBeNull();
+    await expect(store.getGenerationStatus("user-a", rows[0]!.id, staleBefore)).resolves.toEqual({
+      status: "failed"
+    });
+    await expect(store.failStaleGenerations("user-a", staleBefore)).resolves.toBe(1);
+    expect(rows[0]).toMatchObject({ status: ResumeRoastStatus.FAILED, generationToken: null });
+
+    const fresh = await store.createGeneration(input);
+    expect(fresh.kind).toBe("created");
+    await expect(store.getActiveGeneration("user-a", staleBefore)).resolves.toMatchObject({
+      target: { role: "backend-engineer", companyEnvironment: "product-company", level: "senior" }
+    });
+    await expect(store.getGenerationStatus("user-b", rows[1]!.id, staleBefore)).resolves.toBeNull();
+  });
+
+  it("returns a completed roast to a follower", async () => {
+    const { prisma, rows } = makePrisma([row()]);
+    const store = new ResumeRoastStore(prisma);
+
+    await expect(
+      store.getGenerationStatus("user-a", rows[0]!.id, new Date(0))
+    ).resolves.toMatchObject({ status: "ready", roast: { id: rows[0]!.id, result: validResult } });
+  });
+
+  it("reuses a saved scorecard only for the same resume, target and rubric", async () => {
+    const scorecard = {
+      rubricVersion: "rubric-v1",
+      overall: 7,
+      dimensions: {
+        roleFit: { score: 4, note: "Clearly backend.", evidenceAnchors: [] },
+        impact: { score: 3, note: "A couple of outcomes.", evidenceAnchors: [] },
+        ownership: { score: 4, note: "Owns the payments API.", evidenceAnchors: [] },
+        technical: { score: 4, note: "Right stack.", evidenceAnchors: [] },
+        readability: { score: 4, note: "Easy to skim.", evidenceAnchors: [] }
+      }
+    };
+    const { prisma } = makePrisma([
+      row({ result: { ...validResult, scorecard } }),
+      row({
+        id: "77777777-7777-4777-8777-777777777777",
+        result: { ...validResult, scorecard: { ...scorecard, rubricVersion: "rubric-v0" } },
+        createdAt: new Date(NOW.getTime() + 1_000)
+      })
+    ]);
+    const store = new ResumeRoastStore(prisma);
+    const target = {
+      role: "backend-engineer",
+      companyEnvironment: "product-company",
+      level: "senior"
+    } as const;
+
+    await expect(
+      store.getReusableAssessment("user-a", input.resumeProfileVersionId, target, "rubric-v1")
+    ).resolves.toEqual({ scorecard, verdict: validResult.verdict });
+    await expect(
+      store.getReusableAssessment(
+        "user-a",
+        input.resumeProfileVersionId,
+        { ...target, level: "mid-level" },
+        "rubric-v1"
+      )
+    ).resolves.toBeNull();
+    await expect(
+      store.getReusableAssessment("user-a", input.resumeProfileVersionId, target, "rubric-v2")
+    ).resolves.toBeNull();
   });
 
   it("validates generation metadata before inserting", async () => {
@@ -295,6 +407,34 @@ describe("ResumeRoastStore", () => {
     ]);
   });
 
+  it("puts the rubric score in the completion notification", async () => {
+    const token = "66666666-6666-4666-8666-666666666666";
+    const { prisma, rows, notifications } = makePrisma([
+      row({ status: ResumeRoastStatus.GENERATING, generationToken: token, result: null })
+    ]);
+    const store = new ResumeRoastStore(prisma);
+    const dimension = { score: 4, note: "Fine.", evidenceAnchors: [] };
+
+    await store.complete("user-a", rows[0]!.id, token, {
+      ...validResult,
+      verdict: { band: "strong", explanation: "You'd get shortlisted." },
+      scorecard: {
+        rubricVersion: "rubric-v1",
+        overall: 8,
+        dimensions: {
+          roleFit: dimension,
+          impact: dimension,
+          ownership: dimension,
+          technical: dimension,
+          readability: dimension
+        }
+      }
+    });
+    expect(notifications[0]?.body).toBe(
+      "James scored it 8/10 for your target. Open it to see what to fix first."
+    );
+  });
+
   it("owner-scopes deletion", async () => {
     const { prisma, rows } = makePrisma([row()]);
     const store = new ResumeRoastStore(prisma);
@@ -304,7 +444,10 @@ describe("ResumeRoastStore", () => {
   });
 
   it("rejects malformed persisted and attempted results", async () => {
-    const malformed = { ...validResult, actionPlan: [] };
+    const malformed = {
+      ...validResult,
+      actionPlan: [{ priority: 2, action: "Out of order", rationale: "Priorities start at 1." }]
+    };
     const { prisma } = makePrisma([row({ result: malformed })]);
     const store = new ResumeRoastStore(prisma);
 

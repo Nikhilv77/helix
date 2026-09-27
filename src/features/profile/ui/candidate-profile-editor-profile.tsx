@@ -144,13 +144,13 @@ export function ProfileHero({
                   />
                 ) : null}
               </h1>
-              <p className="mt-2 max-w-3xl text-center text-sm leading-6 text-cream/58 sm:text-[15px]">
-                <AnimatedProfileWords
-                  text={profile.headline || "Add a headline so Trailgrad can frame your rounds."}
-                  delay={130}
-                  copy
-                />
-              </p>
+              {/* Set at onboarding and not editable here, so an empty one is
+                  simply left out; the role and level chips carry the line. */}
+              {profile.headline ? (
+                <p className="mt-2 max-w-3xl text-center text-sm leading-6 text-cream/58 sm:text-[15px]">
+                  <AnimatedProfileWords text={profile.headline} delay={130} copy />
+                </p>
+              ) : null}
 
               <div
                 className="step-in mt-3.5 flex flex-wrap justify-center gap-2.5"
@@ -175,18 +175,20 @@ export function ProfileHero({
                 style={{ "--profile-reveal-delay": "260ms" } as CSSProperties}
               />
 
-              <div className="mt-7 max-w-4xl">
-                <p className="text-base leading-8 text-cream/66 sm:text-lg">
-                  <AnimatedProfileWords
-                    text={
-                      profile.context ||
-                      "Add a short profile summary so your teacher can shape interviews around your real work."
-                    }
-                    delay={290}
-                    copy
-                  />
-                </p>
-              </div>
+              {profile.context || !resume ? (
+                <div className="mt-7 max-w-4xl">
+                  <p className="text-base leading-8 text-cream/66 sm:text-lg">
+                    <AnimatedProfileWords
+                      text={
+                        profile.context ||
+                        "Upload your resume and your teacher will shape practice and interviews around your real work."
+                      }
+                      delay={290}
+                      copy
+                    />
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
