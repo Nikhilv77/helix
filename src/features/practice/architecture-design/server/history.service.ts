@@ -14,7 +14,7 @@ const historySelect = {
   scenarioSnapshot: true,
   preparedAt: true,
   assessedAt: true,
-  questions: { select: { status: true } },
+  questions: { orderBy: { order: "asc" as const }, select: { id: true, order: true, status: true } },
   assessment: {
     select: {
       id: true,
@@ -52,6 +52,8 @@ export class ArchitectureDesignHistoryService {
         completedQuestionCount: block.questions.filter(({ status }) => status === "COMPLETED")
           .length,
         learnedQuestionCount: block.questions.filter(({ status }) => status === "LEARNED").length,
+        // Question links for a started library path that is not the current block.
+        questions: block.questions.map(({ id, order, status }) => ({ id, order, status })),
         assessment: block.assessment
           ? {
               id: block.assessment.id,

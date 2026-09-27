@@ -157,10 +157,10 @@ describe("Architecture Step 8 services", () => {
         preparedAt: new Date("2026-09-06T10:00:00Z"),
         assessedAt: new Date("2026-09-07T10:00:00Z"),
         questions: [
-          { status: "COMPLETED" },
-          { status: "COMPLETED" },
-          { status: "COMPLETED" },
-          { status: "LEARNED" }
+          { id: "question-1", order: 1, status: "COMPLETED" },
+          { id: "question-2", order: 2, status: "COMPLETED" },
+          { id: "question-3", order: 3, status: "COMPLETED" },
+          { id: "question-4", order: 4, status: "LEARNED" }
         ],
         assessment: {
           id: ASSESSMENT_ID,
@@ -180,6 +180,13 @@ describe("Architecture Step 8 services", () => {
       scenario: { key: first.scenario.key },
       completedQuestionCount: 3,
       learnedQuestionCount: 1,
+      // A started library path links its questions even when it is not current.
+      questions: [
+        { id: "question-1", order: 1, status: "COMPLETED" },
+        { id: "question-2", order: 2, status: "COMPLETED" },
+        { id: "question-3", order: 3, status: "COMPLETED" },
+        { id: "question-4", order: 4, status: "LEARNED" }
+      ],
       assessment: { overallScore: 72 }
     });
     expect(findMany).toHaveBeenCalledWith(

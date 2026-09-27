@@ -15,6 +15,7 @@ import {
   type AppliedEngineeringProductionSignal,
   type AppliedEngineeringRankedIncident
 } from "@/features/practice/applied-engineering/domain";
+import { boundedReason, targetJobTitle } from "@/features/practice/shared/domain/selection-reason";
 
 export type AppliedEngineeringFirstIncidentRankingContext = {
   recentIncidentKeys?: string[];
@@ -177,7 +178,7 @@ export class AppliedEngineeringIncidentRankingService {
         selectedIncident,
         rankings,
         reason: bounded(
-          `${selectedIncident.title} is next because ${humanize(weakestDimension ?? "production judgment")} needs the most reinforcement and the incident adds unrepeated evidence for ${focus.targetJob}.`,
+          `${selectedIncident.title} is next because ${humanize(weakestDimension ?? "production judgment")} needs the most reinforcement and the incident adds unrepeated evidence for ${targetJobTitle(focus.targetJob)}.`,
           500
         )
       })
@@ -408,7 +409,10 @@ function firstSelectionReason(
       : focus.baselineEvidence.weakSignalKeys.includes(incident.emphasizedSignalKeys[0]!)
         ? `your onboarding evidence showed a gap in ${emphasized}`
         : `your onboarding evidence has not yet assessed ${emphasized}`;
-  return `We chose ${incident.title} because ${baseline}, and it directly supports your ${focus.targetJob} target.`;
+  return boundedReason(
+    `We chose ${incident.title} because ${baseline}, and it directly supports your ${targetJobTitle(focus.targetJob)} target.`,
+    420
+  );
 }
 
 function foundationFit(signals: readonly AppliedEngineeringProductionSignal[]): number {

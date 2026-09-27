@@ -353,6 +353,31 @@ export class ProfileService {
     return teacherId;
   }
 
+  /** Whether this learner has finished onboarding but not yet heard the Overview tour. */
+  async overviewIntroductionPending(ownerId: string): Promise<boolean> {
+    // Raw SQL, like the other hot profile reads: it also keeps working in a
+    // dev server whose generated client predates this column.
+    const rows = await this.prisma.$queryRaw<Array<{ pending: boolean }>>(Prisma.sql`
+      SELECT ("overviewIntroducedAt" IS NULL
+        AND "preparationOnboardingCompletedAt" IS NOT NULL) AS "pending"
+      FROM "CandidateProfile"
+      WHERE "ownerId" = ${ownerId}
+    `);
+    return rows[0]?.pending === true;
+  }
+
+  /**
+   * Records that the Overview tour actually played. Called by the browser once
+   * audio starts, so a blocked autoplay never uses up the tour.
+   */
+  async markOverviewIntroduced(ownerId: string): Promise<void> {
+    await this.prisma.$executeRaw(Prisma.sql`
+      UPDATE "CandidateProfile"
+      SET "overviewIntroducedAt" = NOW()
+      WHERE "ownerId" = ${ownerId} AND "overviewIntroducedAt" IS NULL
+    `);
+  }
+
   async deleteAccountData(ownerId: string): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.interviewSession.deleteMany({ where: { ownerId } }),
@@ -693,7 +718,12 @@ async function runResumeTransaction<T>(
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       return await prisma.$transaction(work, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        // Onboarding writes the resume analysis and a compiled interview
+        // profile, both large JSON documents. Prisma's 5 s default is too tight
+        // on a slow or distant connection; matches `saveReadyPlan`.
+        maxWait: 10_000,
+        timeout: 20_000
       });
     } catch (error) {
       const retryable =

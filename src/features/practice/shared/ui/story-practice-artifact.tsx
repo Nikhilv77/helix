@@ -224,6 +224,8 @@ function languageExtension(language: string | undefined): string {
       return "cs";
     case "sql":
       return "sql";
+    case "css":
+      return "css";
     case "tsx":
       return "tsx";
     case "jsx":

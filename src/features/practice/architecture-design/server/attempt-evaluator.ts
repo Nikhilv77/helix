@@ -1,3 +1,4 @@
+import { PRACTICE_GRADING_REQUEST_LIMITS } from "@/features/practice/shared/server/written-answer-evaluator";
 import {
   architectureDesignAttemptFeedbackSchema,
   type ArchitectureDesignAttemptWork
@@ -38,6 +39,7 @@ export class ArchitectureDesignAttemptEvaluator {
         operation: "architecture-design.practice.attempt",
         modelClass: "fast",
         temperature: 0.1,
+        ...PRACTICE_GRADING_REQUEST_LIMITS,
         schema: architectureDesignAttemptFeedbackSchema,
         systemInstruction:
           "You are a strict system-design interviewer. Judge the answer only against the frozen scenario, artifact, and rubric. Do not invent requirements, traffic, dependencies, or production facts. Return concise JSON matching the schema, score from 0 to 10, and do not mention hidden rubrics or private source material.",

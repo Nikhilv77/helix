@@ -76,7 +76,11 @@ describe("ArchitectureDesignPracticeService", () => {
   });
 
   it("saves a draft without completing the question", async () => {
-    const upsert = vi.fn();
+    const upsert = vi.fn().mockResolvedValue({
+      draft: { kind: "text", text: "A bounded draft" },
+      revealedHintCount: 0,
+      updatedAt: new Date("2026-09-08T12:00:00Z")
+    });
     const tx = {
       $executeRaw: vi.fn(),
       architectureBlockQuestion: { findFirst: vi.fn().mockResolvedValue(mutableRow(question)) },
@@ -99,7 +103,10 @@ describe("ArchitectureDesignPracticeService", () => {
     });
 
     expect(result.status).toBe("ACTIVE");
+    expect(result.draft).toEqual({ kind: "text", text: "A bounded draft" });
     expect(upsert).toHaveBeenCalledOnce();
+    // The reply comes from the transaction's read; no second read after commit.
+    expect(root.architectureBlockQuestion.findFirst).not.toHaveBeenCalled();
     expect(tx.architectureBlockQuestion).not.toHaveProperty("update");
   });
 
@@ -189,11 +196,7 @@ describe("ArchitectureDesignPracticeService", () => {
     const tx = {
       $executeRaw: vi.fn(),
       architectureBlockQuestion: {
-        findFirst: vi.fn().mockResolvedValue({
-          id: QUESTION_ID,
-          blockId: BLOCK_ID,
-          status: "ACTIVE"
-        }),
+        findFirst: vi.fn().mockResolvedValue(publicRow(question)),
         update: vi.fn(),
         count: vi.fn().mockResolvedValue(0)
       },
@@ -287,13 +290,9 @@ function evaluationFixture() {
   };
 }
 
+/** Writes read the full row inside their transaction and reply from it. */
 function mutableRow(frozen: ArchitectureDesignQuestion) {
-  return {
-    id: QUESTION_ID,
-    blockId: BLOCK_ID,
-    contentFingerprint: `sha256:${"b".repeat(64)}`,
-    privateSnapshot: frozen
-  };
+  return publicRow(frozen);
 }
 
 function attemptRow(work: unknown, evaluation: ReturnType<typeof evaluationFixture>) {

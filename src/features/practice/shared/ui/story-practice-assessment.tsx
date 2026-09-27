@@ -16,6 +16,7 @@ import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
 import { AssessmentResultsScorecard } from "@/features/practice/shared/ui/assessment-results-scorecard";
 import { humanizeStoryPracticeKey } from "./presentation";
 import {
+  openAppliedEngineeringAssessmentRoom,
   openArchitectureDesignAssessmentRoom,
   openInterviewRoom
 } from "@/features/interviews/ui/shared/interview-room-navigation";
@@ -466,6 +467,9 @@ export function StoryPracticeAssessment({
         if (!data.sessionId) throw new Error("The assessment room could not be prepared.");
         if (experience.slug === "architecture-design") {
           openArchitectureDesignAssessmentRoom(data.sessionId);
+        } else if (experience.slug === "applied-engineering") {
+          // The typed room, like Core Technical and Architecture: no live voice session.
+          openAppliedEngineeringAssessmentRoom(data.sessionId);
         } else {
           openInterviewRoom(data.sessionId);
         }
@@ -837,11 +841,11 @@ function Report({
       ) : null}
 
       {transcript ? (
-        <details className="mt-5 rounded-xl border border-white/[0.07] px-4 py-4">
+        <details className="smooth-disclosure mt-5 rounded-xl border border-white/[0.07] px-4 py-4">
           <summary className="min-h-11 cursor-pointer text-[13px] font-semibold leading-[2.75rem] text-cream/68 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]">
             Review your safe transcript
           </summary>
-          <ol className="mt-3 space-y-4">
+          <ol className="smooth-disclosure-body mt-3 space-y-4">
             {transcript.entries.map((entry) => (
               <li key={entry.promptId}>
                 <p className="text-[12px] font-semibold leading-5 text-cream/66">

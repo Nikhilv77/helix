@@ -128,7 +128,11 @@ export class CoreTechnicalPreparationService {
           resumeTopicKeys: focus.resumeEvidence.topicKeys,
           resumeMechanismKeys: focus.resumeEvidence.mechanismKeys,
           excludedTopicKeys: focus.excludedTopicKeys,
-          personalizePresentation: input.personalized,
+          // The first path starts from its reviewed, critic-approved version.
+          // Live personalisation is four sequential reasoning-model calls
+          // (measured 40-80 s, or 66 s ending on this same reviewed path when
+          // the provider is overloaded), so `input.personalized` is ignored.
+          personalizePresentation: false,
           reviewedContract: {
             storyKey: reviewedStory.key,
             storyTitle: reviewedStory.title,
@@ -140,8 +144,9 @@ export class CoreTechnicalPreparationService {
           }
         },
         {
-          preferApprovedArtifact: !input.personalized,
-          fallbackToApprovedArtifactOnProviderFailure: input.personalized
+          preferApprovedArtifact: true,
+          // Live generation only runs if a story has no reviewed version.
+          fallbackToApprovedArtifactOnProviderFailure: true
         }
       );
       stage = "publishing";

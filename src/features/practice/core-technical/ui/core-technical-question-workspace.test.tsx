@@ -458,6 +458,12 @@ describe("CoreTechnicalQuestionWorkspace", () => {
 
     expect(await screen.findByText("Learned · zero mastery")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit answer" })).toBeNull();
+    // Nothing was submitted, so the answer area shows the revealed answer, not an editor.
+    expect(screen.getByRole("heading", { name: "Answer revealed" })).toBeInTheDocument();
+    expect(screen.getByText("The answer")).toBeInTheDocument();
+    // Once in the answer area, once in the review that opens after Learn.
+    expect(screen.getAllByText("Bound concurrency prevents resource exhaustion.")).toHaveLength(2);
+    expect(screen.queryByLabelText("Written answer")).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: /Hints/i }));
     expect(

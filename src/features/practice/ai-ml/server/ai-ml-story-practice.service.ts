@@ -13,7 +13,7 @@ import {
   storyPracticeRevealHintInputSchema,
   interactivePracticeSaveDraftInputSchema
 } from "@/features/practice/shared/domain/story-practice-contracts";
-import type { AiMlStoryQuestion } from "../domain/ai-ml-story-catalog";
+import type { AiMlStoryPath, AiMlStoryQuestion } from "../domain/ai-ml-story-catalog";
 import { aiMlQuickCheckQuestionById } from "../domain/ai-ml-quick-check-catalog";
 import {
   storyDiscipline,
@@ -92,6 +92,13 @@ export type AiMlStorySession = {
   recommendation: AiMlPracticeRecommendation | null;
 };
 
+/**
+ * Story sessions add authored questions and upgrade frozen snapshots in one
+ * transaction on a learner's first visit after a content change. Prisma's 5 s
+ * default is too tight on a slow or distant connection.
+ */
+const STORY_TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 20_000 } as const;
+
 export class AiMlStoryPracticeService {
   constructor(
     private readonly prisma: PrismaService,
@@ -141,37 +148,7 @@ export class AiMlStoryPracticeService {
             order: nextOrder + index,
             contentVersion: CONTENT_VERSION,
             contentFingerprint: storyPracticeFingerprint(question),
-            publicSnapshot: json({
-              id: question.id,
-              title: question.title,
-              prompt: question.prompt,
-              options: (question.choices ?? []).map((label, index) => ({
-                id: String(index),
-                label
-              })),
-              pathKey: question.pathKey,
-              ...(resumePath && question.pathKey === resumePath.key
-                ? {
-                    pathTitle: resumePath.title,
-                    pathDescription: resumePath.description,
-                    pathExpectedMinutes: resumePath.expectedMinutes
-                  }
-                : {}),
-              format: question.format,
-              artifact: question.artifact,
-              topicKeys: question.topicKeys,
-              interaction: question.interaction,
-              interviewConnection: question.interviewConnection
-            }),
-            privateSnapshot: json({
-              interactionRubric: question.interactionRubric,
-              answer: question.answer,
-              hints: question.hints,
-              rubric: question.rubric,
-              correctChoiceIndex: question.correctChoiceIndex,
-              commonMistakes: question.commonMistakes,
-              interviewerFollowUps: question.interviewerFollowUps
-            })
+            ...authoredSnapshots(question, resumePath)
           })),
           skipDuplicates: true
         });
@@ -230,8 +207,36 @@ export class AiMlStoryPracticeService {
           if (!row) throw new Error("Story practice session disappeared");
         }
       }
+      // A revised authored question reaches learners who have not touched it:
+      // no answer, no draft, and no hints. Anything started stays frozen.
+      const revisions = revisableQuestions(row, discipline, track);
+      if (revisions.length) {
+        const refreshed = await Promise.all(
+          revisions.map(({ question, authored }) =>
+            tx.aiMlPracticeQuestion.updateMany({
+              where: {
+                id: question.id,
+                ownerId,
+                status: AiMlPracticeQuestionStatus.ACTIVE,
+                contentFingerprint: question.contentFingerprint,
+                revealedHintCount: 0,
+                draft: { equals: Prisma.AnyNull },
+                attempt: { is: null }
+              },
+              data: {
+                contentFingerprint: storyPracticeFingerprint(authored),
+                ...authoredSnapshots(authored, null)
+              }
+            })
+          )
+        );
+        if (refreshed.some((result) => result.count > 0)) {
+          row = await this.load(ownerId, discipline, track, tx);
+          if (!row) throw new Error("Story practice session disappeared");
+        }
+      }
       return row;
-    });
+    }, STORY_TRANSACTION_OPTIONS);
     return this.view(row, discipline, track, profile);
   }
 
@@ -274,6 +279,7 @@ export class AiMlStoryPracticeService {
     ];
     const present = new Map(row.questions.map((question) => [question.questionKey, question]));
     if (required.some((question) => !present.has(question.id))) return false;
+    if (revisableQuestions(row, discipline, track).length > 0) return false;
     const quickKeys = new Set(
       (definition.quickCheck(track)?.questions ?? []).map((question) => question.id)
     );
@@ -293,9 +299,13 @@ export class AiMlStoryPracticeService {
     profile?: CandidateProfile
   ): AiMlStorySession {
     const candidateRole = storyDiscipline(discipline).candidateRole;
+    // Core paths first, then the learner's own project, then the quick check.
+    const definition = storyDiscipline(discipline);
+    const quickCheck = definition.quickCheck(track);
     const paths: AiMlPracticePath[] = [
+      ...definition.paths(track),
       ...savedPersonalizedPaths(row.questions, AI_ML_RESUME_PATH_KEY),
-      ...storyDisciplinePaths(discipline, track)
+      ...(quickCheck ? [quickCheck] : [])
     ];
     const recommendation = profile
       ? recommendAiMlPractice({ profile, paths, questions: row.questions })
@@ -623,7 +633,7 @@ export class AiMlStoryPracticeService {
         });
         await completeSessionIfTerminal(tx, row.sessionId);
         return { attempt, completedAt };
-      });
+      }, STORY_TRANSACTION_OPTIONS);
     } catch (error) {
       if (!isUniqueConflict(error)) throw error;
       const committed = await this.prisma.aiMlPracticeAttempt.findUnique({
@@ -666,7 +676,7 @@ export class AiMlStoryPracticeService {
       });
       await completeSessionIfTerminal(tx, row.sessionId);
       return result.count > 0;
-    });
+    }, STORY_TRANSACTION_OPTIONS);
     if (!updated) return this.question(ownerId, input.questionId);
     return this.questionView({
       ...row,
@@ -750,6 +760,75 @@ type PrivateSnapshot = {
     contentFingerprint: string;
   };
 };
+
+/** The frozen public and private snapshots stored for an authored question. */
+function authoredSnapshots(question: AiMlStoryQuestion, resumePath: AiMlStoryPath | null) {
+  return {
+    publicSnapshot: json({
+      id: question.id,
+      title: question.title,
+      prompt: question.prompt,
+      options: (question.choices ?? []).map((label, index) => ({
+        id: String(index),
+        label
+      })),
+      pathKey: question.pathKey,
+      ...(resumePath && question.pathKey === resumePath.key
+        ? {
+            pathTitle: resumePath.title,
+            pathDescription: resumePath.description,
+            pathExpectedMinutes: resumePath.expectedMinutes
+          }
+        : {}),
+      format: question.format,
+      artifact: question.artifact,
+      topicKeys: question.topicKeys,
+      interaction: question.interaction,
+      interviewConnection: question.interviewConnection
+    }),
+    privateSnapshot: json({
+      interactionRubric: question.interactionRubric,
+      answer: question.answer,
+      hints: question.hints,
+      rubric: question.rubric,
+      correctChoiceIndex: question.correctChoiceIndex,
+      commonMistakes: question.commonMistakes,
+      interviewerFollowUps: question.interviewerFollowUps
+    })
+  };
+}
+
+/**
+ * Authored path questions whose catalog content changed since they were
+ * saved, limited to ones the learner has not touched. The quick check has its
+ * own upgrade, and resume paths are generated per learner.
+ */
+function revisableQuestions(
+  row: SessionRow,
+  discipline: StoryDiscipline,
+  track: PersistedAiMlPracticeTrack
+): Array<{ question: QuestionRow; authored: AiMlStoryQuestion }> {
+  const authored = new Map(
+    storyDiscipline(discipline)
+      .paths(track)
+      .flatMap((path) => path.questions)
+      .map((question) => [question.id, question])
+  );
+  return row.questions.flatMap((question) => {
+    const current = authored.get(question.questionKey);
+    if (
+      !current ||
+      question.status !== AiMlPracticeQuestionStatus.ACTIVE ||
+      question.attempt ||
+      question.draft !== null ||
+      question.revealedHintCount > 0 ||
+      question.contentFingerprint === storyPracticeFingerprint(current)
+    ) {
+      return [];
+    }
+    return [{ question, authored: current }];
+  });
+}
 
 function quickCheckSnapshots(question: AiMlStoryQuestion, previous: QuestionRow) {
   const previousPublic = publicData(previous);

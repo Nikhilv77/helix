@@ -88,6 +88,33 @@ function runReference(reference, args) {
 
 const results = { verified: [], mismatched: [], missing: [] };
 
+/**
+ * A reference answer the bank cannot store faithfully. JSON turns Infinity
+ * and NaN into null, and integers past 2^53 lose digits, so the saved
+ * expectation would fail every correct solution. Returns the offending value.
+ */
+function unrepresentable(value) {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return value;
+    if (Number.isInteger(value) && !Number.isSafeInteger(value)) return value;
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = unrepresentable(item);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  if (value && typeof value === "object") {
+    for (const item of Object.values(value)) {
+      const found = unrepresentable(item);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
 for (const [slug, reference] of Object.entries(REFERENCES)) {
   const question = findQuestion(slug)?.question;
   if (!question) {
@@ -153,6 +180,15 @@ for (const [slug, reference] of Object.entries(REFERENCES)) {
         comparison = "one-of";
       }
 
+      const invalid = unrepresentable(expectedValue);
+      if (invalid !== undefined) {
+        results.mismatched.push({
+          slug,
+          generating: args.map((arg) => (Array.isArray(arg) && arg.length > 20 ? `[${arg.length} items]` : arg)),
+          error: `reference answer contains ${invalid}, which the bank cannot store; the input breaks the problem's constraints`
+        });
+        continue;
+      }
       generated.push({
         arguments: clone(args),
         expectedValue: clone(expectedValue),
@@ -182,6 +218,15 @@ for (const [slug, reference] of Object.entries(REFERENCES)) {
           slug,
           generating: scaleCase.build,
           error: `scale case answers with ${expectedValue.length} values; the answer is written into the bank, so scale cases must answer small`
+        });
+        continue;
+      }
+      const invalid = unrepresentable(expectedValue);
+      if (invalid !== undefined) {
+        results.mismatched.push({
+          slug,
+          generating: scaleCase.build,
+          error: `scale case answer contains ${invalid}, which the bank cannot store`
         });
         continue;
       }

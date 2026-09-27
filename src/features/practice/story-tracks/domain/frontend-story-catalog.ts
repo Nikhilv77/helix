@@ -3,6 +3,7 @@ import type {
   AiMlStoryQuestion
 } from "@/features/practice/ai-ml/domain/ai-ml-story-catalog";
 import type { PersistedAiMlPracticeTrack } from "@/features/practice/ai-ml/domain/ai-ml-practice";
+import type { InteractionCriterion } from "@/features/practice/shared/domain/interactive-response";
 
 const text = (
   value: Omit<AiMlStoryQuestion, "rubric"> & { rubric: [string, string, string] }
@@ -18,6 +19,17 @@ const text = (
 const choice = (value: Omit<AiMlStoryQuestion, "rubric">): AiMlStoryQuestion => ({
   ...value,
   rubric: [{ criterion: "Select the best answer for the evidence shown.", points: 10 }]
+});
+
+/** An interactive ordering question; the rubric comes from its ordering rules. */
+const ordering = (
+  value: Omit<AiMlStoryQuestion, "rubric"> & {
+    interaction: NonNullable<AiMlStoryQuestion["interaction"]>;
+    interactionRubric: InteractionCriterion[];
+  }
+): AiMlStoryQuestion => ({
+  ...value,
+  rubric: value.interactionRubric.map(({ label, points }) => ({ criterion: label, points }))
 });
 
 const core: AiMlStoryPath[] = [
@@ -762,6 +774,856 @@ const applied: AiMlStoryPath[] = [
   }
 ];
 
+// Paths 3-4 of each Frontend track, added so each track has four paths.
+const coreMore: AiMlStoryPath[] = [
+  {
+    key: "css-and-layout",
+    title: "Make layouts behave under pressure",
+    description:
+      "Explain stacking, overflow, the cascade, and responsive images from real UI bugs.",
+    expectedMinutes: 40,
+    questions: [
+      text({
+        id: "frontend-core-11",
+        pathKey: "css-and-layout",
+        title: "Bring the modal above the header",
+        format: "artifact-diagnosis",
+        prompt:
+          "The modal has z-index: 9999 but still renders underneath the sticky header. Explain why raising the number does not help, and fix it.",
+        artifact: {
+          kind: "code",
+          language: "css",
+          title: "layout.css",
+          content:
+            '.page { transform: translateZ(0); } /* added for smoother scrolling */\n.page .modal { position: fixed; z-index: 9999; }\n.header { position: sticky; top: 0; z-index: 10; }\n/* DOM: <header class="header"> is a sibling of <main class="page"> */'
+        },
+        topicKeys: ["stacking-context", "z-index"],
+        hints: [
+          "z-index only competes inside the same stacking context.",
+          "A transform on an ancestor creates a new stacking context.",
+          "The modal can never escape .page while .page itself sits below the header."
+        ],
+        answer: {
+          concise:
+            "The transform on .page creates a stacking context, so the modal's 9999 only ranks inside .page, and .page sits below the header.",
+          explanation:
+            "Render the modal outside .page (for example through a portal at the end of body) or remove the transform. Then its z-index is compared with the header in the root stacking context and wins."
+        },
+        rubric: [
+          "Identify the transform as creating a new stacking context.",
+          "Explain that z-index cannot escape its stacking context.",
+          "Fix it with a portal or by removing the stacking-context trigger."
+        ],
+        commonMistakes: ["Raising z-index further without changing where the modal lives."],
+        interviewerFollowUps: ["Name three other CSS properties that create a stacking context."],
+        interviewConnection:
+          "Stacking-context bugs are a classic way to test whether you know how the browser layers content."
+      }),
+      choice({
+        id: "frontend-core-12",
+        pathKey: "css-and-layout",
+        title: "Stop the long file name breaking the row",
+        format: "mcq",
+        prompt:
+          "A long file name pushes the delete button out of this flex row instead of being truncated. What is the smallest correct fix?",
+        artifact: {
+          kind: "code",
+          language: "css",
+          title: "file-row.css",
+          content:
+            ".row { display: flex; gap: 8px; }\n.name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.delete { flex-shrink: 0; }"
+        },
+        topicKeys: ["flexbox", "overflow"],
+        choices: [
+          "Add min-width: 0 to .name so the flex item is allowed to shrink below its content width.",
+          "Give .row overflow: hidden.",
+          "Set .delete to position: absolute.",
+          "Replace flex: 1 with width: 100% on .name."
+        ],
+        correctChoiceIndex: 0,
+        hints: [
+          "Flex items have an automatic minimum size.",
+          "By default a flex item will not shrink smaller than its content.",
+          "Lowering that minimum lets overflow and ellipsis take effect."
+        ],
+        answer: {
+          concise:
+            "Flex items default to min-width: auto, so .name refuses to shrink; min-width: 0 lets the ellipsis work.",
+          explanation:
+            "Because min-width: auto keeps the item at least as wide as its content, overflow: hidden never gets a chance to clip. Setting min-width: 0 removes that floor so the text truncates and the button keeps its place."
+        },
+        commonMistakes: ["Clipping the whole row, which hides the delete button instead."],
+        interviewerFollowUps: ["Why does the same problem appear with nested flex containers?"],
+        interviewConnection:
+          "Interviewers use this to see whether you understand flexbox sizing rather than trial-and-error CSS."
+      }),
+      text({
+        id: "frontend-core-13",
+        pathKey: "css-and-layout",
+        title: "Predict which color wins",
+        format: "predict-explain",
+        prompt:
+          "What color is the link inside the card? Explain how the browser decides, step by step.",
+        artifact: {
+          kind: "code",
+          language: "css",
+          title: "theme.css",
+          content:
+            '/* <div id="promo" class="card"><a class="cta" href="#">Buy</a></div> */\n#promo a { color: blue; }\n.card .cta { color: green; }\na.cta { color: red !important; }\n.card a.cta { color: purple; }'
+        },
+        topicKeys: ["cascade", "specificity"],
+        hints: [
+          "!important declarations are compared before specificity.",
+          "Only one rule here is marked !important.",
+          "Without it, an ID selector would beat any number of classes."
+        ],
+        answer: {
+          concise:
+            "Red, because the only !important declaration wins before specificity is compared.",
+          explanation:
+            "The cascade first sorts by importance, so a.cta { color: red !important } beats the normal rules. Without it, #promo a would win because one ID outranks any number of classes, making the link blue."
+        },
+        rubric: [
+          "State that the link is red.",
+          "Explain that importance is compared before specificity.",
+          "Explain what would win without !important and why."
+        ],
+        commonMistakes: ["Assuming the last rule in the file always wins."],
+        interviewerFollowUps: ["How do cascade layers change this ordering?"],
+        interviewConnection:
+          "Cascade questions check that you can predict CSS instead of adding !important until it works."
+      }),
+      text({
+        id: "frontend-core-14",
+        pathKey: "css-and-layout",
+        title: "Find why the sticky header scrolls away",
+        format: "artifact-diagnosis",
+        prompt:
+          "position: sticky works on one page but not on the settings page. Using the computed styles, explain the cause and the fix.",
+        artifact: {
+          kind: "logs",
+          title: "Computed styles on the settings page",
+          content:
+            "nav.settings-header   position: sticky; top: 0\nparent section.panel  overflow: hidden; height: auto\ngrandparent main      overflow: visible\nScrolling container: window\nObserved: header scrolls out of view with the page"
+        },
+        topicKeys: ["sticky-positioning", "overflow"],
+        hints: [
+          "A sticky element sticks relative to its nearest scrolling ancestor.",
+          "overflow: hidden makes an element a scroll container even if it never scrolls.",
+          "The panel is only as tall as its content, so there is nowhere to stick."
+        ],
+        answer: {
+          concise:
+            "overflow: hidden on section.panel makes it the sticky element's scroll container, and that container never scrolls, so the header cannot stick.",
+          explanation:
+            "Remove overflow: hidden from the ancestor (use overflow: clip if you only need clipping) so the window becomes the scroll container again, then confirm the header sticks while the page scrolls."
+        },
+        rubric: [
+          "Identify the ancestor overflow as the cause.",
+          "Explain that sticky is relative to the nearest scroll container.",
+          "Fix it by removing the overflow or using overflow: clip."
+        ],
+        commonMistakes: ["Switching to position: fixed and breaking the layout flow."],
+        interviewerFollowUps: [
+          "What is the difference between overflow: hidden and overflow: clip?"
+        ],
+        interviewConnection:
+          "Sticky bugs show whether you can reason from computed styles instead of guessing."
+      }),
+      text({
+        id: "frontend-core-15",
+        pathKey: "css-and-layout",
+        title: "Choose images that fit every screen",
+        format: "production-decision",
+        prompt:
+          "The product grid serves one 1600 px image to every device and mobile data usage complaints are rising. Decide how you would serve images and how you would confirm the improvement.",
+        artifact: {
+          kind: "metrics",
+          title: "Product grid image delivery",
+          content:
+            "Image source: 1600x1600 JPEG, ~420 KB each\nGrid cell on phones: ~170 CSS px wide (DPR 3)\nImages per page: 24\nMobile LCP p75: 3.9 s\n62% of traffic on mobile"
+        },
+        topicKeys: ["responsive-images", "performance"],
+        hints: [
+          "The browser can choose the right file if you describe the options.",
+          "sizes tells the browser how wide the image will be displayed.",
+          "Modern formats and lazy loading below the fold add more savings."
+        ],
+        answer: {
+          concise:
+            "Serve several widths with srcset and an accurate sizes attribute, use a modern format like AVIF or WebP, and lazy-load images below the fold.",
+          explanation:
+            "A 170 px cell at DPR 3 needs roughly a 510 px image, not 1600 px. With srcset and sizes the browser downloads the smallest adequate file. Keep the first visible images eager, then confirm with field LCP and bytes transferred per page."
+        },
+        rubric: [
+          "Use srcset with sizes so the browser picks an appropriate width.",
+          "Add modern formats and lazy loading, keeping above-the-fold images eager.",
+          "Verify with field LCP and transferred bytes."
+        ],
+        commonMistakes: ["Lazy-loading the LCP image, which makes it slower."],
+        interviewerFollowUps: ["When would you use the picture element instead of srcset alone?"],
+        interviewConnection:
+          "Image delivery is one of the most common real performance wins interviewers ask about."
+      })
+    ]
+  },
+  {
+    key: "typescript-and-async",
+    title: "Write TypeScript and async code that holds up",
+    description:
+      "Reason about promises, types, and state shapes that prevent whole classes of bugs.",
+    expectedMinutes: 40,
+    questions: [
+      text({
+        id: "frontend-core-16",
+        pathKey: "typescript-and-async",
+        title: "Explain why 'saved' prints first",
+        format: "predict-explain",
+        prompt:
+          "The log shows 'All saved' before any item finishes saving. Explain why, and rewrite the loop so it waits.",
+        artifact: {
+          kind: "code",
+          language: "typescript",
+          title: "save-all.ts",
+          content:
+            "async function saveAll(items: Item[]) {\n  items.forEach(async (item) => {\n    await api.save(item);\n    console.log('saved', item.id);\n  });\n  console.log('All saved');\n}"
+        },
+        topicKeys: ["promises", "async-iteration"],
+        hints: [
+          "forEach ignores the promise each callback returns.",
+          "saveAll never awaits anything itself.",
+          "Collect the promises, or loop with for...of."
+        ],
+        answer: {
+          concise:
+            "forEach does not await the async callbacks, so saveAll logs 'All saved' immediately; use for...of with await or Promise.all.",
+          explanation:
+            "Use for (const item of items) await api.save(item) to save in order, or await Promise.all(items.map((item) => api.save(item))) to save in parallel. Choose based on whether order and rate limits matter."
+        },
+        rubric: [
+          "Explain that forEach discards the returned promises.",
+          "Give a correct sequential or parallel rewrite.",
+          "Explain when to choose sequential versus parallel."
+        ],
+        commonMistakes: ["Adding await before items.forEach, which still does not wait."],
+        interviewerFollowUps: ["How would you limit it to three saves at a time?"],
+        interviewConnection:
+          "This bug appears constantly in real code reviews and interview live-coding."
+      }),
+      choice({
+        id: "frontend-core-17",
+        pathKey: "typescript-and-async",
+        title: "Keep one failing widget from blanking the page",
+        format: "mcq",
+        prompt:
+          "The dashboard loads four independent widgets with Promise.all. When one API fails, the whole dashboard shows an error. What should change?",
+        artifact: {
+          kind: "code",
+          language: "typescript",
+          title: "dashboard.ts",
+          content:
+            "const [sales, traffic, alerts, tasks] = await Promise.all([\n  getSales(), getTraffic(), getAlerts(), getTasks()\n]);\nrender({ sales, traffic, alerts, tasks });"
+        },
+        topicKeys: ["promises", "error-handling"],
+        choices: [
+          "Use Promise.allSettled and render each widget from its own result, showing an error only where it failed.",
+          "Use Promise.race so the fastest widget renders first.",
+          "Wrap Promise.all in a retry loop until every call succeeds.",
+          "Await each call one after another inside a single try/catch."
+        ],
+        correctChoiceIndex: 0,
+        hints: [
+          "Promise.all rejects as soon as any promise rejects.",
+          "The widgets do not depend on each other.",
+          "You need every result, successful or not."
+        ],
+        answer: {
+          concise:
+            "Promise.allSettled waits for every request and reports each outcome, so one failure only affects its own widget.",
+          explanation:
+            "Promise.all fails fast, which suits dependent work. For independent widgets, allSettled returns fulfilled and rejected results together, so the page renders what succeeded and shows a local error state for the rest."
+        },
+        commonMistakes: ["Retrying everything, which delays the widgets that already succeeded."],
+        interviewerFollowUps: ["When is failing fast with Promise.all the right choice?"],
+        interviewConnection:
+          "Interviewers use this to check you can match error handling to how data is actually used."
+      }),
+      text({
+        id: "frontend-core-18",
+        pathKey: "typescript-and-async",
+        title: "Find the crash the type checker missed",
+        format: "artifact-diagnosis",
+        prompt:
+          "TypeScript compiles cleanly, yet users see this crash. Explain how the type system was bypassed and how to make the compiler catch it.",
+        artifact: {
+          kind: "logs",
+          title: "Production error and source",
+          content:
+            "TypeError: Cannot read properties of undefined (reading 'name')\n  at ProfileCard (ProfileCard.tsx:12)\n\n// profile.ts\nconst user = (await res.json()) as User;\n// ProfileCard.tsx:12\nreturn <h2>{user.team.name}</h2>; // team is missing for new users"
+        },
+        topicKeys: ["typescript", "runtime-validation"],
+        hints: [
+          "`as User` tells the compiler to trust you, not the data.",
+          "The API sometimes omits team.",
+          "Validate at the boundary and model optional fields honestly."
+        ],
+        answer: {
+          concise:
+            "The `as User` assertion trusted the API response, but team can be missing, so the compiler never saw the undefined case.",
+          explanation:
+            "Parse the response at the boundary with a runtime schema (for example zod), mark team as optional in the type, and handle the missing case in the component. The compiler then forces every use of team to deal with undefined."
+        },
+        rubric: [
+          "Identify the type assertion as the bypass.",
+          "Validate external data at runtime at the boundary.",
+          "Model the optional field so the compiler enforces handling it."
+        ],
+        commonMistakes: ["Adding a non-null assertion (!) to silence the error again."],
+        interviewerFollowUps: ["What does strictNullChecks change here?"],
+        interviewConnection:
+          "Interviewers look for the difference between compile-time types and runtime data."
+      }),
+      text({
+        id: "frontend-core-19",
+        pathKey: "typescript-and-async",
+        title: "Model request state so impossible states cannot happen",
+        format: "written",
+        prompt:
+          "This component tracks a request with three booleans and occasionally shows a spinner and an error together. Redesign the state type and explain why it prevents the bug.",
+        artifact: {
+          kind: "code",
+          language: "typescript",
+          title: "useOrders.ts",
+          content:
+            "const [isLoading, setIsLoading] = useState(false);\nconst [isError, setIsError] = useState(false);\nconst [data, setData] = useState<Order[] | null>(null);\n// a retry sets isLoading = true but forgets to reset isError"
+        },
+        topicKeys: ["typescript", "discriminated-unions"],
+        hints: [
+          "Three booleans allow eight combinations, but only a few are valid.",
+          "A single status field can carry only one state at a time.",
+          "Attach data only to the state where it exists."
+        ],
+        answer: {
+          concise:
+            "Use one discriminated union, such as idle | loading | success with data | error with message, so only valid combinations can exist.",
+          explanation:
+            "type State = { status: 'idle' } | { status: 'loading' } | { status: 'success'; data: Order[] } | { status: 'error'; message: string }. Every transition replaces the whole state, so loading and error can never be true together, and TypeScript narrows data only in the success branch."
+        },
+        rubric: [
+          "Explain why independent booleans allow invalid combinations.",
+          "Propose a discriminated union with one status field.",
+          "Show how narrowing makes data available only when it exists."
+        ],
+        commonMistakes: ["Adding another boolean to patch the invalid combination."],
+        interviewerFollowUps: ["How would you handle a refetch while keeping old data visible?"],
+        interviewConnection:
+          "Modelling state with unions is a strong senior-level signal in frontend interviews."
+      }),
+      text({
+        id: "frontend-core-20",
+        pathKey: "typescript-and-async",
+        title: "Decide where form validation belongs",
+        format: "production-decision",
+        prompt:
+          "A teammate wants to drop server-side validation because the React form already validates every field. Decide what to do and explain the risks.",
+        artifact: {
+          kind: "scenario",
+          title: "Signup form",
+          content:
+            "Client: validates email format, password length, age >= 18\nServer: currently re-validates the same rules\nProposal: remove server checks to 'avoid duplication'\nPublic API also used by the mobile app"
+        },
+        topicKeys: ["validation", "security"],
+        hints: [
+          "Anyone can send a request without using your form.",
+          "The mobile app and scripts reach the same API.",
+          "Duplication can be removed by sharing rules, not by deleting checks."
+        ],
+        answer: {
+          concise:
+            "Keep server validation as the source of truth; client validation is only for fast feedback. Share one schema to remove the duplication.",
+          explanation:
+            "Requests can bypass the form entirely, so only the server can enforce rules. Define the rules once (for example a shared zod schema) and use it on both sides, so the client gives instant feedback and the server still rejects bad input."
+        },
+        rubric: [
+          "State that the server must still validate.",
+          "Explain that clients can be bypassed by other callers.",
+          "Remove duplication by sharing one schema."
+        ],
+        commonMistakes: ["Trusting the UI as a security boundary."],
+        interviewerFollowUps: ["How would you show server errors next to the right field?"],
+        interviewConnection:
+          "This checks whether you understand trust boundaries, not just form libraries."
+      })
+    ]
+  }
+];
+
+const appliedMore: AiMlStoryPath[] = [
+  {
+    key: "data-fetching-incidents",
+    title: "Fix data that shows up wrong",
+    description:
+      "Trace stale caches, CORS failures, pagination bugs, and auth races to their cause.",
+    expectedMinutes: 45,
+    questions: [
+      text({
+        id: "frontend-applied-11",
+        pathKey: "data-fetching-incidents",
+        title: "Explain why the renamed project snaps back",
+        format: "artifact-diagnosis",
+        prompt:
+          "Users rename a project, see the new name, then it reverts a second later. Using the network log, explain what happens and how to fix it.",
+        artifact: {
+          kind: "logs",
+          title: "Network log after renaming",
+          content:
+            "t=0 ms     optimistic update: 'Q3 Plan' -> 'Q3 Roadmap'\nt=5 ms     PATCH /projects/42 (pending)\nt=40 ms    GET /projects (started by window focus refetch)\nt=380 ms   PATCH /projects/42 200\nt=620 ms   GET /projects 200 -> name: 'Q3 Plan' (read from replica before write)\nUI shows: 'Q3 Plan'"
+        },
+        topicKeys: ["caching", "optimistic-updates"],
+        hints: [
+          "A refetch started before the write finished.",
+          "Its older response overwrote the optimistic value.",
+          "Cancel in-flight reads for that key during a mutation."
+        ],
+        answer: {
+          concise:
+            "A refetch that started before the PATCH finished returned the old name and overwrote the optimistic update.",
+          explanation:
+            "Cancel in-flight queries for the project list when the mutation starts, apply the optimistic update, then invalidate and refetch after the mutation succeeds. Roll back only if the mutation fails."
+        },
+        rubric: [
+          "Identify the stale refetch overwriting the optimistic value.",
+          "Cancel in-flight reads when the mutation starts.",
+          "Invalidate after success and roll back on failure."
+        ],
+        commonMistakes: ["Disabling refetch on focus everywhere instead of fixing the ordering."],
+        interviewerFollowUps: ["How does read-after-write consistency on the server affect this?"],
+        interviewConnection: "Cache ordering bugs are common in apps using React Query or SWR."
+      }),
+      text({
+        id: "frontend-applied-12",
+        pathKey: "data-fetching-incidents",
+        title: "Fix the CORS error after the API move",
+        format: "artifact-diagnosis",
+        prompt:
+          "After moving the API to a new domain, every authenticated request fails in the browser but works in curl. Explain the cause and the correct server fix.",
+        artifact: {
+          kind: "logs",
+          title: "Browser console and preflight",
+          content:
+            "Access to fetch at 'https://api.shop.example/cart' from origin 'https://shop.example' has been blocked by CORS policy: Request header field authorization is not allowed by Access-Control-Allow-Headers in preflight response.\n\nOPTIONS /cart -> 204\n  Access-Control-Allow-Origin: https://shop.example\n  Access-Control-Allow-Methods: GET, POST"
+        },
+        topicKeys: ["cors", "http"],
+        hints: [
+          "curl does not enforce CORS; browsers do.",
+          "The Authorization header triggers a preflight.",
+          "The preflight response must list every custom header you send."
+        ],
+        answer: {
+          concise:
+            "The preflight response does not allow the Authorization header, so the browser blocks the request; the API must add it to Access-Control-Allow-Headers.",
+          explanation:
+            "Return Access-Control-Allow-Headers: Authorization, Content-Type (and allow any other methods used) for the exact origin. Do not respond with a wildcard origin for credentialed requests. curl works because CORS is a browser rule."
+        },
+        rubric: [
+          "Explain that the preflight rejected the Authorization header.",
+          "Fix it on the server with the right allow headers for the exact origin.",
+          "Explain why curl succeeds and avoid unsafe wildcards."
+        ],
+        commonMistakes: ["Trying to fix CORS from the frontend code."],
+        interviewerFollowUps: ["Which requests skip the preflight entirely?"],
+        interviewConnection:
+          "Almost every frontend engineer meets CORS; interviewers check you know who must fix it."
+      }),
+      choice({
+        id: "frontend-applied-13",
+        pathKey: "data-fetching-incidents",
+        title: "Stop duplicate items in the infinite feed",
+        format: "mcq",
+        prompt:
+          "The activity feed sometimes shows the same item twice while scrolling during busy hours. The API uses ?offset=20&limit=20. What is the best fix?",
+        artifact: {
+          kind: "scenario",
+          title: "Feed behaviour",
+          content:
+            "Feed sorted newest first\nNew items arrive every few seconds\nPage 1: offset 0, page 2: offset 20\nDuplicates appear at page boundaries only during busy periods"
+        },
+        topicKeys: ["pagination", "api-design"],
+        choices: [
+          "Switch to cursor pagination that continues after the last item's id and timestamp.",
+          "Deduplicate items by id on the client and keep offsets.",
+          "Increase the page size to 100.",
+          "Poll the first page more often."
+        ],
+        correctChoiceIndex: 0,
+        hints: [
+          "New items shift every later item down by one position.",
+          "Offsets describe positions, not items.",
+          "A cursor anchors the next page to a specific item."
+        ],
+        answer: {
+          concise:
+            "Use cursor pagination so each page starts after a specific item, which new inserts cannot shift.",
+          explanation:
+            "With offsets, every new item pushes older ones down, so the next page repeats items (and deletions skip them). A cursor based on the last seen item's sort key returns the next items regardless of inserts."
+        },
+        commonMistakes: [
+          "Deduplicating on the client, which still skips items when rows are deleted."
+        ],
+        interviewerFollowUps: ["What makes a good cursor when timestamps can tie?"],
+        interviewConnection:
+          "Pagination questions show whether you understand data changing under the UI."
+      }),
+      text({
+        id: "frontend-applied-14",
+        pathKey: "data-fetching-incidents",
+        title: "Speed up the dashboard request chain",
+        format: "production-decision",
+        prompt:
+          "The dashboard takes 3 seconds to show anything. Using the waterfall, decide what to change first and what trade-offs you accept.",
+        artifact: {
+          kind: "waterfall",
+          title: "Dashboard data requests",
+          content:
+            "0 ms     GET /me            (320 ms)\n320 ms   GET /teams?user=7  (410 ms)\n730 ms   GET /projects?team=3 (650 ms)\n1380 ms  GET /stats?project=12 (900 ms)\n2280 ms  render\nEach request only needs an id from the previous one"
+        },
+        topicKeys: ["request-waterfalls", "performance"],
+        hints: [
+          "Each request waits for the previous one to finish.",
+          "Some ids may already be known from the session or URL.",
+          "The server can combine dependent reads in one round trip."
+        ],
+        answer: {
+          concise:
+            "Remove the sequential chain: fetch independent data in parallel and move dependent lookups to one server endpoint or server component.",
+          explanation:
+            "Start requests whose ids are already known (from the session or URL) immediately and in parallel. Resolve the dependent chain on the server, close to the database, so the browser makes one request. Show a skeleton for slower widgets instead of blocking the whole page."
+        },
+        rubric: [
+          "Identify the sequential dependency as the cause.",
+          "Parallelize independent requests and move dependent ones server-side.",
+          "Discuss the trade-off, such as a new endpoint or partial rendering."
+        ],
+        commonMistakes: ["Adding a global spinner without shortening the chain."],
+        interviewerFollowUps: ["How would you prefetch this data on hover of the dashboard link?"],
+        interviewConnection:
+          "Request waterfalls are one of the most common real-world frontend performance problems."
+      }),
+      ordering({
+        id: "frontend-applied-15",
+        pathKey: "data-fetching-incidents",
+        title: "Stop the logout storm on token expiry",
+        format: "production-decision",
+        prompt:
+          "When the access token expires, several requests fail at once, each tries to refresh the token, and users are randomly logged out. The refresh token is single-use and rotates. Order what the client should do so every request recovers and nobody is logged out by mistake.",
+        artifact: {
+          kind: "logs",
+          title: "Requests at token expiry",
+          content:
+            "10:00:00.010 GET /orders   401\n10:00:00.012 GET /profile  401\n10:00:00.015 GET /alerts   401\n10:00:00.020 POST /auth/refresh 200 (refresh token rotated)\n10:00:00.022 POST /auth/refresh 401 (old refresh token reused)\n10:00:00.030 client: logout()"
+        },
+        topicKeys: ["authentication", "concurrency"],
+        interaction: {
+          type: "sequence",
+          instruction:
+            "Add all five steps, then move them earlier or later. Scoring checks what must happen before what.",
+          items: [
+            { id: "retry", label: "Retry each failed request once with the new access token." },
+            { id: "start", label: "On the first 401, start one refresh request." },
+            { id: "store", label: "Store the new access token and the rotated refresh token." },
+            {
+              id: "wait",
+              label:
+                "Make every later 401 wait for that same in-flight refresh instead of starting its own."
+            },
+            { id: "logout", label: "Log out only if that single refresh itself fails." }
+          ]
+        },
+        interactionRubric: [
+          {
+            type: "before",
+            first: "start",
+            second: "wait",
+            label: "One refresh starts before others wait on it",
+            points: 3,
+            explanation:
+              "Later failures must join the refresh that is already running, not start a new one."
+          },
+          {
+            type: "before",
+            first: "store",
+            second: "retry",
+            label: "Store the new tokens before retrying",
+            points: 3,
+            explanation:
+              "Retries need the new access token, and the rotated refresh token must replace the old one."
+          },
+          {
+            type: "before",
+            first: "wait",
+            second: "retry",
+            label: "Wait for the refresh before retrying",
+            points: 2,
+            explanation: "Retrying before the refresh finishes sends the expired token again."
+          },
+          {
+            type: "before",
+            first: "retry",
+            second: "logout",
+            label: "Log out only as the last resort",
+            points: 2,
+            explanation: "Logging out is for a failed refresh, not for the normal expiry path."
+          }
+        ],
+        hints: [
+          "The refresh token can be used only once.",
+          "Three requests starting three refreshes is the bug.",
+          "One refresh, everyone waits for it, then retry."
+        ],
+        answer: {
+          concise:
+            "Start one refresh, make later 401s wait for it, store the new tokens, retry once, and log out only if the refresh fails.",
+          explanation:
+            "A single shared in-flight refresh prevents the rotated refresh token from being reused. Every failed request waits for it, then retries once with the new access token; only a failed refresh should end the session."
+        },
+        commonMistakes: ["Retrying each request with its own refresh, which repeats the race."],
+        interviewerFollowUps: ["How would you share the refresh across two open browser tabs?"],
+        interviewConnection:
+          "Auth races test whether you can reason about concurrency in the browser."
+      })
+    ]
+  },
+  {
+    key: "accessibility-incidents",
+    title: "Ship a UI everyone can use",
+    description:
+      "Fix focus, labelling, contrast, and announcements, then keep them from regressing.",
+    expectedMinutes: 40,
+    questions: [
+      ordering({
+        id: "frontend-applied-16",
+        pathKey: "accessibility-incidents",
+        title: "Keep keyboard focus inside the dialog",
+        format: "artifact-diagnosis",
+        prompt:
+          "A keyboard user can tab behind the open 'Delete account' dialog and loses their place when it closes. Order what an accessible dialog does from opening to closing.",
+        artifact: {
+          kind: "logs",
+          title: "Keyboard walkthrough",
+          content:
+            "1. Focus on 'Delete account' button, press Enter -> dialog opens\n2. Focus stays on the 'Delete account' button behind the dialog\n3. Tab moves through page links under the overlay\n4. Escape does nothing\n5. Clicking 'Cancel' closes the dialog; focus jumps to <body>"
+        },
+        topicKeys: ["accessibility", "focus-management"],
+        interaction: {
+          type: "sequence",
+          instruction:
+            "Add all five steps, then move them earlier or later. Scoring checks what must happen before what.",
+          items: [
+            { id: "restore", label: "Return focus to the 'Delete account' button that opened it." },
+            { id: "remember", label: "Remember which element had focus before opening." },
+            { id: "trap", label: "Keep Tab and Shift+Tab inside the dialog while it is open." },
+            { id: "move", label: "Move focus to the first control inside the dialog." },
+            { id: "close", label: "Close the dialog on Escape or Cancel." }
+          ]
+        },
+        interactionRubric: [
+          {
+            type: "before",
+            first: "remember",
+            second: "move",
+            label: "Remember the trigger before moving focus",
+            points: 3,
+            explanation: "Once focus moves, you can no longer tell which element opened the dialog."
+          },
+          {
+            type: "before",
+            first: "move",
+            second: "trap",
+            label: "Move focus in before keeping it there",
+            points: 2,
+            explanation: "Focus must be inside the dialog before Tab can be contained."
+          },
+          {
+            type: "before",
+            first: "trap",
+            second: "close",
+            label: "Contain focus while the dialog is open",
+            points: 2,
+            explanation: "The background must stay unreachable until the dialog closes."
+          },
+          {
+            type: "before",
+            first: "close",
+            second: "restore",
+            label: "Restore focus after closing",
+            points: 3,
+            explanation: "Returning focus to the trigger is what keeps the user's place."
+          }
+        ],
+        hints: [
+          "Focus should move into the dialog when it opens.",
+          "Content behind a modal should not be reachable.",
+          "When it closes, focus should return to what opened it."
+        ],
+        answer: {
+          concise:
+            "Remember the trigger, move focus in, keep it inside while open, close on Escape or Cancel, then return focus to the trigger.",
+          explanation:
+            "The native <dialog> with showModal() handles most of this: it makes the background inert and supports Escape. You still remember and restore focus so the keyboard user continues from the 'Delete account' button."
+        },
+        commonMistakes: ["Only adding aria-modal without actually managing focus."],
+        interviewerFollowUps: ["What does the inert attribute do?"],
+        interviewConnection:
+          "Dialog focus management is the most common accessibility question in frontend interviews."
+      }),
+      choice({
+        id: "frontend-applied-17",
+        pathKey: "accessibility-incidents",
+        title: "Fix the unreadable disabled button text",
+        format: "mcq",
+        prompt:
+          "An audit flags low contrast on the primary button's secondary text. Which change fixes it without hiding information?",
+        artifact: {
+          kind: "metrics",
+          title: "Contrast audit",
+          content:
+            "Element: .btn-primary .subtext (14px, regular)\nForeground: #9aa4b2  Background: #ffffff\nContrast ratio: 2.6:1\nRequired (WCAG AA, normal text): 4.5:1"
+        },
+        topicKeys: ["accessibility", "color-contrast"],
+        choices: [
+          "Darken the text color until the ratio is at least 4.5:1 and re-check it.",
+          "Increase the font weight slightly and keep the color.",
+          "Add a tooltip with the same text.",
+          "Lower the background opacity."
+        ],
+        correctChoiceIndex: 0,
+        hints: [
+          "Normal-size text needs 4.5:1 for WCAG AA.",
+          "Weight changes do not change the measured ratio.",
+          "The fix must change the colors themselves."
+        ],
+        answer: {
+          concise:
+            "Darken the foreground color to reach at least 4.5:1, then verify with a contrast checker.",
+          explanation:
+            "14 px regular text needs 4.5:1. A slightly bolder font does not count as large text, so the colors must change. Update the design token so every use is fixed, not just this button."
+        },
+        commonMistakes: ["Fixing one element instead of the shared color token."],
+        interviewerFollowUps: ["When does the lower 3:1 requirement apply?"],
+        interviewConnection:
+          "Interviewers expect you to know the basic WCAG thresholds and how to fix them."
+      }),
+      text({
+        id: "frontend-applied-18",
+        pathKey: "accessibility-incidents",
+        title: "Announce new results to screen reader users",
+        format: "written",
+        prompt:
+          "After filtering, sighted users see '12 results', but screen reader users hear nothing. Explain how you would announce the change without being noisy.",
+        artifact: {
+          kind: "code",
+          language: "tsx",
+          title: "Results.tsx",
+          content:
+            '<input aria-label="Filter products" onChange={onFilter} />\n<p>{results.length} results</p>\n<ul>{results.map(renderItem)}</ul>'
+        },
+        topicKeys: ["accessibility", "aria-live"],
+        hints: [
+          "Screen readers only read changes in live regions automatically.",
+          "The region must exist before its text changes.",
+          "Avoid announcing on every keystroke."
+        ],
+        answer: {
+          concise:
+            "Put the count in a polite live region that is always rendered, and update it after filtering settles.",
+          explanation:
+            'Render <p aria-live="polite" role="status">{count} results</p> from the start so screen readers notice updates. Debounce the update so it announces the final count once typing pauses rather than every keystroke.'
+        },
+        rubric: [
+          "Use an always-present polite live region or status role.",
+          "Update it with a concise message such as the result count.",
+          "Avoid noisy announcements by debouncing updates."
+        ],
+        commonMistakes: ["Using aria-live='assertive', which interrupts the user constantly."],
+        interviewerFollowUps: ["Why must the live region exist before the content changes?"],
+        interviewConnection:
+          "Live regions show you can build dynamic UIs that still work with assistive technology."
+      }),
+      text({
+        id: "frontend-applied-19",
+        pathKey: "accessibility-incidents",
+        title: "Fix the unnamed icon buttons",
+        format: "artifact-diagnosis",
+        prompt:
+          "A screen reader announces the toolbar as 'button, button, button'. Explain why and fix it.",
+        artifact: {
+          kind: "code",
+          language: "tsx",
+          title: "Toolbar.tsx",
+          content:
+            '<div className="toolbar">\n  <button onClick={bold}><BoldIcon /></button>\n  <button onClick={italic}><ItalicIcon /></button>\n  <div className="icon-btn" onClick={link}><LinkIcon /></div>\n</div>'
+        },
+        topicKeys: ["accessibility", "semantics"],
+        hints: [
+          "An icon alone gives the button no accessible name.",
+          "The third control is not a button at all.",
+          "Name each control and use real buttons."
+        ],
+        answer: {
+          concise:
+            "The icon buttons have no accessible name, and the link control is a div; add names and use a real button.",
+          explanation:
+            "Give each button a name with aria-label (for example 'Bold') or visually hidden text, mark the SVGs aria-hidden, and replace the div with <button> so it is focusable and works with Enter and Space."
+        },
+        rubric: [
+          "Explain the missing accessible names.",
+          "Replace the clickable div with a real button.",
+          "Add labels and hide decorative icons from assistive technology."
+        ],
+        commonMistakes: ["Adding role='button' to the div without keyboard support."],
+        interviewerFollowUps: ["How would you expose the pressed state of the Bold button?"],
+        interviewConnection:
+          "Semantic HTML questions are a quick way for interviewers to gauge accessibility basics."
+      }),
+      text({
+        id: "frontend-applied-20",
+        pathKey: "accessibility-incidents",
+        title: "Stop accessibility regressions reaching production",
+        format: "production-decision",
+        prompt:
+          "Accessibility bugs keep coming back after being fixed. Propose a practical process that catches them before release without slowing every PR.",
+        artifact: {
+          kind: "metrics",
+          title: "Last quarter",
+          content:
+            "Accessibility bugs reported: 23\nRegressions of previously fixed bugs: 9\nAutomated checks in CI: none\nManual screen reader testing: only before major launches"
+        },
+        topicKeys: ["accessibility", "testing"],
+        hints: [
+          "Automated tools catch some issues quickly.",
+          "Tools cannot judge everything, such as focus order or meaning.",
+          "Protect fixed bugs with tests so they cannot return."
+        ],
+        answer: {
+          concise:
+            "Add automated axe checks in CI and component tests, write regression tests for fixed bugs, and keep short manual keyboard and screen reader checks for key flows.",
+          explanation:
+            "Automated checks catch labels, contrast, and roles cheaply on every PR. Tests using accessible queries (getByRole) protect fixed behaviour. A short manual checklist for critical flows covers what tools miss, such as focus order and announcements."
+        },
+        rubric: [
+          "Add automated accessibility checks in CI.",
+          "Protect fixed bugs with regression tests.",
+          "Keep targeted manual testing for what tools cannot catch."
+        ],
+        commonMistakes: ["Relying only on automated tools, which catch a minority of issues."],
+        interviewerFollowUps: ["Which issues can automated tools never detect?"],
+        interviewConnection:
+          "Senior candidates are expected to prevent classes of bugs, not just fix individual ones."
+      })
+    ]
+  }
+];
+
 export function frontendStoryPaths(track: PersistedAiMlPracticeTrack): AiMlStoryPath[] {
-  return track === "core-technical" ? core : applied;
+  return track === "core-technical" ? [...core, ...coreMore] : [...applied, ...appliedMore];
 }

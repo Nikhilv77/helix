@@ -93,6 +93,11 @@ export type StoryPracticeOverviewExperience<TAssessment = unknown, TReport = unk
   startUnstartedPath?: {
     endpoint: `/api/practice/${string}`;
   };
+  /**
+   * Label a non-current path by its progress (In progress / Not started)
+   * instead of "Completed". For tracks where every path stays open.
+   */
+  historyStatusFromProgress?: boolean;
   coachSteps: readonly [string, string, string];
   intro: StoryPracticeIntroExperience;
   assessment: StoryPracticeAssessmentExperience<TAssessment, TReport>;

@@ -1,18 +1,42 @@
 "use client";
 
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useLinkStatus } from "next/link";
 
 /**
- * The arrow inside a back `<Link>`. While that link's navigation is pending it
- * becomes a small spinner, so a slow page never makes the click look ignored.
- * Must render inside the `<Link>` it reports on.
+ * The arrow inside a navigation `<Link>`. While that link's navigation is
+ * pending it becomes a small spinner (shown after 120 ms, so fast navigations
+ * do not flicker), so a slow page never makes the click look ignored. Must
+ * render inside the `<Link>` it reports on.
  */
-export function BackLinkIcon({ size = 14 }: { size?: number }) {
+export function LinkPendingIcon({
+  direction,
+  size = 14,
+  icon
+}: {
+  direction: "back" | "forward";
+  size?: number;
+  /**
+   * Idle icon when the link's design uses a chevron rather than an arrow. A
+   * name, not a component, so Server Components can pass it.
+   */
+  icon?: "arrow" | "chevron";
+}) {
   const { pending } = useLinkStatus();
-  return pending ? (
-    <Loader2 size={size} aria-hidden="true" className="back-link-spinner" />
-  ) : (
-    <ArrowLeft size={size} aria-hidden="true" />
-  );
+  if (pending) {
+    return <Loader2 size={size} aria-hidden="true" className="back-link-spinner" />;
+  }
+  const Icon =
+    icon === "chevron"
+      ? direction === "back"
+        ? ChevronLeft
+        : ChevronRight
+      : direction === "back"
+        ? ArrowLeft
+        : ArrowRight;
+  return <Icon size={size} aria-hidden="true" />;
+}
+
+export function BackLinkIcon({ size = 14 }: { size?: number }) {
+  return <LinkPendingIcon direction="back" size={size} />;
 }

@@ -125,7 +125,8 @@ export async function loadPracticeHomeView(ownerId: string, profile: CandidatePr
     architectureDesignEligibility,
     architectureDesignBlock,
     architectureDesignAnalytics,
-    storySummaries
+    storySummaries,
+    storyAnalytics
   ] = await Promise.all([
     practiceRoadmapPromise,
     aiMlPractice
@@ -190,7 +191,21 @@ export async function loadPracticeHomeView(ownerId: string, profile: CandidatePr
           });
           return [];
         })
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    // Frontend, Data, and AI/ML practice also counts toward the weekly chart,
+    // as it already does on Overview and Progress (learned counts as finished).
+    discipline
+      ? recover(
+          container.aiMlPracticeService.dashboardPractice(
+            ownerId,
+            profile,
+            7,
+            new Date(),
+            discipline
+          ),
+          null
+        )
+      : Promise.resolve(null)
   ]);
   const dsaBlockCompletedQuestions =
     dsaRecommendation?.questions.filter(
@@ -202,10 +217,13 @@ export async function loadPracticeHomeView(ownerId: string, profile: CandidatePr
       practiceRoadmap={practiceRoadmap}
       activity={mergePracticeActivity(
         mergePracticeActivity(
-          mergePracticeActivity(activity, coreTechnicalAnalytics?.activity ?? []),
-          appliedEngineeringAnalytics?.activity ?? []
+          mergePracticeActivity(
+            mergePracticeActivity(activity, coreTechnicalAnalytics?.activity ?? []),
+            appliedEngineeringAnalytics?.activity ?? []
+          ),
+          architectureDesignAnalytics?.activity ?? []
         ),
-        architectureDesignAnalytics?.activity ?? []
+        storyAnalytics?.activity ?? []
       )}
       dsaRecommendation={dsaRecommendation}
       dsaBlockCompletedQuestions={dsaBlockCompletedQuestions}

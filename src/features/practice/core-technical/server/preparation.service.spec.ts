@@ -83,6 +83,50 @@ describe("CoreTechnicalPreparationService library paths", () => {
   });
 });
 
+describe("CoreTechnicalPreparationService first path", () => {
+  it("starts from the reviewed path even when personalisation is requested", async () => {
+    const focus = confirmedFocus();
+    const ranker = new CoreTechnicalStoryRankingService(
+      NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE
+    );
+    const prepareReviewedDraft = vi.fn().mockResolvedValue({ draft: true });
+    const service = new CoreTechnicalPreparationService({
+      prisma: {
+        coreTechnicalPreparationAttempt: { findUnique: vi.fn().mockResolvedValue(null) },
+        coreTechnicalFocusRevision: {
+          findUnique: vi.fn().mockResolvedValue({ focusSnapshot: focus })
+        }
+      } as unknown as PrismaService,
+      focus: { confirm: vi.fn() },
+      ranking: {
+        rankFirstStory: (value) => ranker.rankFirstStory(value),
+        rankSelectedStory: vi.fn()
+      },
+      generation: { prepareApprovedDraft: vi.fn(), prepareReviewedDraft },
+      persistence: {
+        saveConfirmedFocus: vi.fn(),
+        publishPreparedBlock: vi.fn().mockResolvedValue({ id: CURRENT_ID }),
+        recordPreparationFailure: vi.fn()
+      },
+      practice: {
+        current: vi.fn().mockResolvedValue({ id: CURRENT_ID }),
+        historyBlock: vi.fn()
+      }
+    });
+
+    await service.prepare("owner-1", {
+      requestId: REQUEST_ID,
+      focusRevisionId: FOCUS_ID,
+      personalized: true
+    });
+
+    expect(prepareReviewedDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ personalizePresentation: false }),
+      { preferApprovedArtifact: true, fallbackToApprovedArtifactOnProviderFailure: true }
+    );
+  });
+});
+
 function confirmedFocus(): CoreTechnicalConfirmedFocus {
   const topics = NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.map((topic) => topic.key);
   const mechanisms = [

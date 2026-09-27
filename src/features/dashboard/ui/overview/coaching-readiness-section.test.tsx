@@ -33,6 +33,10 @@ vi.mock("@/infrastructure/realtime/use-maya-voice", () => ({
   })
 }));
 
+vi.mock("@/lib/avatars/teacher-context", () => ({
+  useWorkspaceTeacher: () => ({ id: "daniel", name: "Daniel", portrait: "/daniel.jpg" })
+}));
+
 import { CoachingReadinessSection } from "./coaching-readiness-section";
 
 const data: Pick<DashboardOverviewData, "coaching" | "readiness"> = {
@@ -121,5 +125,69 @@ describe("CoachingReadinessSection", () => {
     expect(TEACHER_LINES.coaching["interview-with-practice"]).toContain(
       voiceMocks.speak.mock.calls[0]?.[0]
     );
+  });
+
+  // The tour's "heard this visit" marker is module state, so each tour test
+  // loads a fresh copy of the section.
+  async function freshSection() {
+    vi.resetModules();
+    return (await import("./coaching-readiness-section")).CoachingReadinessSection;
+  }
+
+  it("plays the tour on arrival and only then records it as heard", async () => {
+    voiceMocks.speak.mockReset();
+    voiceMocks.speak.mockResolvedValue("started");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+    const Section = await freshSection();
+
+    render(<Section data={data} introduce />);
+
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+    expect(voiceMocks.speak.mock.calls[0]).toEqual([TEACHER_LINES.overviewTour[0], "daniel"]);
+    expect(fetchSpy.mock.calls[0]![0]).toBe("/api/profile");
+    expect(JSON.parse(String(fetchSpy.mock.calls[0]![1]!.body))).toEqual({
+      overviewIntroduced: true
+    });
+    fetchSpy.mockRestore();
+  });
+
+  it("does not use up the tour when autoplay is blocked; the speaker button plays it", async () => {
+    voiceMocks.speak.mockReset();
+    voiceMocks.speak.mockResolvedValueOnce("blocked").mockResolvedValue("started");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+    const Section = await freshSection();
+
+    render(<Section data={data} introduce />);
+    await vi.waitFor(() => expect(voiceMocks.speak).toHaveBeenCalledTimes(1));
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Play teacher summary" }));
+
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+    expect(voiceMocks.speak.mock.calls[1]![0]).toBe(TEACHER_LINES.overviewTour[0]);
+    fetchSpy.mockRestore();
+  });
+
+  it("does not replay within the same visit after it has played", async () => {
+    voiceMocks.speak.mockReset();
+    voiceMocks.speak.mockResolvedValue("started");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+    const Section = await freshSection();
+
+    const first = render(<Section data={data} introduce />);
+    await vi.waitFor(() => expect(voiceMocks.speak).toHaveBeenCalledTimes(1));
+    first.unmount();
+    // Back-navigation shows the cached Overview, still rendered with `introduce`.
+    render(<Section data={data} introduce />);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(voiceMocks.speak).toHaveBeenCalledTimes(1);
+    fetchSpy.mockRestore();
+  });
+
+  it("does not play a tour for someone who has already heard it", () => {
+    voiceMocks.speak.mockClear();
+    render(<CoachingReadinessSection data={data} />);
+    expect(voiceMocks.speak).not.toHaveBeenCalled();
   });
 });

@@ -13,6 +13,10 @@ export function AppliedEngineeringTechnologyWelcome({
 }: {
   technologies: AppliedEngineeringTechnologyOption[];
 }) {
+  // With a single reviewed stack there is nothing to choose, so the path starts
+  // at once like Core Technical and Architecture. The picker returns when a
+  // second stack has reviewed incidents.
+  const autoStart = technologies.length === 1;
   const experience: StoryPracticeTechnologyWelcomeExperience<AppliedEngineeringTechnology> = {
     slug: "applied-engineering",
     label: "Applied Engineering",
@@ -21,9 +25,14 @@ export function AppliedEngineeringTechnologyWelcome({
     heading: "What do you want to get better at?",
     choosingScript: TEACHER_VOICE_LINES.appliedEngineeringWelcome,
     // The chosen technology is shown on screen; the spoken line stays fixed.
-    confirmingScript: () => TEACHER_VOICE_LINES.appliedEngineeringConfirming,
+    // Starting on its own there was no choice, so skip straight to preparing.
+    confirmingScript: () =>
+      autoStart
+        ? TEACHER_VOICE_LINES.appliedEngineeringPreparing
+        : TEACHER_VOICE_LINES.appliedEngineeringConfirming,
     generatingScript: TEACHER_VOICE_LINES.appliedEngineeringPreparing,
     options: technologies,
+    autoStart,
     buildConfirmation: (language) => ({ language }),
     buildPreparation: (focusRevisionId, requestId) => ({ requestId, focusRevisionId })
   };

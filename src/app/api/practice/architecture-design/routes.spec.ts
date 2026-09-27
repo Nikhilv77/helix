@@ -102,7 +102,7 @@ describe("Architecture & Design representative API routes", () => {
       created: true
     });
     const app = {
-      config: { nodeEnv: "development" },
+      config: { nodeEnv: "development", practiceEarlyAssessmentStart: true },
       architectureDesign: { assessmentRuntime: { startOrResume } }
     };
     mocks.owner.mockResolvedValue({ ownerId: "owner-1", app, profile: {} });

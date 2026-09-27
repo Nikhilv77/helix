@@ -58,7 +58,7 @@ export class CoreTechnicalAssessmentEvaluator {
         modelClass: "reasoning",
         temperature: 0.1,
         schema: coreTechnicalAssessmentEvaluationSchema,
-        systemInstruction: `You are a strict senior Node.js interviewer. Return only JSON matching the schema. Score factual and implementation correctness before fluency. Use each frozen expected answer and rubric. Never claim deterministic code evidence passed when the supplied evidence says it did not. Produce exactly one promptFeedback item for each prompt ID.`,
+        systemInstruction: `You are a strict senior Node.js interviewer. Return only JSON matching the schema. Score factual and implementation correctness before fluency. Use each frozen expected answer and rubric. Never claim deterministic code evidence passed when the supplied evidence says it did not. Produce exactly one promptFeedback item for each prompt ID. Every score, for each dimension and each promptFeedback item, is an integer from 0 to 100 (not out of 10), where 100 is a complete, correct interview answer.`,
         prompt: assessmentPrompt(input)
       })
     );

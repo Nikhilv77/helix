@@ -12,6 +12,13 @@ Practice attempts, interview sessions and assessments, Resume Roast records, and
 | Reports            | `WorkspacePageSnapshot` with page `reports`      | One Reports view; rolling quota is recalculated from saved start times                |
 | Profile, Manage    | No page snapshot                                 | Direct reads of the fields those pages need                                           |
 
+What each view counts:
+
+- **Overview and Progress** count practice from DSA and every other track the role has: Core Technical, Applied Engineering, and Architecture for backend and full-stack; Architecture for story disciplines that include it; and the AI/ML, frontend, or data story tracks. Both use the same merge, so their totals agree (schema version 4).
+- **Reports and Overview's report summary** count interview rounds plus finished Core Technical, Applied Engineering, and Architecture assessments, each once, through their assessment reports. Practice checkpoints also run as interview sessions; those raw sessions are left out (DSA block and story-track checkpoints are reported on Practice). Unfinished assessments are never scored (Reports schema version 2).
+- **Interviews** lists the same rounds as history (schema version 2).
+- **The daily interview limit** counts interviews only. Practice checkpoints neither use it nor are blocked by it; they keep their own start rate limit. The server check (`countStartedSince`) and the Interviews and Reports displays share one definition (`PRACTICE_CHECKPOINT_SESSION_SQL` and `isResumableBlockAssessment`).
+
 `CandidateActivityDaily` holds UTC activity totals for future charts. It is maintained after analytics publication. It does not serve the pages above. The older `CandidateAnalyticsSnapshot.reportsPayload` column remains in the database for compatibility but is no longer read or written. Reports now has its own projection and cannot trigger a Practice or Progress rebuild just to show report history.
 
 ## Freshness and failures

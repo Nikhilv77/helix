@@ -117,6 +117,7 @@ import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "@/features/practi
 import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "@/features/practice/core-technical/domain/domain-map";
 import { AiMlPracticeService } from "@/features/practice/ai-ml/server/ai-ml-practice.service";
 import { AiMlStoryPracticeService } from "@/features/practice/ai-ml/server/ai-ml-story-practice.service";
+import { StoryAssessmentService } from "@/features/practice/story-tracks/server/story-assessment.service";
 import { PracticeHomeSnapshotStore } from "@/features/practice/shared/server/practice-home-snapshot.store";
 import { CandidateAnalyticsSnapshotStore } from "@/features/analytics/server/candidate-analytics-snapshot.store";
 import { WorkspacePageSnapshotStore } from "@/features/analytics/server/workspace-page-snapshot.store";
@@ -168,6 +169,7 @@ export interface AppContainer {
   workspacePageSnapshotStore: WorkspacePageSnapshotStore;
   aiMlPracticeService: AiMlPracticeService;
   aiMlStoryPracticeService: AiMlStoryPracticeService;
+  storyAssessmentService: StoryAssessmentService;
   workspaceSearchService: WorkspaceSearchService;
   resumeRoastService: ResumeRoastService;
   resumeRoastStore: ResumeRoastStore;
@@ -645,7 +647,17 @@ export function getAppContainer(): AppContainer {
       personalizedInterviewPlanningService
     ),
     aiMlPracticeService,
-    aiMlStoryPracticeService: new AiMlStoryPracticeService(prisma, aiMlPracticeService, geminiAi),
+    // Written answers are graded through the Gemini-then-Groq fallback like the
+    // other practice tracks, so a slow or overloaded Gemini does not fail them.
+    aiMlStoryPracticeService: new AiMlStoryPracticeService(
+      prisma,
+      aiMlPracticeService,
+      generationAi
+    ),
+    // Written story-path assessments grade through the same fallback.
+    storyAssessmentService: new StoryAssessmentService(prisma, generationAi, interviewService, {
+      allowEarlyStart: config.practiceEarlyAssessmentStart
+    }),
     workspaceSearchService: new WorkspaceSearchService(prisma),
     // Resume Roast reuses the profile's immutable candidate revision and the
     // same Gemini client as structured resume extraction.

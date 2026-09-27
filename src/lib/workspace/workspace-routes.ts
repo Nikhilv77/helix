@@ -1,8 +1,15 @@
+/** Written assessment rooms for the Frontend, Data, and AI/ML story tracks. */
+const STORY_TRACK_ASSESSMENT_ROUTE =
+  /^\/practice\/(?:ai-ml|frontend|data)\/(?:core-technical|applied-engineering)\/assessment$/;
+
 export function isWorkspaceChromeRoute(pathname: string): boolean {
   if (
+    STORY_TRACK_ASSESSMENT_ROUTE.test(pathname) ||
     pathname === "/practice/dsa/assessment" ||
     pathname === "/practice/core-technical/assessment" ||
-    pathname.startsWith("/practice/core-technical/assessment/")
+    pathname.startsWith("/practice/core-technical/assessment/") ||
+    pathname === "/practice/applied-engineering/assessment" ||
+    pathname === "/practice/architecture-design/assessment"
   ) {
     return false;
   }
@@ -33,6 +40,9 @@ export function isWorkspaceCanvasRoute(pathname: string): boolean {
     pathname === "/practice/dsa/assessment" ||
     pathname === "/practice/core-technical/assessment" ||
     pathname.startsWith("/practice/core-technical/assessment/") ||
+    pathname === "/practice/applied-engineering/assessment" ||
+    pathname === "/practice/architecture-design/assessment" ||
+    STORY_TRACK_ASSESSMENT_ROUTE.test(pathname) ||
     isWorkspaceChromeRoute(pathname) ||
     pathname.startsWith("/interview/")
   );

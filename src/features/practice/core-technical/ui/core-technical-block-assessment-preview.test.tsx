@@ -255,6 +255,8 @@ describe("CoreTechnicalBlockAssessmentPreview", () => {
     expect(resumeButton).toBeInTheDocument();
 
     fireEvent.click(resumeButton);
+    // The click is acknowledged at once, while the session is being resumed.
+    expect(screen.getByRole("button", { name: /opening assessment/i })).toBeDisabled();
 
     await waitFor(() => {
       expect(mocks.openCoreTechnicalAssessmentRoom).toHaveBeenCalledWith(SESSION_ID);

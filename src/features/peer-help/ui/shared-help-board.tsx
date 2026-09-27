@@ -284,7 +284,10 @@ export function SharedHelpBoard({
         <canvas
           ref={canvas}
           aria-label="Shared drawing canvas"
-          style={{ cursor: tool === "erase" ? ERASER_CURSOR : undefined }}
+          style={{
+            cursor: tool === "erase" ? ERASER_CURSOR : undefined,
+            ...BOARD_GRID
+          }}
           onPointerDown={beginStroke}
           onPointerMove={extendStroke}
           onPointerUp={finishStroke}
@@ -295,6 +298,19 @@ export function SharedHelpBoard({
     </aside>
   );
 }
+
+/**
+ * Graph-paper lines behind the drawing so the board reads as a sketch surface.
+ * A CSS background, not canvas pixels: Clear and Erase never remove it and it
+ * is never part of the shared strokes.
+ */
+const BOARD_GRID = {
+  backgroundImage: [
+    "linear-gradient(rgba(239,232,214,0.035) 1px, transparent 1px)",
+    "linear-gradient(90deg, rgba(239,232,214,0.035) 1px, transparent 1px)"
+  ].join(", "),
+  backgroundSize: "24px 24px"
+} as const;
 
 function BoardTool({
   active,

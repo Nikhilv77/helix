@@ -25,7 +25,10 @@ describe("AppliedEngineeringHistoryService", () => {
         },
         preparedAt: new Date("2026-09-08T00:00:00Z"),
         assessedAt: new Date("2026-09-08T01:00:00Z"),
-        questions: [{ status: "COMPLETED" }, { status: "LEARNED" }],
+        questions: [
+          { id: "question-1", order: 1, status: "COMPLETED" },
+          { id: "question-2", order: 2, status: "LEARNED" }
+        ],
         assessment: { id: "assessment-1", status: "COMPLETED" }
       }
     ]);
@@ -42,7 +45,12 @@ describe("AppliedEngineeringHistoryService", () => {
           title: APPLIED_ENGINEERING_REVIEW_CANDIDATES[0]!.incident.title
         }),
         completedQuestionCount: 1,
-        learnedQuestionCount: 1
+        learnedQuestionCount: 1,
+        // A started library path links its questions even when it is not current.
+        questions: [
+          { id: "question-1", order: 1, status: "COMPLETED" },
+          { id: "question-2", order: 2, status: "LEARNED" }
+        ]
       })
     ]);
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { ownerId: "owner-1" } }));

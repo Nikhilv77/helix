@@ -88,6 +88,13 @@ export const environmentSchema = z
     // interview authorization independent from any third-party credential.
     INTERVIEW_AUTH_SECRET: z.string().min(32).optional(),
     INTERVIEW_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(2),
+    // Local testing only: lets a practice assessment start before its questions
+    // are finished (unfinished ones are recorded as Learned). Off unless set, so
+    // local practice behaves like production; ignored outside development.
+    PRACTICE_EARLY_ASSESSMENT_START: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     // Interview transcripts and reports contain candidate-provided personal
     // data. Retention is explicit, bounded, and independently configurable for
     // signed-in and anonymous sessions.
@@ -198,6 +205,8 @@ export const environmentSchema = z
     clerkSecretKey: env.CLERK_SECRET_KEY,
     interviewAuthSecret: env.INTERVIEW_AUTH_SECRET,
     interviewDailyLimit: env.INTERVIEW_DAILY_LIMIT,
+    practiceEarlyAssessmentStart:
+      env.NODE_ENV === "development" && env.PRACTICE_EARLY_ASSESSMENT_START,
     interviewAuthenticatedRetentionDays: env.INTERVIEW_AUTHENTICATED_RETENTION_DAYS,
     interviewAnonymousRetentionDays: env.INTERVIEW_ANONYMOUS_RETENTION_DAYS,
     interviewOperationalRetentionDays: env.INTERVIEW_OPERATIONAL_RETENTION_DAYS,

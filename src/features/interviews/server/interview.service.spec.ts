@@ -1037,26 +1037,17 @@ describe("InterviewService resume round", () => {
     expect((await store.get(started.state.id))?.phase).toBe("questioning");
   });
 
-  it("finishes a block-assessment coding problem on submit and grades it before responding", async () => {
-    const evaluation: QuestionEvaluation = {
-      source: "semantic-evaluator",
-      score: 88,
-      verdict: "mostly-correct",
-      confidence: 0.8,
-      summary: "Correct single-pass solution.",
-      strengths: [],
-      gaps: [],
-      rubricScores: [{ rubricKey: "approach-reasoning", score: 90, rationale: "Clear." }],
-      answerExcerpts: [],
-      execution: null,
-      evaluatedAt: 2_000
-    };
-    const { service, decide, evaluate } = harness(questions, evaluation);
-    // Slower than the one-second live deadline, well inside the grading budget.
-    evaluate.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve(evaluation), 1_200))
+  it("keeps practice checkpoints outside the daily interview limit", async () => {
+    const planner = {
+      plan: vi.fn().mockResolvedValue([mcqQuestion])
+    } as unknown as InterviewPlanner;
+    const service = new InterviewService(
+      planner,
+      { decide: vi.fn() } as unknown as InterviewDecider,
+      new MemorySessionStore(),
+      1
     );
-    const assessmentSetup: InterviewSetup = {
+    const checkpointSetup: InterviewSetup = {
       ...setup,
       dsaBlockAssessment: {
         kind: "dsa-block-assessment",
@@ -1066,32 +1057,136 @@ describe("InterviewService resume round", () => {
         rubricVersion: 1
       }
     };
-    // Frozen plans written before `maxFollowUps: 0` still move on.
-    const codeQuestion: PlannedQuestion = { ...questions[0]!, kind: "code" };
-    const started = await service.start(assessmentSetup, "user-1", 1_000, [
-      codeQuestion,
-      codeQuestion
-    ]);
 
-    const result = await service.answerOwned(
-      "user-1",
-      started.state.id,
-      {
-        text: "```javascript\nreturn [0, 1];\n```\n\nReasoning and complexity: O(n).",
-        startMs: 100,
-        endMs: 200
-      },
-      1_200,
-      undefined,
-      undefined,
-      "workspace"
-    );
-
-    expect(decide).not.toHaveBeenCalled();
-    expect(result.decision.action).toBe("move_on");
-    expect(result.state.questionIndex).toBe(1);
-    expect(result.state.questionEvaluations?.["0"]?.source).toBe("semantic-evaluator");
+    // A checkpoint first does not use the one daily interview.
+    await service.start(checkpointSetup, "user-1", 1_000, [mcqQuestion]);
+    await service.start(setup, "user-1", 2_000);
+    await expect(service.quota("user-1", 3_000)).resolves.toEqual({ used: 1, limit: 1 });
+    // Another interview is refused, but a checkpoint still starts.
+    await expect(service.start(setup, "user-1", 3_000)).rejects.toMatchObject({
+      code: "SESSION_LIMIT_REACHED"
+    });
+    await expect(
+      service.start(
+        {
+          ...checkpointSetup,
+          dsaBlockAssessment: {
+            ...checkpointSetup.dsaBlockAssessment!,
+            assessmentId: "33333333-3333-4333-8333-333333333333"
+          }
+        },
+        "user-1",
+        3_000,
+        [mcqQuestion]
+      )
+    ).resolves.toMatchObject({ created: true });
   });
+
+  it("reports interview rounds, not the raw sessions of practice checkpoints", async () => {
+    const { service } = harness([mcqQuestion]);
+    const interview = await service.start(setup, "user-1", 1_000);
+    const checkpoint = await service.start(
+      {
+        ...setup,
+        dsaBlockAssessment: {
+          kind: "dsa-block-assessment",
+          blockId: "11111111-1111-4111-8111-111111111111",
+          assessmentId: "22222222-2222-4222-8222-222222222222",
+          snapshotVersion: 1,
+          rubricVersion: 1
+        }
+      },
+      "user-1",
+      2_000,
+      [mcqQuestion]
+    );
+    const assessmentReport = {
+      ...(await service.report("user-1", interview.state.id, 3_000)),
+      sessionId: "core-technical:assessment-1"
+    };
+
+    const overview = await service.reportsOverview("user-1", 50, 3_000, [assessmentReport]);
+
+    const ids = overview.rounds.map((round) => round.sessionId);
+    expect(ids).toContain(interview.state.id);
+    expect(ids).not.toContain(checkpoint.state.id);
+    expect(ids).toContain("core-technical:assessment-1");
+  });
+
+  it.each<[string, Partial<InterviewSetup>]>([
+    [
+      "DSA",
+      {
+        dsaBlockAssessment: {
+          kind: "dsa-block-assessment",
+          blockId: "11111111-1111-4111-8111-111111111111",
+          assessmentId: "22222222-2222-4222-8222-222222222222",
+          snapshotVersion: 1,
+          rubricVersion: 1
+        }
+      }
+    ],
+    [
+      "Core Technical",
+      {
+        coreTechnicalAssessment: {
+          kind: "core-technical-assessment",
+          blockId: "11111111-1111-4111-8111-111111111111",
+          assessmentId: "22222222-2222-4222-8222-222222222222",
+          snapshotVersion: 1,
+          evaluatorVersion: "core-technical-assessment-evaluator-v1"
+        }
+      }
+    ]
+  ])(
+    "finishes a %s block-assessment coding problem on submit and grades it before responding",
+    async (_track, assessment) => {
+      const evaluation: QuestionEvaluation = {
+        source: "semantic-evaluator",
+        score: 88,
+        verdict: "mostly-correct",
+        confidence: 0.8,
+        summary: "Correct single-pass solution.",
+        strengths: [],
+        gaps: [],
+        rubricScores: [{ rubricKey: "approach-reasoning", score: 90, rationale: "Clear." }],
+        answerExcerpts: [],
+        execution: null,
+        evaluatedAt: 2_000
+      };
+      const { service, decide, evaluate } = harness(questions, evaluation);
+      // Slower than the one-second live deadline, well inside the grading budget.
+      evaluate.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(evaluation), 1_200))
+      );
+      const assessmentSetup: InterviewSetup = { ...setup, ...assessment };
+      // Frozen plans written before `maxFollowUps: 0` still move on.
+      const codeQuestion: PlannedQuestion = { ...questions[0]!, kind: "code" };
+      const started = await service.start(assessmentSetup, "user-1", 1_000, [
+        codeQuestion,
+        codeQuestion
+      ]);
+
+      const result = await service.answerOwned(
+        "user-1",
+        started.state.id,
+        {
+          text: "```javascript\nreturn [0, 1];\n```\n\nReasoning and complexity: O(n).",
+          startMs: 100,
+          endMs: 200
+        },
+        1_200,
+        undefined,
+        undefined,
+        "workspace"
+      );
+
+      expect(decide).not.toHaveBeenCalled();
+      expect(result.decision.action).toBe("move_on");
+      expect(result.state.questionIndex).toBe(1);
+      expect(result.state.questionEvaluations?.["0"]?.source).toBe("semantic-evaluator");
+    }
+  );
 
   it("grades a frozen block-review MCQ through the server-side resolver, not a plan answer index", async () => {
     const { service, decide } = harness();

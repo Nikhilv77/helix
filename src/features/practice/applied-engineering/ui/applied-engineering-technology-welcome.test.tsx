@@ -33,7 +33,7 @@ describe("AppliedEngineeringTechnologyWelcome", () => {
     window.sessionStorage.clear();
   });
 
-  it("uses the shared polished welcome and sends only the selected reviewed stack", async () => {
+  it("starts the only reviewed stack without asking the learner to choose", async () => {
     const requests: Array<{ url: string; body: unknown }> = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       requests.push({ url: String(input), body: JSON.parse(String(init?.body)) });
@@ -59,7 +59,10 @@ describe("AppliedEngineeringTechnologyWelcome", () => {
       "data-avatar-feather",
       "alpha-edge"
     );
-    fireEvent.click(screen.getByRole("button", { name: /JavaScript: Node.js production/i }));
+    expect(
+      screen.getByRole("heading", { name: "Preparing your personalised practice path." })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /JavaScript: Node.js production/i })).toBeNull();
 
     await waitFor(() => expect(requests).toHaveLength(2));
     expect(requests[0]).toEqual({
@@ -73,6 +76,35 @@ describe("AppliedEngineeringTechnologyWelcome", () => {
       }
     });
     expect(mocks.replace).toHaveBeenCalledWith("/practice/applied-engineering");
+  });
+
+  it("asks which stack to use once more than one is reviewed", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    render(
+      <AppliedEngineeringTechnologyWelcome
+        technologies={[
+          {
+            value: "javascript",
+            label: "JavaScript",
+            detail: "Node.js production incidents",
+            resumeMatched: true
+          },
+          {
+            value: "python" as never,
+            label: "Python",
+            detail: "Python production incidents",
+            resumeMatched: false
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText("What do you want to get better at?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /JavaScript: Node.js production/i })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Python: Python production/i }));
+    expect(fetchSpy).toHaveBeenCalled();
   });
 });
 

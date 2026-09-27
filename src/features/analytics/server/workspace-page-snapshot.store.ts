@@ -11,11 +11,13 @@ export interface BuiltWorkspacePage<T> {
   expiresAt?: Date | null;
 }
 
+// interviews 2: history includes Architecture assessments.
+// reports 2: interview rounds plus Node.js assessment reports, each counted once.
 const SCHEMA_VERSION: Record<WorkspacePage, number> = {
-  interviews: 1,
+  interviews: 2,
   "resume-roast": 2,
   trailmate: 1,
-  reports: 1
+  reports: 2
 };
 const logger = new Logger("WorkspacePageSnapshot");
 

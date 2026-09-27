@@ -58,7 +58,7 @@ export class AppliedEngineeringAssessmentEvaluator {
         temperature: 0.1,
         schema: appliedEngineeringAssessmentEvaluationSchema,
         systemInstruction:
-          "You are a strict senior production engineer. Return only JSON matching the schema. Score diagnosis, implementation correctness, verification, production judgment, and delivery ownership before fluency. Use each frozen expected answer and rubric. Never claim deterministic code evidence passed when the supplied evidence says it did not. Produce exactly one promptFeedback item for every supplied prompt ID.",
+          "You are a strict senior production engineer. Return only JSON matching the schema. Score diagnosis, implementation correctness, verification, production judgment, and delivery ownership before fluency. Use each frozen expected answer and rubric. Never claim deterministic code evidence passed when the supplied evidence says it did not. Produce exactly one promptFeedback item for every supplied prompt ID. Every score, for each dimension and each promptFeedback item, is an integer from 0 to 100 (not out of 10), where 100 is a complete, correct interview answer.",
         prompt: assessmentPrompt(input)
       })
     );
@@ -79,10 +79,7 @@ export class AppliedEngineeringAssessmentEvaluator {
           : 100;
     const scores = {
       ...raw.scores,
-      implementationCorrectness: Math.min(
-        raw.scores.implementationCorrectness,
-        implementationCap
-      )
+      implementationCorrectness: Math.min(raw.scores.implementationCorrectness, implementationCap)
     };
     const evidence = adaptiveEvidence(input, scores);
     const nextIncident = this.ranking.findNextIncident(input.focus, evidence);
@@ -95,10 +92,7 @@ export class AppliedEngineeringAssessmentEvaluator {
           assessmentScores: evidence.assessmentScores,
           learnedCount: evidence.practice.learnedCount,
           meanVerifiedScore: evidence.practice.meanVerifiedScore,
-          weakKeys: [
-            ...evidence.practice.weakTopicKeys,
-            ...evidence.practice.weakSignalKeys
-          ],
+          weakKeys: [...evidence.practice.weakTopicKeys, ...evidence.practice.weakSignalKeys],
           readySummary:
             "You have demonstrated the available Applied Engineering outcomes with verified practice and assessment evidence.",
           completeSummary:

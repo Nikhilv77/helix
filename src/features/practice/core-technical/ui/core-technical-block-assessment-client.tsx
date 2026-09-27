@@ -1,7 +1,9 @@
 "use client";
 
+import { AssessmentRoomLoading } from "@/features/practice/shared/ui/assessment-room-loading";
 import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
+import { practiceAssessmentMoment } from "@/features/practice/shared/domain/assessment-speech";
 import Link from "next/link";
 import {
   Check,
@@ -16,9 +18,15 @@ import {
   Volume2,
   VolumeX
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { RecallQuizItem } from "@/features/practice/shared/domain/recall-quiz";
+import { RecallQuizPanel } from "@/features/practice/shared/ui/recall-quiz-panel";
 import { DsaCodeEditor } from "@/features/interviews/ui/dsa/dsa-code-editor";
 import type { DsaEditorLanguage } from "@/features/interviews/ui/dsa/dsa-code-editor";
+import {
+  StructuredAnswerEditor,
+  type StructuredAnswerPrompt
+} from "@/features/practice/shared/ui/structured-answer-editor";
 import { PracticeLanguagePicker } from "@/features/practice/dsa/ui/practice-language-picker";
 import type { DsaRunResult } from "@/features/interviews/ui/voice/types";
 import { VoiceShell } from "@/features/interviews/ui/voice/components/session-state";
@@ -52,16 +60,32 @@ const ARCHITECTURE_DEFENCE_PROMPTS = [
   { label: "How to fix", hint: "Defend the safest repair and the trade-off it introduces." }
 ] as const;
 
+type AssessmentRoomKind = "core-technical" | "applied-engineering" | "architecture-design";
+
+/** The typed assessment room is shared by the Node.js tracks and Architecture. */
+const ASSESSMENT_ROOMS: Record<AssessmentRoomKind, { label: string; home: string }> = {
+  "core-technical": { label: "Core Technical", home: "/practice/core-technical" },
+  "applied-engineering": { label: "Applied Engineering", home: "/practice/applied-engineering" },
+  "architecture-design": { label: "Architecture & Design", home: "/practice/architecture-design" }
+};
+
 export function CoreTechnicalBlockAssessmentClient({
   sessionId,
   workspaceAccent,
-  assessmentKind = "core-technical"
+  assessmentKind = "core-technical",
+  roomOverride,
+  recallQuiz
 }: {
   sessionId: string;
   workspaceAccent: WorkspaceAccent;
-  assessmentKind?: "core-technical" | "architecture-design";
+  assessmentKind?: AssessmentRoomKind;
+  /** Overrides the label and return link, for rooms outside the Node.js tracks. */
+  roomOverride?: { label: string; home: string };
+  /** Unscored recall check shown beside written questions. */
+  recallQuiz?: Promise<RecallQuizItem[]>;
 }) {
   const architectureAssessment = assessmentKind === "architecture-design";
+  const room = roomOverride ?? ASSESSMENT_ROOMS[assessmentKind];
   const teacher = useWorkspaceTeacher();
   const voice = useMayaVoice();
   const [session, setSession] = useState<SessionResponse | null>(null);
@@ -82,10 +106,15 @@ export function CoreTechnicalBlockAssessmentClient({
   const [lastRunCode, setLastRunCode] = useState<string | null>(null);
   const [runGuidance, setRunGuidance] = useState<string | null>(null);
   const [skipConfirmationVisible, setSkipConfirmationVisible] = useState(false);
+  /** Confirms what happened to the previous question, shown on the next one. */
+  const [transition, setTransition] = useState<{ index: number; text: string } | null>(null);
+  const questionPane = useRef<HTMLElement>(null);
   const [now, setNow] = useState(Date.now());
   const questionStartedAt = useRef(Date.now());
   const lastQuestionIndex = useRef<number | null>(null);
   const spoken = useRef(new Set<string>());
+  /** What the teacher last said aloud, for the replay button. */
+  const lastSpoken = useRef<string | null>(null);
   const latestSessionRead = useRef(0);
   const activeSessionReads = useRef(0);
   const lastSessionReadAt = useRef(0);
@@ -162,6 +191,7 @@ export function CoreTechnicalBlockAssessmentClient({
     setLastRunCode(null);
     setRunGuidance(null);
     setSkipConfirmationVisible(false);
+    if (questionPane.current) questionPane.current.scrollTop = 0;
   }, [currentIndex, session]);
 
   useEffect(() => {
@@ -187,13 +217,27 @@ export function CoreTechnicalBlockAssessmentClient({
   );
   const latestGuidance = guidanceTurns.at(-1) ?? null;
 
+  const speak = useCallback(
+    (line: string) => {
+      lastSpoken.current = line;
+      void voice.speak(line, teacher.id, { delivery: "quality" });
+    },
+    [teacher.id, voice.speak]
+  );
+
+  // The rail shows the full guidance. Aloud, a pre-recorded line marks the
+  // moment and starts at once; a follow-up question is still read in full.
   useEffect(() => {
-    if (!latestGuidance) return;
+    if (!session || !latestGuidance) return;
     const key = turnKey(latestGuidance);
     if (spoken.current.has(key)) return;
     spoken.current.add(key);
-    void voice.speak(latestGuidance.text, teacher.id, { delivery: "quality" });
-  }, [latestGuidance, teacher.id, voice.speak]);
+    const moment = practiceAssessmentMoment(latestGuidance, {
+      done: session.phase === "done",
+      kind: session.currentQuestion?.kind ?? null
+    });
+    speak(moment ? pickLine(TEACHER_LINES.practiceAssessment[moment]) : latestGuidance.text);
+  }, [latestGuidance, session, speak]);
 
   const submitMcq = async () => {
     if (!session || !selectedOption || sending) return;
@@ -252,6 +296,33 @@ export function CoreTechnicalBlockAssessmentClient({
     }
   };
 
+  const submitWritten = async () => {
+    const answer = notes.trim();
+    if (!session || sending) return;
+    if (answer.length < WRITTEN_ANSWER_MIN_LENGTH) {
+      setError("Write a fuller answer before submitting.");
+      return;
+    }
+    setSending(true);
+    setError(null);
+    try {
+      await submitAnswer({
+        sessionId,
+        userAnswer: answer,
+        startMs: relativeMs(session.startedAt, questionStartedAt.current),
+        endMs: relativeMs(session.startedAt, Date.now()),
+        submissionSource: "workspace"
+      });
+      // A follow-up keeps the same question, so the box is cleared for the reply.
+      setNotes("");
+      await poll();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "That answer could not be saved.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const runCode = async () => {
     const code = drafts[language];
     if (!session || !code.trim() || running) return;
@@ -286,14 +357,12 @@ export function CoreTechnicalBlockAssessmentClient({
         : `I can see the output. ${passed} of ${payload.data.tests.length} tests passed. Review the failing case and try again.`;
       setRunGuidance(cue);
       // The exact counts are on screen; the spoken cue is pre-recorded.
-      void voice.speak(
+      speak(
         pickLine(
           payload.data.accepted
             ? TEACHER_LINES.assessmentRun.passed
             : TEACHER_LINES.assessmentRun.failed
-        ),
-        teacher.id,
-        { delivery: "quality" }
+        )
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "That code could not be run.");
@@ -315,6 +384,7 @@ export function CoreTechnicalBlockAssessmentClient({
         endMs: relativeMs(session.startedAt, Date.now()),
         submissionSource: "workspace"
       });
+      setTransition({ index: session.questionIndex + 1, text: "Solution submitted." });
       await poll();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Your solution could not be submitted.");
@@ -333,6 +403,10 @@ export function CoreTechnicalBlockAssessmentClient({
         startMs: relativeMs(session.startedAt, questionStartedAt.current),
         endMs: relativeMs(session.startedAt, Date.now())
       });
+      setTransition({
+        index: session.questionIndex + 1,
+        text: "Coding task skipped. 0 points recorded for it."
+      });
       await poll();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "This task could not be skipped.");
@@ -342,19 +416,18 @@ export function CoreTechnicalBlockAssessmentClient({
   };
 
   if (loading) {
-    return (
-      <AssessmentState
-        message={`Preparing your ${architectureAssessment ? "Architecture & Design" : "Core Technical"} assessment…`}
-      />
-    );
+    // Same screen as the route's loading state, so the handoff is seamless.
+    return <AssessmentRoomLoading />;
   }
 
   if (error && !session) {
-    return <AssessmentState message={error} error />;
+    return <AssessmentState message={error} error returnHref={room.home} />;
   }
 
   if (!session) {
-    return <AssessmentState message="That assessment could not be found." error />;
+    return (
+      <AssessmentState message="That assessment could not be found." error returnHref={room.home} />
+    );
   }
 
   const durationMs = (session.setup.durationMinutes ?? 30) * 60_000;
@@ -364,32 +437,41 @@ export function CoreTechnicalBlockAssessmentClient({
   const questionCount = session.questionCount ?? 5;
   const currentCode = drafts[language];
   const codeChangedAfterRun = Boolean(lastRunCode && lastRunCode !== currentCode);
+  const stageLabel =
+    session.setup.storyPracticeAssessmentPresentation?.stages.find(
+      (stage) => stage.id === currentQuestion?.stage
+    )?.label ?? "Mechanism Check";
+  const evidenceLabel =
+    session.setup.storyPracticeAssessmentPresentation?.evidenceAnchorLabel ?? "Evidence";
+  const followUp =
+    latestGuidance &&
+    latestGuidance.action !== "move_on" &&
+    latestGuidance.action !== "intro" &&
+    latestGuidance.questionIndex === currentIndex &&
+    (session.followUpCount ?? 0) > 0
+      ? latestGuidance.text
+      : null;
+  const transitionText =
+    !isDone && transition?.index === currentIndex ? transition.text : null;
 
   return (
     <VoiceShell
       workspaceAccent={workspaceAccent}
       wide
-      withinWorkspaceChrome={architectureAssessment}
+      withinWorkspaceChrome={false}
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 pb-4">
         <header className="flex min-h-14 items-center justify-between gap-4 rounded-2xl border border-white/[0.075] bg-[#0d0f11] px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <Link
-              href={
-                architectureAssessment
-                  ? "/practice/architecture-design"
-                  : "/practice/core-technical"
-              }
+              href={room.home}
               aria-label="Leave assessment"
               className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] text-cream/52 transition hover:bg-white/[0.05] hover:text-cream"
             >
               <BackLinkIcon size={16} />
             </Link>
             <p className="truncate text-sm font-semibold text-cream">
-              {session.setup.templateTitle ??
-                (architectureAssessment
-                  ? "Architecture & Design Mastery Checkpoint"
-                  : "Core Technical Mastery Checkpoint")}
+              {session.setup.templateTitle ?? `${room.label} Mastery Checkpoint`}
             </p>
           </div>
 
@@ -415,27 +497,29 @@ export function CoreTechnicalBlockAssessmentClient({
             voiceState={voice.state}
             awaitingGesture={voice.awaitingGesture}
             onReplay={() => {
-              const line = runGuidance ?? latestGuidance?.text;
-              if (line) void voice.speak(line, teacher.id, { delivery: "quality" });
+              if (lastSpoken.current) speak(lastSpoken.current);
             }}
           />
 
           <section
+            ref={questionPane}
             className={`thin-scroll min-h-0 ${
               architectureAssessment
                 ? "overflow-y-auto overscroll-contain xl:overflow-hidden"
                 : "overflow-y-auto overscroll-contain"
             }`}
           >
+            {transitionText ? (
+              <p
+                role="status"
+                className="mb-3 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-sm text-cream/70"
+              >
+                <Check size={14} className="shrink-0 text-[var(--workspace-accent)]" />
+                {transitionText} Question {currentIndex + 1} of {questionCount}.
+              </p>
+            ) : null}
             {isDone ? (
-              <CompletionPanel
-                teacherName={teacher.name}
-                returnHref={
-                  architectureAssessment
-                    ? "/practice/architecture-design"
-                    : "/practice/core-technical"
-                }
-              />
+              <CompletionPanel teacherName={teacher.name} returnHref={room.home} />
             ) : architectureAssessment && currentQuestion ? (
               <ArchitectureCheckpoint
                 sessionId={sessionId}
@@ -474,9 +558,27 @@ export function CoreTechnicalBlockAssessmentClient({
                 onHideSkipConfirmation={() => setSkipConfirmationVisible(false)}
                 onSkip={() => void skipCode()}
               />
+            ) : currentQuestion &&
+              currentQuestion.kind !== "mcq" &&
+              !currentQuestion.options?.length ? (
+              <WrittenCheckpoint
+                question={currentQuestion}
+                stageLabel={stageLabel}
+                evidenceLabel={evidenceLabel}
+                followUp={followUp}
+                recallQuiz={recallQuiz}
+                index={currentIndex}
+                count={questionCount}
+                answer={notes}
+                sending={sending}
+                error={error}
+                onAnswerChange={setNotes}
+                onSubmit={() => void submitWritten()}
+              />
             ) : currentQuestion ? (
               <ReviewCheckpoint
                 question={currentQuestion}
+                stageLabel={stageLabel}
                 index={currentIndex}
                 count={questionCount}
                 selected={selectedOption}
@@ -565,6 +667,7 @@ function TeacherRail({
 
 function ReviewCheckpoint({
   question,
+  stageLabel,
   index,
   count,
   selected,
@@ -574,6 +677,7 @@ function ReviewCheckpoint({
   onSubmit
 }: {
   question: InterviewQuestion;
+  stageLabel: string;
   index: number;
   count: number;
   selected: string | null;
@@ -590,7 +694,7 @@ function ReviewCheckpoint({
         <div>
           <div className="flex items-center justify-between gap-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
-              Mechanism Check
+              {stageLabel}
             </p>
             <span className="font-mono text-sm tabular-nums text-cream/50">
               {String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
@@ -622,6 +726,139 @@ function ReviewCheckpoint({
             Select the mechanism reasoning you would defend in a technical interview.
           </p>
           <ReviewSubmitButton selected={selected} sending={sending} onSubmit={onSubmit} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const WRITTEN_ANSWER_MIN_LENGTH = 20;
+const WRITTEN_ANSWER_MAX_LENGTH = 5_200;
+
+const WRITTEN_ANSWER_FALLBACK_PROMPTS: readonly StructuredAnswerPrompt[] = [
+  { label: "Evidence", suggestion: "Point to the exact signal in the evidence that supports you." },
+  { label: "Mechanism", suggestion: "Explain the failure path that produces that signal." },
+  { label: "Consequence", suggestion: "State what customers or the system experience as a result." },
+  { label: "Next step", suggestion: "Name the fix or check you would make first, and why." }
+];
+
+/**
+ * Prompt chips for a written question, taken from what a strong answer must
+ * cover ("the strongest observable signal" becomes "Strongest observable
+ * signal"), so each question structures its own answer.
+ */
+function writtenAnswerPrompts(expects: string[] | null): readonly StructuredAnswerPrompt[] {
+  const prompts = (expects ?? [])
+    .map((item) => item.trim())
+    .map((item) => ({ item, label: item.replace(/^(?:the|a|an|one)\s+/i, "") }))
+    .filter(({ label }) => label.length > 1 && label.length <= 60)
+    .map(({ item, label }) => ({
+      label: label.charAt(0).toUpperCase() + label.slice(1),
+      suggestion: `Cover ${item}, tied to the evidence you were given.`
+    }));
+  return prompts.length ? prompts : WRITTEN_ANSWER_FALLBACK_PROMPTS;
+}
+
+/** A written-answer question: the frozen evidence beside a free-text answer. */
+function WrittenCheckpoint({
+  question,
+  stageLabel,
+  evidenceLabel,
+  followUp,
+  recallQuiz,
+  index,
+  count,
+  answer,
+  sending,
+  error,
+  onAnswerChange,
+  onSubmit
+}: {
+  question: InterviewQuestion;
+  stageLabel: string;
+  evidenceLabel: string;
+  followUp: string | null;
+  recallQuiz?: Promise<RecallQuizItem[]>;
+  index: number;
+  count: number;
+  answer: string;
+  sending: boolean;
+  error: string | null;
+  onAnswerChange: (answer: string) => void;
+  onSubmit: () => void;
+}) {
+  const ready = answer.trim().length >= WRITTEN_ANSWER_MIN_LENGTH;
+  const prompts = useMemo(() => writtenAnswerPrompts(question.expects), [question.expects]);
+  return (
+    <section className="grid h-full min-h-[38rem] overflow-hidden rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] xl:grid-cols-[minmax(0,1fr)_minmax(24rem,1fr)]">
+      <ReviewReference
+        question={question}
+        evidenceLabel={evidenceLabel}
+        footer={
+          recallQuiz ? (
+            <Suspense fallback={null}>
+              <RecallQuizPanel quiz={recallQuiz} />
+            </Suspense>
+          ) : null
+        }
+      />
+
+      <div className="thin-scroll flex min-h-[34rem] flex-col overflow-y-auto border-t border-white/[0.06] px-6 py-7 sm:px-8 lg:px-9 xl:border-l xl:border-t-0">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+            {stageLabel}
+          </p>
+          <span className="font-mono text-sm tabular-nums text-cream/50">
+            {String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
+          </span>
+        </div>
+        <h1 className="mt-4 text-balance font-display text-[1.22rem] font-semibold leading-[1.32] tracking-[-0.02em] text-cream lg:text-[1.35rem]">
+          {renderInlineMarkdown(question.text)}
+        </h1>
+
+        {followUp ? (
+          <div className="mt-5 rounded-xl border border-[color:var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+              Follow-up
+            </p>
+            <p className="mt-1.5 text-sm leading-6 text-cream/85">{followUp}</p>
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex min-h-0 flex-1 flex-col">
+          <StructuredAnswerEditor
+            fill
+            value={answer}
+            prompts={prompts}
+            disabled={sending}
+            ariaLabel={followUp ? "Your reply to the follow-up" : "Your answer"}
+            placeholder={
+              followUp
+                ? "Answer the follow-up…"
+                : "Add a prompt above, or write your answer in your own words…"
+            }
+            maxLength={WRITTEN_ANSWER_MAX_LENGTH}
+            hint="Your answer is saved when you submit."
+            onChange={onAnswerChange}
+          />
+        </div>
+
+        {error ? <p className="mt-3 text-sm text-[#ffb4b4]">{error}</p> : null}
+        <div aria-hidden="true" className="h-5 shrink-0" />
+
+        <div className="mt-auto flex items-end justify-between gap-4 border-t border-white/[0.06] pt-5">
+          <p className="max-w-xl text-sm leading-relaxed text-cream/50">
+            Answer in your own words, as you would in a technical interview.
+          </p>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={!ready || sending}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-cream px-6 text-sm font-semibold text-[#090a0b] transition hover:bg-white disabled:opacity-35"
+          >
+            {sending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+            {sending ? "Saving" : "Submit"}
+          </button>
         </div>
       </div>
     </section>
@@ -998,16 +1235,26 @@ function RichMarkdown({ text, className = "" }: { text: string; className?: stri
   );
 }
 
-function ReviewReference({ question }: { question: InterviewQuestion }) {
+function ReviewReference({
+  question,
+  evidenceLabel,
+  footer
+}: {
+  question: InterviewQuestion;
+  /** Set for written-answer questions, whose evidence is a titled anchor. */
+  evidenceLabel?: string;
+  footer?: ReactNode;
+}) {
   const reference = question.dsaReviewContext;
   const example = reference?.examples?.[0];
   const codeSnippet = question.codeSnippet;
+  const anchor = reference ? null : splitEvidenceAnchor(question.evidenceAnchor);
 
   return (
     <article className="thin-scroll min-h-0 overflow-y-auto bg-[#0f1113] p-6 sm:p-7">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
-          Governing Runtime Mechanism
+          {evidenceLabel ?? "Governing Runtime Mechanism"}
         </p>
         {reference?.difficulty ? (
           <span className="rounded-full border border-white/[0.07] bg-white/[0.035] px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.1em] text-cream/45">
@@ -1017,7 +1264,7 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
       </div>
 
       <h2 className="mt-2 font-display text-2xl font-semibold tracking-[-0.025em] text-cream">
-        {reference?.title ?? question.evidenceAnchor ?? "Mechanism Reference"}
+        {reference?.title ?? anchor?.title ?? "Mechanism Reference"}
       </h2>
 
       {/* Problem Scenario & Context with Markdown parsing */}
@@ -1026,6 +1273,7 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
         <RichMarkdown
           text={
             reference?.problemStatement ??
+            anchor?.body ??
             question.codeTask ??
             "Review the governing runtime mechanisms and system state before answering."
           }
@@ -1091,6 +1339,7 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
           </ul>
         </section>
       ) : null}
+      {footer}
     </article>
   );
 }
@@ -1499,7 +1748,15 @@ function ProgressRail({ index, count, done }: { index: number; count: number; do
   );
 }
 
-function AssessmentState({ message, error = false }: { message: string; error?: boolean }) {
+function AssessmentState({
+  message,
+  error = false,
+  returnHref = "/practice/core-technical"
+}: {
+  message: string;
+  error?: boolean;
+  returnHref?: string;
+}) {
   return (
     <main className="fixed inset-0 z-[100] grid place-items-center bg-black p-6 text-center">
       <div>
@@ -1510,7 +1767,7 @@ function AssessmentState({ message, error = false }: { message: string; error?: 
         <p className={`mt-4 text-sm ${error ? "text-[#ffb4b4]" : "text-cream/52"}`}>{message}</p>
         {error ? (
           <Link
-            href="/practice/core-technical"
+            href={returnHref}
             className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-cream"
           >
             <RotateCcw size={14} />
@@ -1533,4 +1790,13 @@ function formatClock(ms: number): string {
 
 function turnKey(turn: Turn): string {
   return `${turn.startMs}:${turn.endMs}:${turn.text}`;
+}
+
+/** Evidence anchors read "Title: evidence"; a long heading is hard to scan. */
+function splitEvidenceAnchor(anchor: string | null | undefined): { title: string; body: string } | null {
+  if (!anchor?.trim()) return null;
+  const match = /^([^:\n]{3,80}):\s+([\s\S]+)$/.exec(anchor.trim());
+  return match
+    ? { title: match[1]!.trim(), body: match[2]!.trim() }
+    : { title: "Evidence", body: anchor.trim() };
 }

@@ -146,7 +146,9 @@ export class CoreTechnicalContinuationService {
           resumeMechanismKeys: focus.resumeEvidence.mechanismKeys,
           recentTopicKeys: selection.evidence.priorTopicKeys,
           excludedTopicKeys: focus.excludedTopicKeys,
-          personalizePresentation: true,
+          // Like the first path: the reviewed version, not a live chain of four
+          // reasoning-model calls (40-80 s) for a personalised title.
+          personalizePresentation: false,
           reviewedContract: {
             storyKey: reviewedStory.key,
             storyTitle: reviewedStory.title,
@@ -157,7 +159,7 @@ export class CoreTechnicalContinuationService {
             ]
           }
         },
-        { fallbackToApprovedArtifactOnProviderFailure: true }
+        { preferApprovedArtifact: true, fallbackToApprovedArtifactOnProviderFailure: true }
       );
       stage = "publishing";
       await this.dependencies.persistence.publishPreparedBlock(ownerId, {

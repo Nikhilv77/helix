@@ -77,11 +77,33 @@ const ARCHITECTURE_DESIGN_DIALOGUE: StoryPracticeAssessmentDialogue = {
   teachingPrefix: "The design point to carry forward is this:"
 };
 
+const STORY_TRACK_DIALOGUE: StoryPracticeAssessmentDialogue = {
+  openingShape:
+    "We’ll work through four written questions from the path you just practised: your hardest question again, two follow-ups an interviewer would ask, and a common trap to explain.",
+  expectations: [
+    "Answer in your own words, as you would in an interview. I may ask one follow-up when a point needs sharpening, then I’ll leave you with the key idea.",
+    "Use the evidence on screen and be explicit about cause and effect. I’ll help tighten the reasoning as we go.",
+    "Explain why, not just what. I may pressure-test one detail before we move on."
+  ],
+  transitions: [
+    "Let’s take that into the next question.",
+    "Now let’s look at it from another angle.",
+    "All right, here’s the next part."
+  ],
+  closingLines: [
+    "That completes the assessment. Thanks for reasoning it through with me—your feedback will be ready shortly.",
+    "That’s the full round. Your scores and what to practise next will be ready shortly.",
+    "We’ve covered everything I wanted to test. Your report will be ready shortly."
+  ],
+  teachingPrefix: "The point to carry forward is this:"
+};
+
 export function storyPracticeAssessmentDialogue(
   practice: StoryPracticeAssessmentKind
 ): StoryPracticeAssessmentDialogue {
   if (practice === "applied-engineering") return APPLIED_ENGINEERING_DIALOGUE;
   if (practice === "architecture-design") return ARCHITECTURE_DESIGN_DIALOGUE;
+  if (practice === "story-track") return STORY_TRACK_DIALOGUE;
   return CORE_TECHNICAL_DIALOGUE;
 }
 
@@ -106,7 +128,11 @@ export function storyPracticeAssessmentMoveOnUtterance(
 ): string {
   const completedIndex = state.questionIndex - 1;
   const evaluation = state.questionEvaluations?.[String(completedIndex)];
-  const teaching = teachingFeedback(evaluation, dialogue.teachingPrefix);
+  const teaching = teachingFeedback(
+    evaluation,
+    dialogue.teachingPrefix,
+    referencePoint(state.plan[completedIndex])
+  );
 
   if (state.phase === "done" || state.phase === "wrap") {
     return joinSpoken(
@@ -126,13 +152,28 @@ export function storyPracticeAssessmentMoveOnUtterance(
   );
 }
 
+/** The key point of a prompt's reference answer, when the plan carries one. */
+function referencePoint(question: DialogueState["plan"][number] | undefined): string | null {
+  const expected = question?.storyPracticeInterviewerGuide?.expectedAnswer?.split("\n")[0]?.trim();
+  return expected ? expected : null;
+}
+
+/** Evaluator notes are written about "the candidate"; they must never be read aloud. */
+function evaluatorVoice(text: string): boolean {
+  return /\b(?:the )?(?:candidate|learner|user)(?:'s|’s)?\b/i.test(text);
+}
+
 function teachingFeedback(
   evaluation: QuestionEvaluation | undefined,
-  teachingPrefix: string
+  teachingPrefix: string,
+  reference: string | null = null
 ): string | null {
   if (!evaluation || evaluation.source === "evaluation-unavailable") return null;
+  if (evaluatorVoice(evaluation.summary)) {
+    return reference ? `${teachingPrefix} ${sentence(reference)}` : null;
+  }
   const summary = sentence(evaluation.summary);
-  const gap = evaluation.gaps.find((item) => item.trim().length > 0);
+  const gap = evaluation.gaps.find((item) => item.trim().length > 0 && !evaluatorVoice(item));
   if (gap) return `${teachingPrefix} ${summary} Strengthen this next time: ${sentence(gap)}`;
   const strength = evaluation.strengths.find((item) => item.trim().length > 0);
   return strength

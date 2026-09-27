@@ -105,6 +105,10 @@ export const TEACHER_LINES = {
       "Some practice this week, which is good. Pick a regular time and let the streak start again."
     ]
   },
+  // The one-time Overview tour after onboarding, pre-recorded for every teacher.
+  overviewTour: [
+    "Hi, welcome to Trailgrad. This Overview is your home base. Up top is what to sharpen first, with focused practice one click away. Weekly rhythm tracks your progress, and Next focus shows what comes after. Start with focused practice, and I'll adapt your plan as you go."
+  ],
   coaching: {
     "interview-in-progress": [
       "You have an interview in progress. Finish it while the context is still fresh.",
@@ -180,39 +184,64 @@ export const TEACHER_LINES = {
    */
   blockAssessment: {
     opening: [
-      "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
-      "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
-      "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully."
+      "Well done finishing this block. This checkpoint shows how well the ideas have settled in. We'll start with a few quick questions about what you practised, then you'll solve a fresh coding problem. Everything is on screen, so take your time with each one.",
+      "Nice work getting through the block. Let's see what has really stuck. First come a few short questions on the patterns you used, then an unseen problem to solve in the editor. You can answer everything on screen, and I'll guide you as we go.",
+      "You've finished the block, so let's check how it has settled in. There are a few quick questions first, then a new coding problem. Read each question carefully, trust what you practised, and don't rush."
     ],
     reviewCorrectNext: [
-      "Exactly. Here's the next one.",
-      "That's right. Let's keep going.",
-      "Yes, that's the right read. On to the next question."
+      "Exactly, that's the right read. You clearly remember why that works. Here's the next question.",
+      "That's right. Nicely reasoned. Let's keep that going with the next one.",
+      "Yes, that's correct. That idea has settled in well. On to the next question."
     ],
     reviewIncorrectNext: [
-      "Not quite. The reasoning is on screen. Let's try the next one.",
-      "That one doesn't hold. Have a look at why, then take the next question.",
-      "Close, but not this time. Read the explanation, then keep going."
+      "Not quite. Have a look at the explanation on screen, it shows the reasoning behind the right answer. Then let's try the next one.",
+      "That one doesn't hold. Take a moment with the explanation, because this is exactly the kind of detail interviews test. Then take the next question.",
+      "Close, but not this time. Read why on screen, it will stick better now that you've seen it. Let's keep going."
     ],
     reviewCorrectToCode: [
-      "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
-      "That's right, and that finishes the review. Time for a new coding problem."
+      "Exactly. That's the quick checks done, and you handled them well. Now let's see how you apply these ideas to a fresh problem. Run your code, then explain your approach.",
+      "That's right, and that finishes the review. Time for a new coding problem. Read it carefully, run your solution, and add a short note on your approach and complexity."
     ],
     reviewIncorrectToCode: [
-      "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
-      "That one doesn't hold, but the review is done. Let's see how you handle something new."
+      "Not quite, and the reasoning is on screen for you. That finishes the review. Now let's move to a fresh problem. Run your code, then explain your approach.",
+      "That one doesn't hold, but the review is done. Have a quick look at the explanation, then let's see how you handle something new in the editor."
     ],
     codeNext: [
-      "Thanks, I have your solution. Let's try one more problem.",
-      "Got it. Here's your next problem."
+      "Thanks, I have your solution. Let's try one more problem. Read it carefully before you start coding.",
+      "Got it, your solution is saved. Here's your next problem. Take a moment to plan your approach first."
     ],
     codeSkippedNext: [
-      "No problem. Let's move to the next problem.",
-      "That's fine. Here's the next one."
+      "No problem, we'll note that one. Let's move to the next problem and give it a fresh try.",
+      "That's fine, skipping is better than guessing. Here's the next one."
     ],
     done: [
-      "That's the full checkpoint. Nice work. I'm preparing your results now.",
-      "You've finished the checkpoint. Your results will be ready in a moment."
+      "That's the full checkpoint. Nice work sticking with it. I'm preparing your results now, with what went well and what to practise next.",
+      "You've finished the checkpoint. Well done. Your results will be ready in a moment, including the area worth another pass."
+    ]
+  },
+  /**
+   * Core Technical, Applied Engineering, and Architecture assessments. The
+   * screen shows the full feedback and question; follow-up questions are still
+   * spoken in full because the learner has to answer them.
+   */
+  practiceAssessment: {
+    opening: [
+      "Welcome to your checkpoint. I'll ask you a few questions about the practice path you just finished. Answer in your own words on screen, and take the time you need to explain your reasoning.",
+      "Good to see you. This checkpoint looks at how well you can explain and apply what you practised. Each question is on screen. Write your answer clearly, and I'll let you know when we move on.",
+      "Let's check how this path has settled in. You'll get a handful of questions, some about your own work and some new. Read each one carefully, then answer on screen."
+    ],
+    nextQuestion: [
+      "Thanks, I've noted that. Here's the next question, it's on screen now.",
+      "Got it. Let's move on. Take a moment with the next question before you answer.",
+      "Okay, that's recorded. Here's what I'd like to ask next."
+    ],
+    nextCode: [
+      "Thanks. The next one is hands on. Read the task, write your fix in the editor, and run it before you submit.",
+      "Got it. Now let's see it in code. Run your solution to check it, then submit with a short explanation."
+    ],
+    done: [
+      "That's the full checkpoint. Thank you. I'm reviewing your answers now, and your results will show what went well and what to practise next.",
+      "You've finished the checkpoint. Nice work. Your report is being prepared, so give it a moment."
     ]
   },
   chapter: {

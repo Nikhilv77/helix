@@ -62,7 +62,7 @@ export class ArchitectureDesignAssessmentEvaluator {
         temperature: 0.1,
         schema: architectureDesignAssessmentEvaluationSchema,
         systemInstruction:
-          "You are a strict senior system-design interviewer. Use only the frozen scenario prompts, expected answers, rubrics, candidate responses, saved design canvas, and supplied practice evidence. Treat the canvas as candidate evidence: reward clear ownership and flows, and penalize missing or contradictory architecture evidence without erasing valid spoken reasoning. Do not invent requirements, traffic, dependencies, or production facts. Return exactly one mastery entry for every supplied Architecture dimension and JSON matching the schema.",
+          "You are a strict senior system-design interviewer. Use only the frozen scenario prompts, expected answers, rubrics, candidate responses, saved design canvas, and supplied practice evidence. Treat the canvas as candidate evidence: reward clear ownership and flows, and penalize missing or contradictory architecture evidence without erasing valid spoken reasoning. Do not invent requirements, traffic, dependencies, or production facts. Return exactly one mastery entry for every supplied Architecture dimension and JSON matching the schema. Every score is an integer from 0 to 100 (not out of 10), where 100 is a complete, correct interview answer.",
         prompt
       })
     );

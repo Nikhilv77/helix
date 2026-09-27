@@ -224,7 +224,11 @@ export const phase1 = {
       [[-1, 1, 0, -3, 3]],
       [[2, 3]],
       [[1, 0]],
-      [Array.from({ length: 2_000 }, (_, i) => (i % 3) + 1)]
+      // Long enough that O(n^2) shows, while every product stays inside a
+      // 32-bit int as the problem guarantees: twenty 2s give at most 2^20.
+      // (A 1,2,3 repeat overflowed to Infinity, saved as null, and failed
+      // every correct typed solution.)
+      [Array.from({ length: 2_000 }, (_, i) => (i % 100 === 0 ? 2 : i % 3 === 0 ? -1 : 1))]
     ]
   }
 };

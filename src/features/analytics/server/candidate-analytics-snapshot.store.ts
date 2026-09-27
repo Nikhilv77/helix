@@ -8,11 +8,14 @@ import { candidateActivityDaily } from "./candidate-activity-daily";
 import type { PrismaService } from "@/server/database/prisma.service";
 import { Logger } from "@/server/common/logger";
 import { withSummaryBuildSlot } from "./summary-build-budget";
+import { PRACTICE_CHECKPOINT_SESSION_SQL } from "@/features/interviews/server/types";
 
 type BuiltAnalytics = Awaited<ReturnType<typeof buildCandidateAnalytics>>;
 type Builder = () => Promise<BuiltAnalytics>;
 // 3: Overview and Progress include AI/ML cohorts for AI/ML candidates.
-export const CANDIDATE_ANALYTICS_SCHEMA_VERSION = 3;
+// 4: Overview and Progress include Core Technical, Applied Engineering, and
+//    Architecture practice for the roles that have those tracks.
+export const CANDIDATE_ANALYTICS_SCHEMA_VERSION = 4;
 const SCHEMA_VERSION = CANDIDATE_ANALYTICS_SCHEMA_VERSION;
 const todayUtc = () => new Date().toISOString().slice(0, 10);
 const logger = new Logger("CandidateAnalyticsSnapshot");
@@ -37,11 +40,15 @@ export class CandidateAnalyticsSnapshotStore {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Interview start times for the daily-limit display; practice checkpoints are not counted. */
   async recentInterviewStartTimes(ownerId: string, since: number): Promise<number[]> {
-    const sessions = await this.prisma.interviewSession.findMany({
-      where: { ownerId, startedAt: { gte: new Date(since) } },
-      select: { startedAt: true }
-    });
+    const sessions = await this.prisma.$queryRaw<Array<{ startedAt: Date }>>(Prisma.sql`
+      SELECT "startedAt"
+      FROM "InterviewSession"
+      WHERE "ownerId" = ${ownerId}
+        AND "startedAt" >= ${new Date(since)}
+        AND NOT ${Prisma.raw(PRACTICE_CHECKPOINT_SESSION_SQL)}
+    `);
     return sessions.map((session) => session.startedAt.getTime());
   }
 

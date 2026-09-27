@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AssessmentRoomLoading } from "@/features/practice/shared/ui/assessment-room-loading";
 import { redirect } from "next/navigation";
 import { requireOnboardedOwner } from "@/server/auth/onboarding-guard";
 import { DsaBlockAssessmentClient } from "@/features/practice/dsa/ui/dsa-block-assessment-client";
@@ -21,9 +22,5 @@ export default async function DsaBlockAssessmentPage({
 }
 
 function AssessmentLoading() {
-  return (
-    <main className="fixed inset-0 z-[100] grid place-items-center bg-black text-cream/56">
-      Preparing your checkpoint…
-    </main>
-  );
+  return <AssessmentRoomLoading />;
 }

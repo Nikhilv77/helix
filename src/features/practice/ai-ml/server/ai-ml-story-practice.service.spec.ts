@@ -8,6 +8,8 @@ import { appliedEngineeringLab } from "../domain/applied-engineering-lab";
 import { aiMlQuickCheckPath } from "../domain/ai-ml-quick-check-catalog";
 import { frontendStoryPaths } from "@/features/practice/story-tracks/domain/frontend-story-catalog";
 import { AiMlStoryPracticeService } from "./ai-ml-story-practice.service";
+import { storyPracticeFingerprint } from "@/features/practice/shared/server/practice-orchestrator";
+import { dataStoryPaths } from "@/features/practice/story-tracks/domain/data-story-catalog";
 
 const ownerId = "user:ai-ml-test";
 const questionId = "00000000-0000-4000-8000-000000000001";
@@ -44,7 +46,28 @@ const feedback = {
   missedEdgeCases: []
 } as const;
 
+/** Rows saved from the current catalog carry that question's real fingerprint. */
+const CATALOG_FINGERPRINTS = new Map(
+  (["core-technical", "applied-engineering"] as const)
+    .flatMap((track) => [
+      ...aiMlStoryPaths(track),
+      ...frontendStoryPaths(track),
+      ...dataStoryPaths(track)
+    ])
+    .flatMap((path) => path.questions)
+    .map((question) => [question.id, storyPracticeFingerprint(question)])
+);
+
 function questionRow(overrides: Record<string, unknown> = {}) {
+  const key = typeof overrides.questionKey === "string" ? overrides.questionKey : authored.id;
+  return {
+    ...questionRowBase(),
+    contentFingerprint: CATALOG_FINGERPRINTS.get(key) ?? "sha256:question",
+    ...overrides
+  };
+}
+
+function questionRowBase() {
   return {
     id: questionId,
     sessionId: "session-1",
@@ -63,8 +86,7 @@ function questionRow(overrides: Record<string, unknown> = {}) {
       track: AiMlPracticeTrack.CORE_TECHNICAL,
       // question() reads path peers from the row's session in the same query.
       questions: [{ id: questionId, publicSnapshot }]
-    },
-    ...overrides
+    }
   };
 }
 
@@ -200,6 +222,55 @@ describe("AiMlStoryPracticeService", () => {
     expect(transaction).not.toHaveBeenCalled();
     expect(legacySession).not.toHaveBeenCalled();
     expect(result.totalQuestions).toBe(required.length);
+  });
+
+  it("refreshes a revised question only when the learner has not touched it", async () => {
+    const authoredQuestions = frontendStoryPaths("applied-engineering").flatMap(
+      (path) => path.questions
+    );
+    const rows = authoredQuestions.map((question, index) =>
+      questionRow({
+        id: `row-${question.id}`,
+        questionKey: question.id,
+        order: index + 1,
+        publicSnapshot: { ...publicSnapshot, id: question.id, pathKey: question.pathKey }
+      })
+    );
+    // Saved before the catalog turned these into ordering questions.
+    const untouched = rows.find((row) => row.questionKey === "frontend-applied-15")!;
+    untouched.contentFingerprint = "sha256:written-version";
+    const drafted = rows.find((row) => row.questionKey === "frontend-applied-16")!;
+    drafted.contentFingerprint = "sha256:written-version";
+    drafted.draft = { kind: "text", text: "My half-written answer." } as never;
+
+    const findUnique = vi.fn().mockResolvedValue({ id: "session-f", questions: rows });
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const database = {
+      aiMlPracticeSession: { findUnique, update: vi.fn() },
+      aiMlPracticeQuestion: { updateMany, createMany: vi.fn() }
+    };
+    const subject = new AiMlStoryPracticeService(
+      {
+        $transaction: async (work: (tx: unknown) => Promise<unknown>) =>
+          work({ $executeRaw: vi.fn(), ...database }),
+        ...database
+      } as unknown as PrismaService,
+      { session: vi.fn() } as unknown as AiMlPracticeService,
+      { generateStructured: vi.fn() } as unknown as Pick<AiService, "generateStructured">
+    );
+
+    await subject.session(ownerId, "applied-engineering", undefined, "frontend");
+
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    const [{ where, data }] = updateMany.mock.calls[0]!;
+    expect(where).toMatchObject({
+      id: untouched.id,
+      contentFingerprint: "sha256:written-version",
+      revealedHintCount: 0,
+      attempt: { is: null }
+    });
+    expect(data.publicSnapshot.interaction.type).toBe("sequence");
+    expect(data.privateSnapshot.interactionRubric).toHaveLength(4);
   });
 
   it("creates a frontend cohort from its own catalog without the AI/ML legacy questions", async () => {
@@ -650,7 +721,7 @@ describe("AiMlStoryPracticeService", () => {
       aiMlPracticeQuestion: {
         findFirst: vi.fn().mockResolvedValue({
           status: AiMlPracticeQuestionStatus.ACTIVE,
-          contentFingerprint: "sha256:question",
+          contentFingerprint: questionRow().contentFingerprint,
           attempt: null
         }),
         update: vi.fn(),
@@ -698,7 +769,7 @@ describe("AiMlStoryPracticeService", () => {
       aiMlPracticeQuestion: {
         findFirst: vi.fn().mockResolvedValue({
           status: AiMlPracticeQuestionStatus.ACTIVE,
-          contentFingerprint: "sha256:question",
+          contentFingerprint: questionRow().contentFingerprint,
           attempt: null
         }),
         update: vi.fn().mockResolvedValue({}),
@@ -743,7 +814,7 @@ describe("AiMlStoryPracticeService", () => {
       aiMlPracticeQuestion: {
         findFirst: vi.fn().mockResolvedValue({
           status: AiMlPracticeQuestionStatus.ACTIVE,
-          contentFingerprint: "sha256:question",
+          contentFingerprint: questionRow().contentFingerprint,
           attempt: null
         }),
         update,

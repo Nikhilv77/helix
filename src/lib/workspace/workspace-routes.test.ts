@@ -31,4 +31,27 @@ describe("workspace routes", () => {
     expect(isWorkspaceChromeRoute("/practice/core-technical/assessment/test-id")).toBe(false);
     expect(isWorkspaceCanvasRoute("/practice/core-technical/assessment/test-id")).toBe(true);
   });
+
+  it("renders the Architecture checkpoint full-screen like the other assessments", () => {
+    expect(isWorkspaceChromeRoute("/practice/architecture-design/assessment")).toBe(false);
+    expect(isWorkspaceCanvasRoute("/practice/architecture-design/assessment")).toBe(true);
+    for (const path of [
+      "/practice/frontend/core-technical/assessment",
+      "/practice/data/applied-engineering/assessment",
+      "/practice/ai-ml/core-technical/assessment"
+    ]) {
+      expect(isWorkspaceChromeRoute(path)).toBe(false);
+      expect(isWorkspaceCanvasRoute(path)).toBe(true);
+    }
+    // The track overviews keep the workspace chrome.
+    expect(isWorkspaceChromeRoute("/practice/frontend/core-technical")).toBe(true);
+    expect(isWorkspaceChromeRoute("/practice/architecture-design")).toBe(true);
+  });
+
+  it("renders the Applied Engineering checkpoint in the same full-screen room", () => {
+    expect(isWorkspaceChromeRoute("/practice/applied-engineering/assessment")).toBe(false);
+    expect(isWorkspaceCanvasRoute("/practice/applied-engineering/assessment")).toBe(true);
+    // The track itself keeps the workspace navigation.
+    expect(isWorkspaceChromeRoute("/practice/applied-engineering")).toBe(true);
+  });
 });

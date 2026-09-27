@@ -99,8 +99,13 @@ function monacoLanguage(language: string): string {
     case "javascript":
       return "javascript";
     case "ts":
+    case "tsx":
     case "typescript":
       return "typescript";
+    case "jsx":
+      return "javascript";
+    case "css":
+      return "css";
     case "py":
     case "python":
       return "python";
@@ -151,11 +156,19 @@ export function PracticeCodeViewer({
 
   const lineCount = code.split("\n").length;
   // 21px per line plus a little breathing room; Monaco needs an explicit height.
-  const height = Math.min(lineCount, maxLines) * 21 + 24;
+  // Long lines wrap, so once mounted the height follows the wrapped content,
+  // still capped at `maxLines` rows before the viewer scrolls.
+  const maxHeight = maxLines * 21 + 24;
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const height = Math.min(contentHeight ?? lineCount * 21 + 24, maxHeight);
 
   const onMount: OnMount = (instance) => {
     editorRef.current = instance;
     decorationsRef.current = instance.createDecorationsCollection();
+    setContentHeight(instance.getContentHeight());
+    instance.onDidContentSizeChange((event) => {
+      if (event.contentHeightChanged) setContentHeight(event.contentHeight);
+    });
     setReady(true);
   };
 
@@ -219,6 +232,9 @@ export function PracticeCodeViewer({
           domReadOnly: true,
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
+          // Wrap rather than scroll sideways; prose evidence is often one long line.
+          wordWrap: "on",
+          wrappingIndent: "same",
           lineNumbers: "on",
           lineNumbersMinChars: 3,
           glyphMargin: false,

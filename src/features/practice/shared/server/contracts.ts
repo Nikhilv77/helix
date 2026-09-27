@@ -22,7 +22,9 @@ export type StoryPracticeAssessmentStatus = (typeof STORY_PRACTICE_ASSESSMENT_ST
 export const STORY_PRACTICE_ASSESSMENT_KINDS = [
   "core-technical",
   "applied-engineering",
-  "architecture-design"
+  "architecture-design",
+  /** Frontend, Data, and AI/ML story paths; see StoryAssessmentService. */
+  "story-track"
 ] as const;
 
 export type StoryPracticeAssessmentKind = (typeof STORY_PRACTICE_ASSESSMENT_KINDS)[number];

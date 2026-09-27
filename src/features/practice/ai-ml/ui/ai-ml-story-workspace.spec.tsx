@@ -301,7 +301,7 @@ describe("AI/ML shared question workspace", () => {
     render(
       <AiMlStoryWorkspace track="applied-engineering" block={block(current)} question={current} />
     );
-    expect(screen.getByRole("spinbutton", { name: /Decision threshold/ })).toHaveValue(0.4);
+    expect(screen.getByRole("spinbutton", { name: /Decision threshold/ })).toHaveValue("0.4");
     for (const [name, value] of [
       [/Daily reviews/, "150"],
       [/Fraud recall/, "90"],

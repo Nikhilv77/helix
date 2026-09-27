@@ -4,7 +4,7 @@ import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidati
 
 import Image from "next/image";
 import { ArrowRight, Check, Loader2, Play, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { useTheme } from "@/lib/theme/theme-context";
@@ -21,14 +21,31 @@ const METRICS = [
   ["communication-production", "Production verification"]
 ] as const;
 
+/**
+ * The block-assessment card beside a practice path. Core Technical uses the
+ * defaults; other tracks reuse the same card by supplying how to open their
+ * room, what the assessment covers, and their own completed results.
+ */
 export function CoreTechnicalBlockAssessmentPreview({
   block,
   terminalCount,
-  allowEarlyStart = false
+  allowEarlyStart = false,
+  label = "Core Technical assessment",
+  readyDescription = "Four evidence-based mechanism and diagnosis checks, then one live transfer repair in a focused 25-minute checkpoint.",
+  metrics = METRICS,
+  onOpen,
+  completedContent
 }: {
   block: StoryPracticeBlockView;
   terminalCount: number;
   allowEarlyStart?: boolean;
+  label?: string;
+  readyDescription?: string;
+  metrics?: ReadonlyArray<readonly [string, string]>;
+  /** Starts or resumes the assessment and navigates to its room. */
+  onOpen?: () => Promise<void>;
+  /** Replaces the Core Technical results when the assessment is complete. */
+  completedContent?: ReactNode;
 }) {
   const teacher = useWorkspaceTeacher();
   const { resolvedTheme } = useTheme();
@@ -70,16 +87,21 @@ export function CoreTechnicalBlockAssessmentPreview({
   };
 
   const startAssessment = async () => {
-    if (!block.assessment?.id || startPending.current) return;
+    const assessmentId = block.assessment?.id;
+    if (startPending.current || (!onOpen && !assessmentId)) return;
     startPending.current = true;
     setStarting(true);
     setStartError(null);
     try {
+      if (onOpen) {
+        await onOpen();
+        return;
+      }
       const response = await workspaceMutationFetch("/api/practice/core-technical/assessment/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          assessmentId: block.assessment.id,
+          assessmentId,
           requestId: crypto.randomUUID()
         })
       });
@@ -99,7 +121,7 @@ export function CoreTechnicalBlockAssessmentPreview({
   return (
     <>
       <aside
-        aria-label="Core Technical assessment"
+        aria-label={label}
         className={`dsa-assessment-card ${nudging ? "assessment-card-nudge" : ""} relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]`}
       >
         <div
@@ -145,6 +167,7 @@ export function CoreTechnicalBlockAssessmentPreview({
           <div className="flex min-w-0 flex-col justify-center px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
             {isPractising ? (
               <LockedAssessment
+                metrics={metrics}
                 remainingQuestions={remainingQuestions}
                 completionPercent={
                   block.questions.length > 0
@@ -160,19 +183,27 @@ export function CoreTechnicalBlockAssessmentPreview({
               />
             ) : isReady ? (
               <ReadyAssessment
+                metrics={metrics}
                 teacherName={teacher.name}
+                description={readyDescription}
                 starting={starting}
                 error={startError}
                 onStart={() => void startAssessment()}
               />
             ) : isInProgress ? (
-              <InProgressAssessment onStart={() => void startAssessment()} />
-            ) : (
-              <CompletedAssessment
-                block={block}
-                teacherName={teacher.name}
-                teacherPortrait={assessmentPortrait}
+              <InProgressAssessment
+                starting={starting}
+                error={startError}
+                onStart={() => void startAssessment()}
               />
+            ) : (
+              (completedContent ?? (
+                <CompletedAssessment
+                  block={block}
+                  teacherName={teacher.name}
+                  teacherPortrait={assessmentPortrait}
+                />
+              ))
             )}
           </div>
         </div>
@@ -190,6 +221,7 @@ export function CoreTechnicalBlockAssessmentPreview({
 }
 
 function LockedAssessment({
+  metrics,
   remainingQuestions,
   completionPercent,
   teacherName,
@@ -199,6 +231,7 @@ function LockedAssessment({
   onStart,
   onShowNotice
 }: {
+  metrics: ReadonlyArray<readonly [string, string]>;
   remainingQuestions: number;
   completionPercent: number;
   teacherName: string;
@@ -274,18 +307,22 @@ function LockedAssessment({
           </span>
         </span>
       </button>
-      <MetricPreview />
+      <MetricPreview metrics={metrics} />
     </div>
   );
 }
 
 function ReadyAssessment({
+  metrics,
   teacherName,
+  description,
   starting,
   error,
   onStart
 }: {
+  metrics: ReadonlyArray<readonly [string, string]>;
   teacherName: string;
+  description: string;
   starting: boolean;
   error: string | null;
   onStart: () => void;
@@ -299,8 +336,7 @@ function ReadyAssessment({
         Your 1:1 with {teacherName} is ready
       </h3>
       <p className="mt-2 text-[14px] leading-6 text-cream/58">
-        Four evidence-based mechanism and diagnosis checks, then one live transfer repair in a
-        focused 25-minute checkpoint.
+        {description}
       </p>
       <button
         type="button"
@@ -320,12 +356,20 @@ function ReadyAssessment({
           {error}
         </p>
       ) : null}
-      <MetricPreview />
+      <MetricPreview metrics={metrics} />
     </div>
   );
 }
 
-function InProgressAssessment({ onStart }: { onStart: () => void }) {
+function InProgressAssessment({
+  starting,
+  error,
+  onStart
+}: {
+  starting: boolean;
+  error: string | null;
+  onStart: () => void;
+}) {
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
@@ -340,10 +384,18 @@ function InProgressAssessment({ onStart }: { onStart: () => void }) {
       <button
         type="button"
         onClick={onStart}
-        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white"
+        disabled={starting}
+        aria-busy={starting}
+        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white disabled:translate-y-0 disabled:opacity-75"
       >
-        Resume assessment <ArrowRight size={15} aria-hidden="true" />
+        {starting ? "Opening assessment…" : "Resume assessment"}
+        {starting ? (
+          <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+        ) : (
+          <ArrowRight size={15} aria-hidden="true" />
+        )}
       </button>
+      {error ? <p className="mt-2 text-[12px] text-[#ffb4b4]">{error}</p> : null}
     </div>
   );
 }
@@ -412,14 +464,14 @@ function CompletedAssessment({
   );
 }
 
-function MetricPreview() {
+function MetricPreview({ metrics }: { metrics: ReadonlyArray<readonly [string, string]> }) {
   return (
     <div className="mt-4 border-t border-white/[0.06] pt-3">
       <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cream/36">
         Evaluated Dimensions
       </p>
       <div className="mt-2.5 flex flex-wrap gap-2">
-        {METRICS.map(([key, label]) => (
+        {metrics.map(([key, label]) => (
           <span
             key={key}
             className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.025] px-2.5 py-1 text-[11px] font-medium text-cream/65"

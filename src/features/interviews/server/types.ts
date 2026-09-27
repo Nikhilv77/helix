@@ -479,6 +479,20 @@ export function roundCaps(setup: InterviewSetup | undefined): RoundCaps {
   return { softWrapMs: SOFT_WRAP_MS, hardCapMs: HARD_CAP_MS };
 }
 
+/**
+ * SQL form of `isResumableBlockAssessment` for a row of "InterviewSession":
+ * true for practice checkpoints (DSA block, story-track, and Node.js track
+ * assessments). Those do not count toward the daily interview limit.
+ */
+// COALESCE: a missing key makes jsonb_typeof NULL, and `NOT NULL` would
+// silently drop every ordinary interview from a count.
+export const PRACTICE_CHECKPOINT_SESSION_SQL = `COALESCE(
+  jsonb_typeof("state"->'setup'->'dsaBlockAssessment') = 'object'
+  OR jsonb_typeof("state"->'setup'->'storyPracticeAssessment') = 'object'
+  OR jsonb_typeof("state"->'setup'->'coreTechnicalAssessment') = 'object',
+  false
+)`;
+
 export function isResumableBlockAssessment(setup: InterviewSetup | undefined): boolean {
   return (
     setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||

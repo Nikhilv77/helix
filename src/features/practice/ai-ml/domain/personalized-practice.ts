@@ -104,6 +104,8 @@ export function recommendAiMlPractice(input: {
             resumeMatch,
             baselineMatch,
             score:
+              // The personal project path comes after the core paths.
+              (path.key.startsWith("resume-project") ? -100 : 0) +
               (resumeMatch ? 8 : 0) +
               (baselineMatch ? 5 : 0) +
               (saved.draft ? 6 : 0) +
@@ -152,7 +154,6 @@ function levelScore(
 ): number {
   if (!senior) return (pathKey === "quick-check" ? 5 : 0) + (question.format === "mcq" ? 3 : 0);
   return (
-    (pathKey.startsWith("resume-project-") ? 4 : 0) +
     (question.format === "production-decision" ? 4 : 0) +
     (question.format === "artifact-diagnosis" ? 3 : 0) +
     (question.interaction ? 2 : 0) +

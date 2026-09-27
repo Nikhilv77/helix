@@ -113,7 +113,12 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
   const [touchPresentation, setTouchPresentation] = useState(false);
   const [lightweightAvatar, setLightweightAvatar] = useState(false);
   const visible = mounted;
-  const alreadyOnboarded = profile.preparationOnboarding.completedAt !== null;
+  // Decided once, when the welcome opens. Finishing the baseline saves
+  // `completedAt`, and the workspace then refreshes this page's profile; the
+  // learner who just finished must keep their results, not a "welcome back".
+  const [alreadyOnboarded] = useState(
+    () => profile.preparationOnboarding.completedAt !== null
+  );
   const welcomeIntro = preparationWelcomeIntroCopy(profile, teacher.name);
 
   const slides = useMemo(() => {

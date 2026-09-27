@@ -103,7 +103,7 @@ describe("Applied Engineering representative API routes", () => {
       created: true
     });
     const app = {
-      config: { nodeEnv: "development" },
+      config: { nodeEnv: "development", practiceEarlyAssessmentStart: true },
       appliedEngineeringAssessmentRuntimeService: { startOrResume }
     };
     mocks.owner.mockResolvedValue({ ownerId: "owner-1", app, profile: {} });

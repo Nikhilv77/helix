@@ -49,6 +49,7 @@ import { POST as aiMlDraft } from "../../ai-ml/draft/handler";
 import { POST as aiMlHint } from "../../ai-ml/hint/handler";
 import { POST as aiMlAttempt } from "../../ai-ml/attempt/handler";
 import { POST as aiMlLearn } from "../../ai-ml/learn/handler";
+import { POST as storyAssessmentStart } from "../../ai-ml/assessment/start/handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -65,6 +66,7 @@ const handlers: Readonly<Record<string, PracticeHandler>> = {
   "ai-ml/hint": aiMlHint,
   "ai-ml/attempt": aiMlAttempt,
   "ai-ml/learn": aiMlLearn,
+  "ai-ml/assessment/start": storyAssessmentStart,
   "core-technical/assessment/finalize": coreAssessmentFinalize,
   "core-technical/assessment/start": coreAssessmentStart,
   "core-technical/attempt": coreAttempt,

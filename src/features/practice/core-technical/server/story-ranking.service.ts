@@ -14,6 +14,7 @@ import {
   type CoreTechnicalStoryRankingCandidate
 } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
 import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "@/features/practice/core-technical/domain/domain-map";
+import { boundedReason, targetJobTitle } from "@/features/practice/shared/domain/selection-reason";
 
 export type CoreTechnicalFirstStoryRankingContext = {
   recentStoryKeys?: string[];
@@ -448,7 +449,10 @@ function selectionReason(
           )
         ? `your initial assessment showed a gap in ${topic}`
         : `your initial assessment supports an unassessed transfer into ${topic}`;
-  return `We chose ${story.title} because ${evidenceReason}, and it is relevant to your ${focus.targetJob} target.`;
+  return boundedReason(
+    `We chose ${story.title} because ${evidenceReason}, and it is relevant to your ${targetJobTitle(focus.targetJob)} target.`,
+    320
+  );
 }
 
 function deepFreeze<T>(value: T): T {

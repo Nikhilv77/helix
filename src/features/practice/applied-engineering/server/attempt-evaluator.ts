@@ -1,3 +1,4 @@
+import { PRACTICE_GRADING_REQUEST_LIMITS } from "@/features/practice/shared/server/written-answer-evaluator";
 import {
   appliedEngineeringAttemptFeedbackSchema,
   type AppliedEngineeringAttemptWork
@@ -29,6 +30,7 @@ export class AppliedEngineeringAttemptEvaluator {
         operation: "applied-engineering.practice.attempt",
         modelClass: "fast",
         temperature: 0.1,
+        ...PRACTICE_GRADING_REQUEST_LIMITS,
         schema: appliedEngineeringAttemptFeedbackSchema,
         systemInstruction: "You are a strict production engineering evaluator. Judge correctness before fluency, use only the frozen prompt and answer, and return concise JSON matching the schema. Never reveal private rubrics or answer keys.",
         prompt: `Evaluate this Applied Engineering response.\n\nIncident question (${question.format}):\n${question.prompt}\n\nEvidence:\n${question.artifact.content}\n\nCandidate response:\n${work.text}\n\nFrozen answer:\n${question.answer.concise}\n${question.answer.explanation}\n\nRubric:\n${question.rubric.map((item) => `- ${item.points}: ${item.criterion}`).join("\n")}`

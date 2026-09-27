@@ -27,6 +27,14 @@ export function openCoreTechnicalAssessmentRoom(sessionId: string): void {
   window.location.assign(coreTechnicalAssessmentRoomHref(sessionId));
 }
 
+export function appliedEngineeringAssessmentRoomHref(sessionId: string): string {
+  return `/practice/applied-engineering/assessment?session=${encodeURIComponent(sessionId)}`;
+}
+
+export function openAppliedEngineeringAssessmentRoom(sessionId: string): void {
+  window.location.assign(appliedEngineeringAssessmentRoomHref(sessionId));
+}
+
 export function architectureDesignAssessmentRoomHref(sessionId: string): string {
   return `/practice/architecture-design/assessment?session=${encodeURIComponent(sessionId)}`;
 }

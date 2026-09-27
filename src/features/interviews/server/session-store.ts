@@ -9,6 +9,7 @@ import {
 } from "./report";
 import { SESSION_TTL_MS } from "./session-constants";
 import type { InterviewAnswerResponse, InterviewState } from "./types";
+import { isResumableBlockAssessment, PRACTICE_CHECKPOINT_SESSION_SQL } from "./types";
 import type { EvaluationRecoveryMutation } from "./evaluation-recovery";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 import { NotificationKind } from "@/features/notifications/server/notification.service";
@@ -138,6 +139,8 @@ export class MemorySessionStore implements SessionStore {
     this.sessions.set(state.id, stored);
     this.durableSessions.set(state.id, stored);
 
+    // Practice checkpoints do not use the daily interview limit.
+    if (isResumableBlockAssessment(state.setup)) return;
     const starts = this.startsByOwner.get(ownerId) ?? [];
     starts.push(state.startedAt);
     this.startsByOwner.set(ownerId, starts);
@@ -758,13 +761,16 @@ export class PrismaSessionStore implements SessionStore {
     await this.updateAnswerStatus(sessionId, turnId, ANSWER_CONFLICTED);
   }
 
+  /** Interviews started since `since`; practice checkpoints do not use the daily limit. */
   async countStartedSince(ownerId: string, since: number): Promise<number> {
-    return this.prisma.interviewSession.count({
-      where: {
-        ownerId,
-        startedAt: { gte: new Date(since) }
-      }
-    });
+    const [row] = await this.prisma.$queryRaw<Array<{ count: number }>>(Prisma.sql`
+      SELECT COUNT(*)::int AS count
+      FROM "InterviewSession"
+      WHERE "ownerId" = ${ownerId}
+        AND "startedAt" >= ${new Date(since)}
+        AND NOT ${Prisma.raw(PRACTICE_CHECKPOINT_SESSION_SQL)}
+    `);
+    return row?.count ?? 0;
   }
 
   private async updateAnswerStatus(

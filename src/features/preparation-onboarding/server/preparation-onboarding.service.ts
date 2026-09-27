@@ -117,23 +117,27 @@ export class PreparationOnboardingService {
       const questionId = next.questionIds[section as BaselineSection];
       return question && questionId ? [{ section, questionId, question }] : [];
     });
-    await this.prisma.$transaction(async (transaction) => {
-      // Starting a fresh baseline (for example after a resume replacement)
-      // replaces stale assignments; a resumed baseline never enters this branch.
-      await transaction.preparationBaselineQuestion.deleteMany({ where: { ownerId } });
-      await transaction.preparationBaselineQuestion.createMany({
-        data: assignments.map(({ section, questionId, question }) => ({
-          ownerId,
-          section,
-          questionId,
-          question: json(question)
-        }))
-      });
-      await transaction.candidateProfile.update({
-        where: { ownerId },
-        data: { preparationOnboarding: json(next) }
-      });
-    });
+    await this.prisma.$transaction(
+      async (transaction) => {
+        // Starting a fresh baseline (for example after a resume replacement)
+        // replaces stale assignments; a resumed baseline never enters this branch.
+        await transaction.preparationBaselineQuestion.deleteMany({ where: { ownerId } });
+        await transaction.preparationBaselineQuestion.createMany({
+          data: assignments.map(({ section, questionId, question }) => ({
+            ownerId,
+            section,
+            questionId,
+            question: json(question)
+          }))
+        });
+        await transaction.candidateProfile.update({
+          where: { ownerId },
+          data: { preparationOnboarding: json(next) }
+        });
+      },
+      // Prisma's 5 s default is too tight on a slow or distant connection.
+      { maxWait: 10_000, timeout: 20_000 }
+    );
     return next;
   }
 

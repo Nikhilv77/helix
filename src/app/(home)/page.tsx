@@ -7,6 +7,7 @@ import { PreparationWelcomeLoading } from "@/features/preparation-onboarding/ui/
 import { PreparationWelcomeScreen } from "@/features/preparation-onboarding/ui/preparation-welcome-screen";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { loadDashboardOverview } from "@/features/dashboard/server/load-dashboard-overview";
+import { getAppContainer } from "@/server/app-container";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import {
@@ -100,8 +101,19 @@ export default async function HomePage({
   if (surface === "overview") {
     // The root boundary already covers this request. A nested fallback swaps
     // its neutral loader for a second, different skeleton before the page lands.
-    const overviewData = await loadDashboardOverview({ ownerId, now: Date.now() });
-    return <DashboardOverview overviewData={overviewData} />;
+    const [overviewData, introduce] = await Promise.all([
+      loadDashboardOverview({ ownerId, now: Date.now() }),
+      // Until the learner has heard the tour, the Overview offers it. It is
+      // marked heard only once audio actually starts (PATCH /api/profile).
+      getAppContainer()
+        .profileService.overviewIntroductionPending(ownerId)
+        .catch((error: unknown) => {
+          // The tour is optional; say why it was skipped instead of hiding it.
+          console.warn("[Overview] welcome tour check failed", error);
+          return false;
+        })
+    ]);
+    return <DashboardOverview overviewData={overviewData} introduce={introduce} />;
   }
 
   const profile = await getProfileForRequest(ownerId);

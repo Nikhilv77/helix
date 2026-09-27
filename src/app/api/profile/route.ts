@@ -91,3 +91,19 @@ async function readJson(request: NextRequest): Promise<unknown> {
     return {};
   }
 }
+
+/** Marks the one-time Overview tour as heard; sent once its audio starts. */
+export async function PATCH(request: NextRequest) {
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
+    const body = (await request.json().catch(() => null)) as { overviewIntroduced?: unknown } | null;
+    if (body?.overviewIntroduced !== true) {
+      throw new ApiRouteError(400, "BAD_REQUEST", "Only overviewIntroduced can be updated here.");
+    }
+    await getAppContainer().profileService.markOverviewIntroduced(authenticatedOwnerId(userId));
+    return apiSuccess({ overviewIntroduced: true });
+  } catch (error) {
+    return apiError(error, request.nextUrl.pathname);
+  }
+}

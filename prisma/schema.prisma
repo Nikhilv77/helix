@@ -521,6 +521,8 @@ model CandidateProfile {
   /// Durable target-setup and initial-baseline checkpoint. Null legacy rows enter at target setup.
   preparationOnboarding                   Json?
   preparationOnboardingCompletedAt        DateTime?
+  /// Set when the teacher's one-time Overview tour is claimed (once per user).
+  overviewIntroducedAt                    DateTime?
   /// Immutable per-candidate baseline question snapshots, retained for audit and resume safety.
   preparationBaselineQuestions            PreparationBaselineQuestion[]
   /// Maya's curated session plan for this candidate, generated from the resume.
@@ -580,6 +582,7 @@ model CandidateProfile {
   prepBlockAssessments                    PrepBlockAssessment[]
   prepBlockAssessmentReports              PrepBlockAssessmentReport[]
   aiMlPracticeSessions                    AiMlPracticeSession[]
+  storyTrackAssessments                   StoryTrackAssessment[]
   aiMlPracticeQuestions                   AiMlPracticeQuestion[]
   aiMlPracticeAttempts                    AiMlPracticeAttempt[]
   resumeRoastTarget                       ResumeRoastTarget?                     @relation("CandidateResumeRoastTarget")
@@ -748,6 +751,37 @@ model AiMlPracticeAttempt {
   @@unique([questionId, ownerId])
   @@unique([id, ownerId])
   @@index([ownerId, createdAt])
+}
+
+enum StoryTrackAssessmentStatus {
+  IN_PROGRESS
+  FINALIZING
+  COMPLETED
+}
+
+/// One written assessment for a finished story-practice path (Frontend, Data,
+/// AI/ML). Prompts are frozen at start; answers autosave until submission.
+model StoryTrackAssessment {
+  id            String                     @id @default(uuid()) @db.Uuid
+  ownerId       String
+  /// "ai-ml", "frontend", or "data".
+  discipline    String                     @db.VarChar(16)
+  track         AiMlPracticeTrack
+  pathKey       String
+  status        StoryTrackAssessmentStatus @default(IN_PROGRESS)
+  schemaVersion Int
+  /// Frozen prompts, including the private reference answers used for grading.
+  snapshot      Json
+  /// Prompt id -> the learner's latest answer text.
+  responses     Json                       @default("{}")
+  report        Json?
+  startedAt     DateTime                   @default(now())
+  completedAt   DateTime?
+  updatedAt     DateTime                   @updatedAt
+  owner         CandidateProfile           @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([ownerId, discipline, track, pathKey])
+  @@index([ownerId, completedAt])
 }
 
 /// Candidate-confirmed, content-addressed focus. Every block retains the exact

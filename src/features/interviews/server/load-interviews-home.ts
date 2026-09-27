@@ -1,3 +1,4 @@
+import { isResumableBlockAssessment } from "@/features/interviews/server/types";
 import type { InterviewsHomeData } from "@/features/interviews/contracts/interviews-home";
 import { interviewRoadmapSessions } from "@/features/interviews/domain/interview-roadmap-sessions";
 import { SESSION_TTL_MS } from "@/features/interviews/server/session-constants";
@@ -20,14 +21,24 @@ export async function buildInterviewsHome(
       return fallback;
     });
 
-  const [quota, genericSessions, coreRounds, appliedRounds, personalizedPlan] = await Promise.all([
-    app.interviewService.quota(ownerId),
-    app.interviewService.history(ownerId, 50),
-    app.coreTechnicalWorkspaceAnalyticsService.rounds(ownerId),
-    app.appliedEngineeringWorkspaceAnalyticsService.rounds(ownerId),
-    recoverPlan(cachedPersonalizedPlan(ownerId, profile), null)
-  ]);
-  const sessions = [...genericSessions, ...coreRounds.history, ...appliedRounds.history]
+  const [quota, genericSessions, coreRounds, appliedRounds, architectureRounds, personalizedPlan] =
+    await Promise.all([
+      app.interviewService.quota(ownerId),
+      app.interviewService.history(ownerId, 50),
+      app.coreTechnicalWorkspaceAnalyticsService.rounds(ownerId),
+      app.appliedEngineeringWorkspaceAnalyticsService.rounds(ownerId),
+      app.architectureDesign.workspaceAnalytics.rounds(ownerId),
+      recoverPlan(cachedPersonalizedPlan(ownerId, profile), null)
+    ]);
+  // Practice checkpoints also run as interview sessions. Leave their raw
+  // sessions out: Node.js assessments are listed once through their rounds
+  // below, and DSA block and story-track checkpoints belong to Practice.
+  const sessions = [
+    ...genericSessions.filter((session) => !isResumableBlockAssessment(session.setup)),
+    ...coreRounds.history,
+    ...appliedRounds.history,
+    ...architectureRounds.history
+  ]
     .sort((left, right) => right.updatedAt - left.updatedAt)
     .slice(0, 50);
   const now = Date.now();
@@ -44,7 +55,10 @@ export async function buildInterviewsHome(
       firstName,
       quota,
       quotaStartedAt: genericSessions
-        .filter((session) => session.startedAt >= now - DAY_MS)
+        .filter(
+          (session) =>
+            session.startedAt >= now - DAY_MS && !isResumableBlockAssessment(session.setup)
+        )
         .map((session) => session.startedAt),
       sessions,
       roadmapSessions: interviewRoadmapSessions({

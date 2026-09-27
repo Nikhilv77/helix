@@ -127,90 +127,94 @@ export class AiMlPracticeService {
     await this.session(ownerId, input.track);
 
     try {
-      await this.prisma.$transaction(async (transaction) => {
-        await lockAiMlPracticeOwner(transaction, ownerId);
-        const question = await transaction.aiMlPracticeQuestion.findFirst({
-          where: {
-            id: input.questionId,
-            ownerId,
-            session: { discipline: "ai-ml", track: databaseTrack(input.track) }
-          },
-          include: { attempt: true }
-        });
-        if (!question) {
-          throw new NotFoundErrorException(
-            "AI_ML_PRACTICE_QUESTION_NOT_FOUND",
-            "That AI/ML practice question could not be found."
-          );
-        }
-        if (question.attempt) {
-          if (question.attempt.selectedOptionId !== input.optionId) {
-            throw new ConflictErrorException(
-              "AI_ML_PRACTICE_ALREADY_ANSWERED",
-              "This AI/ML practice question already has a saved answer."
+      await this.prisma.$transaction(
+        async (transaction) => {
+          await lockAiMlPracticeOwner(transaction, ownerId);
+          const question = await transaction.aiMlPracticeQuestion.findFirst({
+            where: {
+              id: input.questionId,
+              ownerId,
+              session: { discipline: "ai-ml", track: databaseTrack(input.track) }
+            },
+            include: { attempt: true }
+          });
+          if (!question) {
+            throw new NotFoundErrorException(
+              "AI_ML_PRACTICE_QUESTION_NOT_FOUND",
+              "That AI/ML practice question could not be found."
             );
           }
-          return;
-        }
-
-        if (question.status !== AiMlPracticeQuestionStatus.ACTIVE) {
-          throw new ConflictErrorException(
-            "AI_ML_PRACTICE_QUESTION_CLOSED",
-            "This question has already been completed or learned."
-          );
-        }
-
-        // This endpoint remains for the original MCQ client. Rich AI/ML
-        // questions must go through the story attempt endpoint and its rubric.
-        const snapshot = question.publicSnapshot as { format?: string };
-        if (snapshot.format && snapshot.format !== "mcq") {
-          throw new BadRequestErrorException(
-            "AI_ML_STORY_ANSWER_REQUIRED",
-            "This question requires an evidence-based written answer."
-          );
-        }
-        const publicQuestion = publicQuestionSchema.parse(question.publicSnapshot);
-        const privateQuestion = privateQuestionSchema.parse(question.privateSnapshot);
-        if (!publicQuestion.options.some(({ id }) => id === input.optionId)) {
-          throw new BadRequestErrorException(
-            "AI_ML_PRACTICE_OPTION_INVALID",
-            "That answer option does not belong to this question."
-          );
-        }
-        const correct = input.optionId === privateQuestion.correctOptionId;
-        const completedAt = new Date();
-
-        await transaction.aiMlPracticeAttempt.create({
-          data: {
-            ownerId,
-            questionId: question.id,
-            requestId: input.requestId,
-            contentFingerprint: question.contentFingerprint,
-            selectedOptionId: input.optionId,
-            correct,
-            answerSnapshot: json({ selectedOptionId: input.optionId }),
-            evaluationSnapshot: json({
-              evaluatorVersion: "ai-ml-deterministic-mcq-v1",
-              correct,
-              correctOptionId: privateQuestion.correctOptionId,
-              explanation: privateQuestion.explanation
-            })
+          if (question.attempt) {
+            if (question.attempt.selectedOptionId !== input.optionId) {
+              throw new ConflictErrorException(
+                "AI_ML_PRACTICE_ALREADY_ANSWERED",
+                "This AI/ML practice question already has a saved answer."
+              );
+            }
+            return;
           }
-        });
-        await transaction.aiMlPracticeQuestion.update({
-          where: { id: question.id },
-          data: { status: AiMlPracticeQuestionStatus.COMPLETED, completedAt }
-        });
-        const remaining = await transaction.aiMlPracticeQuestion.count({
-          where: { sessionId: question.sessionId, status: AiMlPracticeQuestionStatus.ACTIVE }
-        });
-        if (remaining === 0) {
-          await transaction.aiMlPracticeSession.update({
-            where: { id: question.sessionId },
-            data: { status: AiMlPracticeSessionStatus.COMPLETED, completedAt }
+
+          if (question.status !== AiMlPracticeQuestionStatus.ACTIVE) {
+            throw new ConflictErrorException(
+              "AI_ML_PRACTICE_QUESTION_CLOSED",
+              "This question has already been completed or learned."
+            );
+          }
+
+          // This endpoint remains for the original MCQ client. Rich AI/ML
+          // questions must go through the story attempt endpoint and its rubric.
+          const snapshot = question.publicSnapshot as { format?: string };
+          if (snapshot.format && snapshot.format !== "mcq") {
+            throw new BadRequestErrorException(
+              "AI_ML_STORY_ANSWER_REQUIRED",
+              "This question requires an evidence-based written answer."
+            );
+          }
+          const publicQuestion = publicQuestionSchema.parse(question.publicSnapshot);
+          const privateQuestion = privateQuestionSchema.parse(question.privateSnapshot);
+          if (!publicQuestion.options.some(({ id }) => id === input.optionId)) {
+            throw new BadRequestErrorException(
+              "AI_ML_PRACTICE_OPTION_INVALID",
+              "That answer option does not belong to this question."
+            );
+          }
+          const correct = input.optionId === privateQuestion.correctOptionId;
+          const completedAt = new Date();
+
+          await transaction.aiMlPracticeAttempt.create({
+            data: {
+              ownerId,
+              questionId: question.id,
+              requestId: input.requestId,
+              contentFingerprint: question.contentFingerprint,
+              selectedOptionId: input.optionId,
+              correct,
+              answerSnapshot: json({ selectedOptionId: input.optionId }),
+              evaluationSnapshot: json({
+                evaluatorVersion: "ai-ml-deterministic-mcq-v1",
+                correct,
+                correctOptionId: privateQuestion.correctOptionId,
+                explanation: privateQuestion.explanation
+              })
+            }
           });
-        }
-      });
+          await transaction.aiMlPracticeQuestion.update({
+            where: { id: question.id },
+            data: { status: AiMlPracticeQuestionStatus.COMPLETED, completedAt }
+          });
+          const remaining = await transaction.aiMlPracticeQuestion.count({
+            where: { sessionId: question.sessionId, status: AiMlPracticeQuestionStatus.ACTIVE }
+          });
+          if (remaining === 0) {
+            await transaction.aiMlPracticeSession.update({
+              where: { id: question.sessionId },
+              data: { status: AiMlPracticeSessionStatus.COMPLETED, completedAt }
+            });
+          }
+          // Prisma's 5 s default is too tight on a slow or distant connection.
+        },
+        { maxWait: 10_000, timeout: 20_000 }
+      );
     } catch (error) {
       // A repeated request or concurrent double-click resolves to the one
       // committed immutable attempt instead of creating duplicate evidence.

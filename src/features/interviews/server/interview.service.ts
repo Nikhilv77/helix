@@ -185,12 +185,16 @@ export class InterviewService {
         };
       }
     }
-    const used = await this.store.countStartedSince(ownerId, now - DAY_MS);
-    if (used >= this.dailyLimit) {
-      throw new BadRequestErrorException("SESSION_LIMIT_REACHED", "Daily session limit reached", {
-        limit: this.dailyLimit,
-        used
-      });
+    // The daily limit is for interviews. Practice checkpoints have their own
+    // start rate limit and one assessment per block.
+    if (!isResumableBlockAssessment(setup)) {
+      const used = await this.store.countStartedSince(ownerId, now - DAY_MS);
+      if (used >= this.dailyLimit) {
+        throw new BadRequestErrorException("SESSION_LIMIT_REACHED", "Daily session limit reached", {
+          limit: this.dailyLimit,
+          used
+        });
+      }
     }
 
     const plan = prebuiltPlan?.length ? prebuiltPlan : await this.planner.plan(setup);
@@ -269,8 +273,24 @@ export class InterviewService {
   async insights(ownerId: string, limit = 30, now = Date.now()): Promise<WorkspaceInsights> {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
     return createWorkspaceInsightsFromReports(
-      await this.store.listReportsByOwner(ownerId, boundedLimit, now),
+      await this.interviewRoundReports(ownerId, boundedLimit, now),
       now
+    );
+  }
+
+  /**
+   * Interview rounds only. Practice checkpoints (DSA block and every story or
+   * Node.js track assessment) also run as interview sessions, but they are
+   * reported on their Practice pages; the Node.js assessments reach Reports
+   * once, through their own assessment reports (`additionalReports`).
+   */
+  private async interviewRoundReports(
+    ownerId: string,
+    limit: number,
+    now: number
+  ): Promise<InterviewReport[]> {
+    return (await this.store.listReportsByOwner(ownerId, limit, now)).filter(
+      (report) => !isResumableBlockAssessment(report.setup)
     );
   }
 
@@ -287,7 +307,7 @@ export class InterviewService {
   ): Promise<ReportsOverview> {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
     const [stored, additional] = await Promise.all([
-      this.store.listReportsByOwner(ownerId, boundedLimit, now),
+      this.interviewRoundReports(ownerId, boundedLimit, now),
       additionalReports
     ]);
     const combined = [...stored, ...additional]
@@ -762,7 +782,8 @@ export class InterviewService {
     // assessment can finish and be finalized.
     const blockAssessmentCodeSubmission =
       !isDialogueRepair &&
-      withAnswer.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" &&
+      (withAnswer.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
+        withAnswer.setup.coreTechnicalAssessment?.kind === "core-technical-assessment") &&
       question.kind === "code" &&
       submissionSource === "workspace";
     const turnStartedAt = Date.now();

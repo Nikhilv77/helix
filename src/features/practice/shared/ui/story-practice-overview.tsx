@@ -4,7 +4,8 @@ import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidati
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Loader2 } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Clock3, Loader2 } from "lucide-react";
+import { LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
 import { useRef, useState } from "react";
 import type { StoryPracticeLibraryExperience } from "./contracts";
 import type { ReactNode } from "react";
@@ -601,7 +602,12 @@ function LibraryQuestionRow({
           className="shrink-0 text-[var(--workspace-accent)] motion-safe:animate-spin"
           aria-hidden="true"
         />
-      ) : question.id || onOpen ? (
+      ) : question.id && blockId ? (
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-cream/30 group-hover/question:bg-white/[0.05] group-hover/question:text-cream/68">
+          {/* Inside the question link: a spinner while the question page loads. */}
+          <LinkPendingIcon direction="forward" size={12} />
+        </span>
+      ) : onOpen ? (
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-cream/30 group-hover/question:bg-white/[0.05] group-hover/question:text-cream/68">
           <ArrowRight size={12} aria-hidden="true" />
         </span>
@@ -653,7 +659,17 @@ function HistoryNavigation({
         </p>
         <p className="mt-1 text-sm font-semibold text-cream/75">
           {capitalize(experience.subjectNoun)} {history.selected.ordinal} of {history.totalBlocks}
-          {history.selected.isCurrent ? " · Current" : " · Completed"}
+          {history.selected.isCurrent
+            ? " · Current"
+            : !experience.historyStatusFromProgress ||
+                history.selected.status === "ASSESSED" ||
+                history.selected.status === "COMPLETED" ||
+                history.selected.completedQuestionCount + history.selected.learnedQuestionCount >=
+                  history.selected.story.stages.length
+              ? " · Completed"
+              : history.selected.completedQuestionCount + history.selected.learnedQuestionCount > 0
+                ? " · In progress"
+                : " · Not started"}
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -694,9 +710,9 @@ function HistoryLink({
       href={`${routeBase}?block=${encodeURIComponent(blockId)}`}
       className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/62 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
     >
-      {direction === "previous" ? <ArrowLeft size={13} aria-hidden="true" /> : null}
+      {direction === "previous" ? <LinkPendingIcon direction="back" size={13} /> : null}
       {label}
-      {direction === "next" ? <ArrowRight size={13} aria-hidden="true" /> : null}
+      {direction === "next" ? <LinkPendingIcon direction="forward" size={13} /> : null}
     </Link>
   );
 }
@@ -754,7 +770,7 @@ function QuestionRow({
         </span>
         {!completed && !learned ? (
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-cream/30 group-hover/question:bg-white/[0.05] group-hover/question:text-cream/68">
-            <ArrowRight size={12} aria-hidden="true" />
+            <LinkPendingIcon direction="forward" size={12} />
           </span>
         ) : null}
       </Link>

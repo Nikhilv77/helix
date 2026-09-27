@@ -563,9 +563,10 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
         seniority: "mid",
         baselineState: "STANDARD",
         resumeTopicKeys: [],
-        resumeMechanismKeys: []
+        resumeMechanismKeys: [],
+        personalizePresentation: false
       }),
-      { fallbackToApprovedArtifactOnProviderFailure: true }
+      { preferApprovedArtifact: true, fallbackToApprovedArtifactOnProviderFailure: true }
     );
     expect(publishPreparedBlock).toHaveBeenCalledWith(
       "owner-1",

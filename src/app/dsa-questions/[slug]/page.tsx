@@ -1,8 +1,8 @@
-import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
+import { BackLinkIcon, LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight, Clock, ExternalLink } from "lucide-react";
+import { Clock, ExternalLink } from "lucide-react";
 import { DsaProblemPanel } from "@/features/practice/dsa/ui/dsa-problem-panel";
 import { DsaQuestionActions } from "@/features/practice/dsa/ui/dsa-question-actions";
 import { DsaQuestionWorkspace } from "@/features/practice/dsa/ui/dsa-question-workspace";
@@ -112,7 +112,7 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
                   href={`/dsa-questions/${next.slug}`}
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/[0.055] px-3 text-[12.5px] font-semibold text-cream/72 transition hover:bg-white/[0.09] hover:text-cream"
                 >
-                  Next question <ChevronRight size={14} aria-hidden="true" />
+                  Next question <LinkPendingIcon direction="forward" icon="chevron" />
                 </Link>
               ) : null}
             </div>

@@ -37,6 +37,13 @@ describe("story-practice technology welcome parity", () => {
             label: "JavaScript",
             detail: "Node.js production incidents",
             resumeMatched: true
+          },
+          // A second reviewed stack brings the picker back; one stack starts at once.
+          {
+            value: "python" as never,
+            label: "Python",
+            detail: "Python production incidents",
+            resumeMatched: false
           }
         ]}
       />

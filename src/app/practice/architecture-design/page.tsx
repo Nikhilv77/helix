@@ -25,7 +25,7 @@ export default async function ArchitectureDesignPracticePage({
   const { ownerId, profile } = await requireOnboardedProfile();
   const app = getAppContainer();
   const services = app.architectureDesign;
-  const allowEarlyAssessmentStart = app.config.nodeEnv === "development";
+  const allowEarlyAssessmentStart = app.config.practiceEarlyAssessmentStart === true;
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
   const [eligibility, initialBlock, initialHistory] = await Promise.all([

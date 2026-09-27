@@ -7383,3 +7383,54 @@ html[data-theme="light"] .resume-roast-skeleton .resume-roast-skeleton-panel {
     animation: none;
   }
 }
+
+/* Slider under practice configuration fields: accent fill up to the value. */
+.practice-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--workspace-accent) var(--range-fill, 0%),
+    rgba(239, 232, 214, 0.1) var(--range-fill, 0%)
+  );
+  cursor: pointer;
+}
+.practice-range:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.practice-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #efe8d6;
+  border: 2px solid var(--workspace-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease;
+}
+.practice-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #efe8d6;
+  border: 2px solid var(--workspace-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease;
+}
+.practice-range:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.practice-range:hover::-moz-range-thumb {
+  transform: scale(1.15);
+}
+html.light .practice-range,
+html[data-theme="light"] .practice-range {
+  background: linear-gradient(
+    to right,
+    var(--workspace-accent) var(--range-fill, 0%),
+    rgba(23, 26, 22, 0.12) var(--range-fill, 0%)
+  );
+}

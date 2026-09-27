@@ -9,8 +9,12 @@ import {
   mergeDashboardPractice
 } from "@/features/practice/core-technical/domain/workspace-analytics";
 import { aiMlStarterPractice } from "@/features/practice/ai-ml/domain/resume-practice-path";
-import { storyDisciplineForRole } from "@/features/practice/story-tracks/domain/story-disciplines";
+import {
+  storyDiscipline as storyDisciplineDefinition,
+  storyDisciplineForRole
+} from "@/features/practice/story-tracks/domain/story-disciplines";
 import { getAppContainer } from "@/server/app-container";
+import { nodeTrackAssessmentReports } from "@/features/reports/server/assessment-reports";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { Logger } from "@/server/common/logger";
 
@@ -69,13 +73,10 @@ export async function buildCandidateAnalytics(
       return fallback;
     });
 
-  const coreRounds = recover(
-    "coreRounds",
-    source("coreRounds", () => app.coreTechnicalWorkspaceAnalyticsService.rounds(ownerId)),
-    {
-      history: [],
-      reports: []
-    }
+  const assessmentReports = recover(
+    "assessmentReports",
+    source("assessmentReports", () => nodeTrackAssessmentReports(ownerId, now)),
+    []
   );
   // A stale snapshot is rebuilt only occasionally, but each service can issue
   // several SQL reads. Keep the rebuild in small waves so it cannot occupy the
@@ -87,12 +88,7 @@ export async function buildCandidateAnalytics(
     recover(
       "interviewReports",
       source("interviewReports", () =>
-        app.interviewService.reportsOverview(
-          ownerId,
-          50,
-          now,
-          coreRounds.then((rounds) => rounds.reports)
-        )
+        app.interviewService.reportsOverview(ownerId, 50, now, assessmentReports)
       ),
       null
     ),
@@ -103,42 +99,68 @@ export async function buildCandidateAnalytics(
     )
   ]);
   const storyDiscipline = storyDisciplineForRole(profile.targetRole);
-  const [corePractice, storyPractice, briefing, insights] = await Promise.all([
-    recover(
-      "corePractice",
-      source("corePractice", () =>
-        app.coreTechnicalWorkspaceAnalyticsService.practice(ownerId, 126)
+  // The same tracks the Practice page offers this role: Node.js Core Technical
+  // and Applied Engineering for backend and full-stack, Architecture for those
+  // plus story disciplines that include it.
+  const nodeTracks = storyDiscipline === null;
+  const architectureTrack =
+    nodeTracks ||
+    (storyDiscipline !== null && storyDisciplineDefinition(storyDiscipline).includesArchitecture);
+  const [corePractice, appliedPractice, architecturePractice, storyPractice, briefing, insights] =
+    await Promise.all([
+      recover(
+        "corePractice",
+        source("corePractice", () =>
+          app.coreTechnicalWorkspaceAnalyticsService.practice(ownerId, 126)
+        ),
+        null
       ),
-      null
-    ),
-    storyDiscipline
-      ? recover(
-          "storyPractice",
-          source("storyPractice", () =>
-            app.aiMlPracticeService.dashboardPractice(
-              ownerId,
-              profile,
-              126,
-              new Date(now),
-              storyDiscipline
-            )
-          ),
-          null
-        )
-      : Promise.resolve(null),
-    recover(
-      "progressBriefing",
-      source("progressBriefing", () =>
-        app.progressService.briefing(ownerId, { completedSessions: 0 }, new Date(now))
+      nodeTracks
+        ? recover(
+            "appliedPractice",
+            source("appliedPractice", () =>
+              app.appliedEngineeringWorkspaceAnalyticsService.practice(ownerId, 126, new Date(now))
+            ),
+            null
+          )
+        : Promise.resolve(null),
+      architectureTrack
+        ? recover(
+            "architecturePractice",
+            source("architecturePractice", () =>
+              app.architectureDesign.workspaceAnalytics.practice(ownerId, 126, new Date(now))
+            ),
+            null
+          )
+        : Promise.resolve(null),
+      storyDiscipline
+        ? recover(
+            "storyPractice",
+            source("storyPractice", () =>
+              app.aiMlPracticeService.dashboardPractice(
+                ownerId,
+                profile,
+                126,
+                new Date(now),
+                storyDiscipline
+              )
+            ),
+            null
+          )
+        : Promise.resolve(null),
+      recover(
+        "progressBriefing",
+        source("progressBriefing", () =>
+          app.progressService.briefing(ownerId, { completedSessions: 0 }, new Date(now))
+        ),
+        null
       ),
-      null
-    ),
-    recover(
-      "interviewInsights",
-      source("interviewInsights", () => app.interviewService.insights(ownerId)),
-      null
-    )
-  ]);
+      recover(
+        "interviewInsights",
+        source("interviewInsights", () => app.interviewService.insights(ownerId)),
+        null
+      )
+    ]);
   const [trailmate, readyCount, latest, quotaStarts, starterPlan] = await Promise.all([
     recover(
       "trailmate",
@@ -185,17 +207,18 @@ export async function buildCandidateAnalytics(
     activity: [],
     interview: { completedSessions: 0 }
   };
-  const progressBriefing = storyPractice
-    ? mergeBriefingPractice(roadmapBriefing, storyPractice)
-    : roadmapBriefing;
+  // Overview and Progress count the same practice: DSA plus every other track.
+  // Progress used to add only story tracks, so Core Technical, Applied
+  // Engineering, and Architecture work never reached its totals or streak.
+  const trackPractice = [corePractice, appliedPractice, architecturePractice, storyPractice].filter(
+    (practice): practice is NonNullable<typeof practice> => practice !== null
+  );
+  const progressBriefing = trackPractice.reduce(mergeBriefingPractice, roadmapBriefing);
   progressBriefing.interview = { completedSessions: insights?.completedSessions ?? 0 };
-
-  const withCorePractice = corePractice
-    ? mergeDashboardPractice(roadmapPractice, corePractice)
-    : roadmapPractice;
-  const dashboardPractice = storyPractice
-    ? mergeDashboardPractice(withCorePractice, storyPractice)
-    : withCorePractice;
+  const dashboardPractice = trackPractice.reduce<ReturnType<typeof mergeDashboardPractice> | null>(
+    mergeDashboardPractice,
+    roadmapPractice
+  );
   return {
     summary: {
       dashboard: buildDashboardOverview(profile, reports, dashboardPractice, now, trailmate),

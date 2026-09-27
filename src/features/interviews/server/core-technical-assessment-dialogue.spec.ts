@@ -44,6 +44,47 @@ describe("Core Technical assessment dialogue", () => {
     expect(text).toContain("How would you diagnose it?");
   });
 
+  it("teaches the reference point instead of reading out evaluator notes", () => {
+    const base = state();
+    const text = coreTechnicalAssessmentMoveOnUtterance(
+      {
+        ...base,
+        plan: [
+          {
+            ...base.plan[0]!,
+            storyPracticeInterviewerGuide: {
+              practice: "story-track" as const,
+              label: "Browser runtime",
+              expectedAnswer: "Microtasks drain completely before the next task.\nMore detail.",
+              rubric: []
+            }
+          },
+          base.plan[1]!
+        ],
+        questionIndex: 1,
+        questionEvaluations: {
+          "0": {
+            source: "semantic-evaluator",
+            score: 5,
+            verdict: "incorrect",
+            confidence: 0.9,
+            summary: "The candidate's responses contain no substantive explanation.",
+            strengths: [],
+            gaps: ["The candidate did not explain the queue."],
+            rubricScores: [],
+            answerExcerpts: [],
+            execution: null,
+            evaluatedAt: 1
+          }
+        }
+      },
+      "Okay."
+    );
+
+    expect(text).toContain("point to carry forward is this: Microtasks drain completely");
+    expect(text).not.toMatch(/candidate/i);
+  });
+
   it("uses production-specific language for Applied Engineering without forking the room", () => {
     const text = storyPracticeAssessmentOpening(
       state(),

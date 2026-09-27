@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, AudioLines, Loader2, Play, Volume2 } from "lucide-react";
+import { AudioLines, Loader2, Play, Volume2 } from "lucide-react";
 import { useCallback, useEffect } from "react";
+import { LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { StoryPracticeIntroExperience } from "@/features/practice/shared/ui/contracts";
 import type { StoryPracticeBlockView } from "@/features/practice/shared/ui/view-contracts";
@@ -123,11 +124,9 @@ export function StoryPracticeIntro({
               <span>{terminalCount ? "Continue" : `Start ${experience.subjectNoun}`}</span>
               <span className="text-black/35">•</span>
               <span>Question {nextQuestion.order}</span>
-              <ArrowRight
-                size={15}
-                aria-hidden="true"
-                className="ml-1 transition-transform group-hover:translate-x-0.5"
-              />
+              <span className="ml-1 inline-flex transition-transform group-hover:translate-x-0.5">
+                <LinkPendingIcon direction="forward" size={15} />
+              </span>
             </Link>
           ) : null}
         </div>

@@ -6,11 +6,17 @@ import {
   getSharedGuard,
   type SharedLease
 } from "@/server/rate-limit/shared-guard";
-import { apiError, appliedEngineeringMutationOwner, parseAppliedEngineeringJson } from "../../_shared";
+import {
+  apiError,
+  appliedEngineeringMutationOwner,
+  parseAppliedEngineeringJson
+} from "../../_shared";
 export async function POST(r: NextRequest) {
   let lease: SharedLease | undefined;
   try {
-    const { ownerId, app } = await appliedEngineeringMutationOwner(RATE_LIMIT_POLICIES.practiceState);
+    const { ownerId, app } = await appliedEngineeringMutationOwner(
+      RATE_LIMIT_POLICIES.practiceState
+    );
     const input = await parseAppliedEngineeringJson(
       r,
       appliedEngineeringAssessmentStartInputSchema
@@ -26,7 +32,7 @@ export async function POST(r: NextRequest) {
     );
     return apiSuccess(
       await app.appliedEngineeringAssessmentRuntimeService.startOrResume(ownerId, input, {
-        allowLocked: app.config.nodeEnv === "development"
+        allowLocked: app.config.practiceEarlyAssessmentStart
       })
     );
   } catch (e) {

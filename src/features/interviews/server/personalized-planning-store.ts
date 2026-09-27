@@ -204,47 +204,52 @@ export class PersonalizedPlanningStore {
     await this.requireOwnedPerformanceSnapshot(ownerId, parsed);
     await this.requireOwnedPracticeEvidenceSnapshot(ownerId, parsed);
 
-    const stored = await this.prisma.$transaction(async (transaction) => {
-      const latest = await transaction.personalizedInterviewPlanVersion.findFirst({
-        where: { ownerId },
-        orderBy: { revision: "desc" },
-        select: { revision: true }
-      });
-      const ready = parsePersonalizedInterviewPlan({
-        ...parsed,
-        revision: (latest?.revision ?? 0) + 1,
-        status: "ready"
-      });
-      const supersededAt = new Date();
+    const stored = await this.prisma.$transaction(
+      async (transaction) => {
+        const latest = await transaction.personalizedInterviewPlanVersion.findFirst({
+          where: { ownerId },
+          orderBy: { revision: "desc" },
+          select: { revision: true }
+        });
+        const ready = parsePersonalizedInterviewPlan({
+          ...parsed,
+          revision: (latest?.revision ?? 0) + 1,
+          status: "ready"
+        });
+        const supersededAt = new Date();
 
-      await transaction.personalizedInterviewPlanVersion.updateMany({
-        where: { ownerId, status: "READY" },
-        data: {
-          status: "SUPERSEDED",
-          supersededAt
-        }
-      });
-
-      return transaction.personalizedInterviewPlanVersion.create({
-        data: {
-          id: ready.id,
-          ownerId,
-          profileVersionId: profile.id,
-          revision: ready.revision,
-          schemaVersion: ready.schemaVersion,
-          status: "READY",
-          sourceSnapshot: toJson(ready.sourceSnapshot),
-          rationale: ready.rationale,
-          generatedAt: new Date(ready.generatedAt),
-          sessionBlueprints: {
-            create: ready.sessions.map(blueprintData)
+        await transaction.personalizedInterviewPlanVersion.updateMany({
+          where: { ownerId, status: "READY" },
+          data: {
+            status: "SUPERSEDED",
+            supersededAt
           }
-        },
-        include: {
-          sessionBlueprints: { orderBy: { order: "asc" } }
-        }
-      });
-    });
+        });
+
+        return transaction.personalizedInterviewPlanVersion.create({
+          data: {
+            id: ready.id,
+            ownerId,
+            profileVersionId: profile.id,
+            revision: ready.revision,
+            schemaVersion: ready.schemaVersion,
+            status: "READY",
+            sourceSnapshot: toJson(ready.sourceSnapshot),
+            rationale: ready.rationale,
+            generatedAt: new Date(ready.generatedAt),
+            sessionBlueprints: {
+              create: ready.sessions.map(blueprintData)
+            }
+          },
+          include: {
+            sessionBlueprints: { orderBy: { order: "asc" } }
+          }
+        });
+        // Each session blueprint is its own insert. The 5 s default expired on a
+        // slow connection and failed the whole Practice roadmap on first visit.
+      },
+      { maxWait: 10_000, timeout: 20_000 }
+    );
 
     return planFromRecord(stored);
   }

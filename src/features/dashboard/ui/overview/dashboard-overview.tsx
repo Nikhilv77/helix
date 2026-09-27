@@ -7,15 +7,18 @@ import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashb
 
 interface DashboardProps {
   overviewData: DashboardOverviewData;
+  /** The learner's first Overview after onboarding: the teacher gives a tour. */
+  introduce?: boolean;
 }
 
-export function DashboardOverview({ overviewData }: DashboardProps) {
+export function DashboardOverview({ overviewData, introduce = false }: DashboardProps) {
   return (
     <main className="dashboard-page min-h-screen w-full overflow-hidden bg-black text-cream">
       <DocumentTitle title="Overview" />
       <div className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-7 sm:px-6 sm:pt-9 lg:px-8 lg:pt-11">
         <CoachingReadinessSection
           data={{ coaching: overviewData.coaching, readiness: overviewData.readiness }}
+          introduce={introduce}
         />
         <WeeklyDirectionSection data={overviewData.direction} />
         <ContinuationSection data={overviewData.continuation} />

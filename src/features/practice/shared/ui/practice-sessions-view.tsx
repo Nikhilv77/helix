@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowRight, Atom, Clock3, CodeXml, Network, Wrench } from "lucide-react";
+import { Atom, Clock3, CodeXml, Network, Wrench } from "lucide-react";
+import { LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
 import { DocumentTitle } from "@/components/document-title";
 import { PracticeWeeklyActivityChart } from "@/components/workspace/shared/practice-weekly-activity-chart";
 import type { DsaRecommendation } from "@/features/practice/dsa/domain/dsa-recommendation";
@@ -295,11 +296,10 @@ function PracticeSessionCard({
         <span className="interview-session-link inline-flex items-center gap-2 text-base font-medium text-cream/88 transition-colors group-hover:text-cream">
           {actionLabel}
           {!unavailable ? (
-            <ArrowRight
-              size={17}
-              aria-hidden="true"
-              className="transition-transform duration-300 group-hover:translate-x-1"
-            />
+            <span className="inline-flex transition-transform duration-300 group-hover:translate-x-1">
+              {/* Becomes a spinner while the track page loads. */}
+              <LinkPendingIcon direction="forward" size={17} />
+            </span>
           ) : null}
         </span>
       </div>

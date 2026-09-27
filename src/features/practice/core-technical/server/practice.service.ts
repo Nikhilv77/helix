@@ -236,7 +236,11 @@ export class CoreTechnicalPracticeService {
         story: coreTechnicalPracticePathPresentation(storedStory),
         selection: {
           difficulty: selection.selectedStory.difficulty,
-          reason: coreTechnicalPracticePathReason(selection.reason, storedStory.key, storedStory.title)
+          reason: coreTechnicalPracticePathReason(
+            selection.reason,
+            storedStory.key,
+            storedStory.title
+          )
         },
         questions: row.block.questions
       },
@@ -246,33 +250,34 @@ export class CoreTechnicalPracticeService {
 
   async saveDraft(ownerId: string, rawInput: unknown) {
     const input = coreTechnicalSaveDraftInputSchema.parse(rawInput);
-    await this.prisma.$transaction(async (tx) => {
+    // The reply is built from the row read inside the transaction; reading the
+    // question again after the commit was one more round trip per keystroke pause.
+    const saved = await this.prisma.$transaction(async (tx) => {
       await lock(tx, input.questionId);
-      const question = await mutableQuestion(tx, ownerId, input.questionId);
+      const question = await mutableQuestionRead(tx, ownerId, input.questionId);
       assertWorkMatchesQuestion(question.privateSnapshot, input.draft);
-      await tx.coreTechnicalQuestionState.upsert({
+      const state = await tx.coreTechnicalQuestionState.upsert({
         where: { blockQuestionId_ownerId: { blockQuestionId: input.questionId, ownerId } },
         create: {
           blockQuestionId: input.questionId,
           ownerId,
           draft: input.draft === null ? Prisma.DbNull : toJson(input.draft)
         },
-        update: { draft: input.draft === null ? Prisma.DbNull : toJson(input.draft) }
+        update: { draft: input.draft === null ? Prisma.DbNull : toJson(input.draft) },
+        select: { draft: true, revealedHintCount: true, updatedAt: true }
       });
+      return { ...question, state };
     }, transactionOptions);
-    return this.question(ownerId, input.questionId);
+    return publicQuestion(saved);
   }
 
   async revealHint(ownerId: string, rawInput: unknown) {
     const input = coreTechnicalRevealHintInputSchema.parse(rawInput);
-    await this.prisma.$transaction(async (tx) => {
+    const revealed = await this.prisma.$transaction(async (tx) => {
       await lock(tx, input.questionId);
-      const question = await mutableQuestion(tx, ownerId, input.questionId);
-      const state = await tx.coreTechnicalQuestionState.findUnique({
-        where: { blockQuestionId_ownerId: { blockQuestionId: input.questionId, ownerId } },
-        select: { revealedHintCount: true }
-      });
-      const current = state?.revealedHintCount ?? 0;
+      // One read carries the hint count too, and the reply reuses it.
+      const question = await mutableQuestionRead(tx, ownerId, input.questionId);
+      const current = question.state?.revealedHintCount ?? 0;
       assertStoryPracticeHintOrder(
         current,
         input.hintNumber,
@@ -282,20 +287,21 @@ export class CoreTechnicalPracticeService {
             "Reveal Core Technical hints in order."
           )
       );
-      if (input.hintNumber > current) {
-        await tx.coreTechnicalQuestionState.upsert({
-          where: { blockQuestionId_ownerId: { blockQuestionId: input.questionId, ownerId } },
-          create: {
-            blockQuestionId: input.questionId,
-            ownerId,
-            revealedHintCount: input.hintNumber
-          },
-          update: { revealedHintCount: input.hintNumber }
-        });
-      }
       generatedQuestionCandidateSchema.parse(question.privateSnapshot);
+      if (input.hintNumber <= current) return question;
+      const state = await tx.coreTechnicalQuestionState.upsert({
+        where: { blockQuestionId_ownerId: { blockQuestionId: input.questionId, ownerId } },
+        create: {
+          blockQuestionId: input.questionId,
+          ownerId,
+          revealedHintCount: input.hintNumber
+        },
+        update: { revealedHintCount: input.hintNumber },
+        select: { draft: true, revealedHintCount: true, updatedAt: true }
+      });
+      return { ...question, state };
     }, transactionOptions);
-    return this.question(ownerId, input.questionId);
+    return publicQuestion(revealed);
   }
 
   async runCode(ownerId: string, rawInput: unknown) {
@@ -387,7 +393,7 @@ export class CoreTechnicalPracticeService {
         ? await this.ownedRun(ownerId, input.questionId, question.contentFingerprint, input.work)
         : null;
     const evaluation = await this.evaluator.evaluate(frozen, input.work, run);
-    const created = await this.prisma.$transaction(async (tx) => {
+    const saved = await this.prisma.$transaction(async (tx) => {
       await lock(tx, input.questionId);
       const existing = await tx.coreTechnicalQuestionAttempt.findUnique({
         where: { ownerId_requestId: { ownerId, requestId: input.requestId } },
@@ -395,9 +401,9 @@ export class CoreTechnicalPracticeService {
       });
       if (existing) {
         assertAttemptReplay(existing, input.questionId, workFingerprint);
-        return existing;
+        return { attempt: existing, question: null };
       }
-      const current = await mutableQuestion(tx, ownerId, input.questionId);
+      const current = await mutableQuestionRead(tx, ownerId, input.questionId);
       if (current.contentFingerprint !== question.contentFingerprint) {
         throw new ConflictErrorException(
           "CORE_TECHNICAL_QUESTION_CHANGED",
@@ -421,25 +427,31 @@ export class CoreTechnicalPracticeService {
         },
         select: attemptReplaySelect
       });
+      let completion: { status: CoreTechnicalQuestionStatus; completedAt: Date } | null = null;
       if (evaluation.complete) {
         await lockBlock(tx, current.blockId);
+        const completedAt = this.now();
         await tx.coreTechnicalBlockQuestion.update({
           where: { id_ownerId: { id: input.questionId, ownerId } },
-          data: { status: CoreTechnicalQuestionStatus.COMPLETED, completedAt: this.now() }
+          data: { status: CoreTechnicalQuestionStatus.COMPLETED, completedAt }
         });
         await makeAssessmentReadyIfTerminal(tx, ownerId, current.blockId, this.now);
+        completion = { status: CoreTechnicalQuestionStatus.COMPLETED, completedAt };
       }
-      return attempt;
+      // Built from the row already read, so answering needs no second read.
+      return { attempt, question: { ...current, ...completion, attempts: [attempt] } };
     }, transactionOptions);
     return {
-      attempt: publicAttempt(created),
-      question: await this.question(ownerId, input.questionId)
+      attempt: publicAttempt(saved.attempt),
+      question: saved.question
+        ? publicQuestion(saved.question)
+        : await this.question(ownerId, input.questionId)
     };
   }
 
   async learn(ownerId: string, rawInput: unknown) {
     const input = coreTechnicalLearnInputSchema.parse(rawInput);
-    await this.prisma.$transaction(async (tx) => {
+    const learned = await this.prisma.$transaction(async (tx) => {
       await lock(tx, input.questionId);
       const question = await tx.coreTechnicalBlockQuestion.findFirst({
         where: {
@@ -447,10 +459,10 @@ export class CoreTechnicalPracticeService {
           ownerId,
           block: { status: CoreTechnicalBlockStatus.PRACTISING }
         },
-        select: { id: true, blockId: true, status: true }
+        select: questionReadSelect
       });
       if (!question) throw questionNotFound();
-      if (question.status === CoreTechnicalQuestionStatus.LEARNED) return;
+      if (question.status === CoreTechnicalQuestionStatus.LEARNED) return question;
       if (question.status === CoreTechnicalQuestionStatus.COMPLETED) {
         throw new ConflictErrorException(
           "CORE_TECHNICAL_QUESTION_TERMINAL",
@@ -464,8 +476,9 @@ export class CoreTechnicalPracticeService {
         data: { status: CoreTechnicalQuestionStatus.LEARNED, learnedAt }
       });
       await makeAssessmentReadyIfTerminal(tx, ownerId, question.blockId, () => learnedAt);
+      return { ...question, status: CoreTechnicalQuestionStatus.LEARNED, learnedAt };
     }, transactionOptions);
-    return this.question(ownerId, input.questionId);
+    return publicQuestion(learned);
   }
 
   private async findQuestion(ownerId: string, questionId: string): Promise<QuestionRead> {
@@ -717,6 +730,25 @@ function assertWorkMatchesQuestion(
         "That answer choice does not exist."
       )
   });
+}
+
+/** The full question row, only while it can still change; draft, hint, and answer writes build their reply from it. */
+async function mutableQuestionRead(
+  tx: Prisma.TransactionClient,
+  ownerId: string,
+  questionId: string
+): Promise<QuestionRead> {
+  const question = await tx.coreTechnicalBlockQuestion.findFirst({
+    where: {
+      id: questionId,
+      ownerId,
+      status: CoreTechnicalQuestionStatus.ACTIVE,
+      block: { status: CoreTechnicalBlockStatus.PRACTISING }
+    },
+    select: questionReadSelect
+  });
+  if (!question) throw questionNotMutable();
+  return question;
 }
 
 async function mutableQuestion(tx: Prisma.TransactionClient, ownerId: string, questionId: string) {

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     );
     return apiSuccess(
       await app.coreTechnicalAssessmentRuntimeService.startOrResume(ownerId, input, {
-        allowLocked: app.config.nodeEnv === "development"
+        allowLocked: app.config.practiceEarlyAssessmentStart
       })
     );
   } catch (error) {

@@ -62,7 +62,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
           : app.appliedEngineeringAssessmentService.finalizeInterviewBySession(id),
         access.kind === "owner"
           ? app.architectureDesign.assessment.finalizeInterviewOwned(access.ownerId, id)
-          : app.architectureDesign.assessment.finalizeInterviewBySession(id)
+          : app.architectureDesign.assessment.finalizeInterviewBySession(id),
+        access.kind === "owner"
+          ? app.storyAssessmentService.finalizeInterviewOwned(access.ownerId, id)
+          : app.storyAssessmentService.finalizeInterviewBySession(id)
       ]);
     });
     return apiSuccess(serialiseInterviewState(state));

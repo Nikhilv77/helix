@@ -27,6 +27,7 @@ type AppConfigInput = Omit<
   | "interviewOperationalRetentionDays"
   | "interviewRetentionBatchSize"
   | "interviewMetricsSampleLimit"
+  | "practiceEarlyAssessmentStart"
 > & {
   clerkSecretKey?: EnvironmentConfig["clerkSecretKey"];
   interviewAuthSecret?: EnvironmentConfig["interviewAuthSecret"];
@@ -53,6 +54,7 @@ type AppConfigInput = Omit<
   interviewOperationalRetentionDays?: EnvironmentConfig["interviewOperationalRetentionDays"];
   interviewRetentionBatchSize?: EnvironmentConfig["interviewRetentionBatchSize"];
   interviewMetricsSampleLimit?: EnvironmentConfig["interviewMetricsSampleLimit"];
+  practiceEarlyAssessmentStart?: EnvironmentConfig["practiceEarlyAssessmentStart"];
 };
 
 export class AppConfigService {
@@ -148,6 +150,11 @@ export class AppConfigService {
 
   get interviewDailyLimit(): EnvironmentConfig["interviewDailyLimit"] {
     return this.config.interviewDailyLimit;
+  }
+
+  /** Development-only opt-in for starting a practice assessment early. */
+  get practiceEarlyAssessmentStart(): boolean {
+    return this.config.practiceEarlyAssessmentStart ?? false;
   }
 
   get interviewAuthenticatedRetentionDays(): number {

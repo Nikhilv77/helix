@@ -87,6 +87,19 @@ describe("CoreTechnicalStoryRankingService", () => {
     });
   });
 
+  it("fits the reason when onboarding stored a long target job description", () => {
+    const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
+    const result = service.rankFirstStory(
+      focus(evidence({ state: "STANDARD" }), {
+        targetJob:
+          "Backend Engineer with 3.5 years of experience building scalable APIs and distributed services using Go, PostgreSQL, Redis and Kafka."
+      })
+    );
+
+    expect(result.reason.length).toBeLessThanOrEqual(320);
+    expect(result.reason).toContain("relevant to your Backend Engineer target.");
+  });
+
   it("caps difficulty by candidate level even when baseline evidence is stronger", () => {
     const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
     const junior = service.rankFirstStory(

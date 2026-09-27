@@ -1,5 +1,6 @@
 "use client";
 
+import { AssessmentRoomLoading } from "@/features/practice/shared/ui/assessment-room-loading";
 import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { blockAssessmentMoment } from "@/features/practice/dsa/domain/block-assessment-speech";
@@ -299,7 +300,7 @@ export function DsaBlockAssessmentClient({
     }
   };
 
-  if (loading) return <AssessmentState message="Preparing your checkpoint…" />;
+  if (loading) return <AssessmentRoomLoading />;
   if (!session) return <AssessmentState message={error ?? "Assessment unavailable."} error />;
 
   const durationMs = (session.setup.durationMinutes ?? 25) * 60_000;

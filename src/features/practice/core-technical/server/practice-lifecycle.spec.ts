@@ -71,6 +71,31 @@ describe("Core Technical practice lifecycle", () => {
     ).rejects.toMatchObject({ code: "CORE_TECHNICAL_HINT_OUT_OF_ORDER" });
   });
 
+  it("answers draft and hint writes from the row read in their transaction", async () => {
+    const upsert = vi
+      .fn()
+      .mockResolvedValueOnce({
+        draft: { kind: "choice", selectedChoiceIndex: 2 },
+        revealedHintCount: 0,
+        updatedAt: NOW
+      })
+      .mockResolvedValueOnce({ draft: null, revealedHintCount: 1, updatedAt: NOW });
+    const tx = mutableTransaction({ revealedHintCount: 0, upsert });
+    const prisma = transactionalPrisma(tx, questionRecord());
+    const service = createService(prisma);
+
+    const drafted = await service.saveDraft("owner-1", {
+      questionId: QUESTION_ID,
+      draft: { kind: "choice", selectedChoiceIndex: 2 }
+    });
+    const hinted = await service.revealHint("owner-1", { questionId: QUESTION_ID, hintNumber: 1 });
+
+    expect(drafted.draft).toEqual({ kind: "choice", selectedChoiceIndex: 2 });
+    expect(hinted.revealedHints).toEqual([mcq.hints[0]]);
+    // No second read of the question after either commit.
+    expect(prisma.coreTechnicalBlockQuestion.findFirst).not.toHaveBeenCalled();
+  });
+
   it("replays an identical attempt without evaluating twice and rejects request-ID reuse", async () => {
     const evaluate = vi.fn();
     const stored = attemptRecord();
@@ -178,9 +203,7 @@ describe("Core Technical practice lifecycle", () => {
     const tx = {
       $executeRaw: vi.fn(),
       coreTechnicalBlockQuestion: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValue({ id: QUESTION_ID, blockId: BLOCK_ID, status: "ACTIVE" }),
+        findFirst: vi.fn().mockResolvedValue(questionRecord({ status: "ACTIVE" })),
         update: questionUpdate,
         count: vi.fn().mockResolvedValue(0)
       },
@@ -241,9 +264,7 @@ describe("Core Technical practice lifecycle", () => {
     const tx = {
       $executeRaw: vi.fn(),
       coreTechnicalBlockQuestion: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValue({ id: QUESTION_ID, blockId: BLOCK_ID, status: "ACTIVE" }),
+        findFirst: vi.fn().mockResolvedValue(questionRecord({ status: "ACTIVE" })),
         update: vi.fn(),
         count: vi.fn().mockResolvedValue(0)
       },
@@ -295,12 +316,12 @@ function mutableTransaction(options: {
   return {
     $executeRaw: vi.fn(),
     coreTechnicalBlockQuestion: {
-      findFirst: vi.fn().mockResolvedValue({
-        id: QUESTION_ID,
-        blockId: BLOCK_ID,
-        contentFingerprint: `sha256:${"a".repeat(64)}`,
-        privateSnapshot: mcq
-      })
+      // Writes read the full row inside the transaction and reply from it.
+      findFirst: vi.fn().mockResolvedValue(
+        questionRecord({
+          state: { draft: null, revealedHintCount: options.revealedHintCount, updatedAt: NOW }
+        })
+      )
     },
     coreTechnicalQuestionState: {
       findUnique: vi.fn().mockResolvedValue({ revealedHintCount: options.revealedHintCount }),

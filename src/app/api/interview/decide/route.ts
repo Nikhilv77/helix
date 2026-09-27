@@ -143,7 +143,13 @@ export async function POST(request: NextRequest) {
                   access.ownerId,
                   parsed.data.sessionId
                 )
-              : app.architectureDesign.assessment.finalizeInterviewBySession(parsed.data.sessionId)
+              : app.architectureDesign.assessment.finalizeInterviewBySession(parsed.data.sessionId),
+            access.kind === "owner"
+              ? app.storyAssessmentService.finalizeInterviewOwned(
+                  access.ownerId,
+                  parsed.data.sessionId
+                )
+              : app.storyAssessmentService.finalizeInterviewBySession(parsed.data.sessionId)
           ]);
           if (access.kind === "owner" && access.ownerId.startsWith("user:")) {
             await refreshPracticeHome(access.ownerId);

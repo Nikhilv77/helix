@@ -1,13 +1,11 @@
 "use client";
 
-import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
+import { BackLinkIcon, LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
 import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -29,6 +27,10 @@ import { createPortal } from "react-dom";
 import { DsaCodeEditor } from "@/features/interviews/ui/dsa/dsa-code-editor";
 import { StoryPracticeArtifact } from "@/features/practice/shared/ui/story-practice-artifact";
 import { PracticeCodeViewer } from "@/features/practice/shared/ui/practice-code-viewer";
+import {
+  StructuredAnswerEditor,
+  type StructuredAnswerPrompt
+} from "@/features/practice/shared/ui/structured-answer-editor";
 import type { StoryPracticeWorkspaceExperience as StoryPracticeWorkspaceExperienceContract } from "@/features/practice/shared/ui/contracts";
 import type {
   StoryPracticeAttemptWork,
@@ -73,10 +75,7 @@ export type StoryPracticeQuestionWorkspaceProps = {
   structuredAnswerPrompts?: readonly StructuredAnswerPrompt[];
 };
 
-export type StructuredAnswerPrompt = {
-  label: string;
-  suggestion: string;
-};
+export type { StructuredAnswerPrompt };
 
 const CORE_TECHNICAL_ANSWER_PROMPTS: readonly StructuredAnswerPrompt[] = [
   { label: "Outcome", suggestion: "State the exact outcome you expect from the evidence shown." },
@@ -543,14 +542,19 @@ export function StoryPracticeQuestionWorkspace({
                 <FileText size={15} aria-hidden="true" className="text-[var(--workspace-accent)]" />
               )}
               <h2 id="your-response-heading">
-                {terminal
-                  ? "Your submitted answer"
-                  : workKind === "code"
-                    ? responseLabel(question.question.format)
-                    : "Answer workspace"}
+                {question.status === "LEARNED" && !attempt
+                  ? "Answer revealed"
+                  : terminal
+                    ? "Your submitted answer"
+                    : workKind === "code"
+                      ? responseLabel(question.question.format)
+                      : "Answer workspace"}
               </h2>
+
             </div>
-            {workKind === "code" && experience.capabilities.runCode ? (
+            {workKind === "code" &&
+            experience.capabilities.runCode &&
+            !(question.status === "LEARNED" && !attempt) ? (
               <div className="flex items-center gap-2">
                 <span className="hidden text-[11px] font-medium text-cream/36 sm:inline">
                   {experience.environmentLabel}
@@ -586,7 +590,20 @@ export function StoryPracticeQuestionWorkspace({
           </div>
 
           <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
-            {interaction && interactive ? (
+            {question.status === "LEARNED" && !attempt ? (
+              // Nothing was submitted: show the revealed answer, not an empty editor.
+              <div className="p-4 sm:p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+                  The answer
+                </p>
+                <p className="mb-4 mt-1.5 text-[13px] leading-6 text-cream/55">
+                  You chose to learn this one, so it counts as finished with zero mastery.
+                  {usesModalReview ? "" : " The answer and explanation are in the Review tab."}
+                </p>
+                {/* Tab-review tracks already show it in the Review tab beside this. */}
+                {usesModalReview && answer ? <AuthorizedAnswer question={question} /> : null}
+              </div>
+            ) : interaction && interactive ? (
               <div className="p-4 sm:p-5">
                 <InteractiveAnswerInput
                   interaction={interaction}
@@ -975,58 +992,6 @@ function TextInput({
   placeholder: string;
   onChange: (value: string) => void;
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const [ghost, setGhost] = useState<{ prompt: string; anchor: number; suggestion: string } | null>(
-    null
-  );
-  const [ghostText, setGhostText] = useState("");
-  const [scrollTop, setScrollTop] = useState(0);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "0px";
-    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 224), 420)}px`;
-  }, [value]);
-
-  useEffect(() => {
-    if (!ghost) {
-      setGhostText("");
-      return;
-    }
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setGhostText(ghost.suggestion);
-      return;
-    }
-    let length = 0;
-    setGhostText("");
-    const timer = window.setInterval(() => {
-      length += 1;
-      setGhostText(ghost.suggestion.slice(0, length));
-      if (length >= ghost.suggestion.length) window.clearInterval(timer);
-    }, 14);
-    return () => window.clearInterval(timer);
-  }, [ghost]);
-
-  function addPrompt(prompt: StructuredAnswerPrompt) {
-    const textarea = textareaRef.current;
-    const heading = `${prompt.label}:\n`;
-    const start = textarea?.selectionStart ?? value.length;
-    const end = textarea?.selectionEnd ?? value.length;
-    const before = value.slice(0, start);
-    const separator = before.trimEnd() ? (before.endsWith("\n") ? "\n" : "\n\n") : "";
-    const after = value.slice(end);
-    const trailingSeparator = after.trim() ? "\n" : "";
-    const next = `${before}${separator}${heading}${trailingSeparator}${after}`;
-    const cursor = start + separator.length + heading.length;
-    setGhost({ prompt: prompt.label, anchor: cursor, suggestion: prompt.suggestion });
-    onChange(next);
-    window.requestAnimationFrame(() => {
-      textarea?.focus();
-      textarea?.setSelectionRange(cursor, cursor);
-    });
-  }
-
   return (
     <div className="max-w-[52rem]">
       {spoken ? (
@@ -1034,123 +999,18 @@ function TextInput({
           Say your answer aloud, then type the evidence you want assessed.
         </p>
       ) : null}
-      <div className="overflow-hidden rounded-2xl border border-white/[0.085] bg-[#0d0f10] shadow-[0_18px_48px_rgba(0,0,0,0.16)]">
-        {structuredPrompts.length ? (
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] px-3 py-2.5 sm:px-4">
-            <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cream/30">
-              Add a prompt
-            </span>
-            {structuredPrompts.map((prompt) => {
-              const alreadyAdded = hasStructuredPrompt(value, prompt.label);
-              return (
-                <button
-                  key={prompt.label}
-                  type="button"
-                  onClick={() => addPrompt(prompt)}
-                  disabled={disabled || alreadyAdded}
-                  aria-label={alreadyAdded ? `${prompt.label} prompt added` : undefined}
-                  className="rounded-md border border-white/[0.065] bg-white/[0.035] px-2 py-1 text-[10.5px] font-medium text-cream/48 transition hover:border-white/[0.12] hover:bg-white/[0.06] hover:text-cream/76 disabled:cursor-not-allowed disabled:border-white/[0.045] disabled:bg-white/[0.02] disabled:text-cream/28"
-                >
-                  {alreadyAdded ? (
-                    <Check size={10} aria-hidden="true" className="mr-1 inline" />
-                  ) : (
-                    "+ "
-                  )}
-                  {prompt.label}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            aria-label={spoken ? "Spoken answer transcript" : "Written answer"}
-            value={value}
-            onChange={(event) => {
-              setGhost(null);
-              onChange(event.target.value);
-            }}
-            onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-            disabled={disabled}
-            maxLength={12_000}
-            rows={8}
-            className={`block min-h-56 max-h-[26.25rem] w-full resize-none overflow-y-auto bg-transparent px-4 py-4 text-[14px] leading-7 caret-cream outline-none placeholder:text-cream/24 disabled:opacity-65 ${structuredPrompts.length && value ? "text-transparent" : "text-cream"}`}
-            placeholder={placeholder}
-          />
-          {structuredPrompts.length && value ? (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 overflow-hidden px-4 py-4 text-[14px] leading-7"
-            >
-              <div
-                className="whitespace-pre-wrap break-words text-cream"
-                style={{ transform: `translateY(-${scrollTop}px)` }}
-              >
-                {ghost ? (
-                  <>
-                    <StyledAnswerText
-                      value={value.slice(0, ghost.anchor)}
-                      prompts={structuredPrompts}
-                    />
-                    <span className="text-cream/25">{ghostText}</span>
-                    <StyledAnswerText
-                      value={value.slice(ghost.anchor)}
-                      prompts={structuredPrompts}
-                    />
-                  </>
-                ) : (
-                  <StyledAnswerText value={value} prompts={structuredPrompts} />
-                )}
-              </div>
-            </div>
-          ) : null}
-        </div>
-        <div className="flex min-h-10 items-center justify-between border-t border-white/[0.055] px-3 sm:px-4">
-          <p className="text-[11px] text-cream/30">
-            {structuredPrompts.length
-              ? "Use only the prompts that help your explanation."
-              : "Your draft saves automatically."}
-          </p>
-          <p className="font-mono text-[10px] tabular-nums text-cream/28">{value.length}/12000</p>
-        </div>
-      </div>
+      <StructuredAnswerEditor
+        value={value}
+        prompts={structuredPrompts}
+        disabled={disabled}
+        placeholder={placeholder}
+        ariaLabel={spoken ? "Spoken answer transcript" : "Written answer"}
+        maxLength={12_000}
+        hint="Your draft saves automatically."
+        onChange={onChange}
+      />
     </div>
   );
-}
-
-function StyledAnswerText({
-  value,
-  prompts
-}: {
-  value: string;
-  prompts: readonly StructuredAnswerPrompt[];
-}) {
-  const lines = value.split("\n");
-  return lines.map((line, index) => (
-    <span key={`${index}:${line}`}>
-      {isStructuredPromptLine(line, prompts) ? (
-        <span className="font-semibold text-cream/90 underline decoration-[var(--workspace-accent)] decoration-1 underline-offset-[5px]">
-          {line}
-        </span>
-      ) : (
-        line
-      )}
-      {index < lines.length - 1 ? "\n" : null}
-    </span>
-  ));
-}
-
-function isStructuredPromptLine(line: string, prompts: readonly StructuredAnswerPrompt[]): boolean {
-  return prompts.some(({ label }) => new RegExp(`^${escapeRegex(label)}:\\s*$`, "i").test(line));
-}
-
-function hasStructuredPrompt(value: string, prompt: string): boolean {
-  return new RegExp(`^${escapeRegex(prompt)}:\\s*$`, "im").test(value);
-}
-
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function ResponseIntro({
@@ -1333,33 +1193,38 @@ function FeedbackItem({ label, value }: { label: string; value: string }) {
 function AuthorizedAnswer({ question }: { question: StoryPracticeQuestionView }) {
   const answer = question.authorizedAnswer!;
   return (
-    <details open className="rounded-xl border border-white/[0.075] bg-[#111214] px-4 py-4">
+    <details
+      open
+      className="smooth-disclosure rounded-xl border border-white/[0.075] bg-[#111214] px-4 py-4"
+    >
       <summary className="flex min-h-11 cursor-pointer items-center text-[13px] font-semibold text-cream/72 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]">
         Correct answer and explanation
       </summary>
-      <p className="mt-4 text-[13px] leading-6 text-cream/64">{answer.concise}</p>
-      <p className="mt-3 text-[12.5px] leading-6 text-cream/48">{answer.explanation}</p>
-      {answer.learningGuide ? <StoryPracticeLearningGuide guide={answer.learningGuide} /> : null}
-      {answer.referenceSolution ? (
-        <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.075] bg-[#0b0d10]">
-          <div className="flex h-10 items-center justify-between border-b border-white/[0.065] bg-[#15181d] px-3.5">
-            <span className="inline-flex items-center gap-2 text-[11px] font-semibold text-cream/58">
-              <Code2 size={12} aria-hidden="true" className="text-[var(--workspace-accent)]" />
-              Reference solution
-            </span>
-            <span className="text-[9.5px] font-semibold uppercase tracking-[0.11em] text-cream/28">
-              JavaScript · read only
-            </span>
+      <div className="smooth-disclosure-body">
+        <p className="mt-4 text-[13px] leading-6 text-cream/64">{answer.concise}</p>
+        <p className="mt-3 text-[12.5px] leading-6 text-cream/48">{answer.explanation}</p>
+        {answer.learningGuide ? <StoryPracticeLearningGuide guide={answer.learningGuide} /> : null}
+        {answer.referenceSolution ? (
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.075] bg-[#0b0d10]">
+            <div className="flex h-10 items-center justify-between border-b border-white/[0.065] bg-[#15181d] px-3.5">
+              <span className="inline-flex items-center gap-2 text-[11px] font-semibold text-cream/58">
+                <Code2 size={12} aria-hidden="true" className="text-[var(--workspace-accent)]" />
+                Reference solution
+              </span>
+              <span className="text-[9.5px] font-semibold uppercase tracking-[0.11em] text-cream/28">
+                JavaScript · read only
+              </span>
+            </div>
+            <PracticeCodeViewer
+              code={answer.referenceSolution}
+              language={question.question.artifact.language ?? "javascript"}
+              maxLines={18}
+              ariaLabel="Reference solution code, read only"
+              embedded
+            />
           </div>
-          <PracticeCodeViewer
-            code={answer.referenceSolution}
-            language={question.question.artifact.language ?? "javascript"}
-            maxLines={18}
-            ariaLabel="Reference solution code, read only"
-            embedded
-          />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </details>
   );
 }
@@ -1610,9 +1475,9 @@ function QuestionLink({
       href={`${routeBase}/questions/${encodeURIComponent(question.id)}?block=${encodeURIComponent(blockId)}`}
       className="inline-flex h-9 items-center gap-2 rounded-lg bg-white/[0.04] px-3 text-[12.5px] font-semibold text-cream/58 transition hover:bg-white/[0.075] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
     >
-      {direction === "previous" ? <ArrowLeft size={13} aria-hidden="true" /> : null}
+      {direction === "previous" ? <LinkPendingIcon direction="back" size={13} /> : null}
       {label}
-      {direction === "next" ? <ArrowRight size={13} aria-hidden="true" /> : null}
+      {direction === "next" ? <LinkPendingIcon direction="forward" size={13} /> : null}
     </Link>
   );
 }

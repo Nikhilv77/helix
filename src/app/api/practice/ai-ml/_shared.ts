@@ -21,14 +21,15 @@ export async function aiMlStoryOwner(policy: RateLimitPolicy) {
   requireCompletedPreparationOnboardingState(state);
   // Frontend, data, and AI/ML story practice share these handlers; each
   // question is owner-scoped, and its session records the discipline.
-  if (!storyDisciplineForRole(state.targetRole)) {
+  const discipline = storyDisciplineForRole(state.targetRole);
+  if (!discipline) {
     throw new ApiRouteError(
       409,
       "AI_ML_PRACTICE_ROLE_REQUIRED",
       "Story practice requires an AI/ML, frontend, or data target role."
     );
   }
-  return { ownerId, app };
+  return { ownerId, app, discipline };
 }
 
 export async function parseAiMlStoryJson<T extends z.ZodTypeAny>(

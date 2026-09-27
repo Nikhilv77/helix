@@ -75,7 +75,10 @@ vi.mock("@/server/app-container", () => ({
       practice: { currentEntryBlock: mocks.architectureDesignCurrent },
       workspaceAnalytics: { entrySummary: mocks.architectureDesignAnalytics }
     },
-    aiMlPracticeService: { summaries: mocks.aiMlSummaries }
+    aiMlPracticeService: {
+      summaries: mocks.aiMlSummaries,
+      dashboardPractice: vi.fn().mockResolvedValue({ activity: [] })
+    }
   })
 }));
 

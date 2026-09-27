@@ -56,6 +56,7 @@ describe("validateEnvironment", () => {
       groqDeciderModel: "openai/gpt-oss-20b",
       groqApiKey: undefined,
       interviewDailyLimit: 2,
+      practiceEarlyAssessmentStart: false,
       interviewAuthenticatedRetentionDays: 365,
       interviewAnonymousRetentionDays: 30,
       interviewOperationalRetentionDays: 30,
@@ -80,6 +81,19 @@ describe("validateEnvironment", () => {
       rapidApiHost: "judge0-ce.p.rapidapi.com"
     });
     expect(config.notificationEmailEnabled).toBe(false);
+  });
+
+  it("allows an early practice assessment only when opted in during development", () => {
+    const early = (NODE_ENV: string, flag?: string) =>
+      validateEnvironment({
+        ...validEnvironment,
+        NODE_ENV,
+        ...(flag ? { PRACTICE_EARLY_ASSESSMENT_START: flag } : {})
+      }).practiceEarlyAssessmentStart;
+
+    expect(early("development")).toBe(false);
+    expect(early("development", "true")).toBe(true);
+    expect(early("production", "true")).toBe(false);
   });
 
   it("enables notification email only through an explicit launch switch", () => {

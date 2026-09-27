@@ -6,12 +6,18 @@ import {
   getSharedGuard,
   type SharedLease
 } from "@/server/rate-limit/shared-guard";
-import { apiError, architectureDesignMutationOwner, parseArchitectureDesignJson } from "../../_shared";
+import {
+  apiError,
+  architectureDesignMutationOwner,
+  parseArchitectureDesignJson
+} from "../../_shared";
 
 export async function POST(request: NextRequest) {
   let lease: SharedLease | undefined;
   try {
-    const { ownerId, app } = await architectureDesignMutationOwner(RATE_LIMIT_POLICIES.practiceState);
+    const { ownerId, app } = await architectureDesignMutationOwner(
+      RATE_LIMIT_POLICIES.practiceState
+    );
     const input = await parseArchitectureDesignJson(
       request,
       architectureDesignAssessmentStartInputSchema
@@ -27,7 +33,7 @@ export async function POST(request: NextRequest) {
     );
     return apiSuccess(
       await app.architectureDesign.assessmentRuntime.startOrResume(ownerId, input, {
-        allowLocked: app.config.nodeEnv === "development"
+        allowLocked: app.config.practiceEarlyAssessmentStart
       })
     );
   } catch (error) {

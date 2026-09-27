@@ -16,6 +16,7 @@ import {
   type ArchitectureDesignRankedScenario,
   type ArchitectureDesignScenarioRankingCandidate
 } from "@/features/practice/architecture-design/domain";
+import { boundedReason, targetJobTitle } from "@/features/practice/shared/domain/selection-reason";
 
 export type ArchitectureDesignFirstScenarioRankingContext = {
   recentScenarioKeys?: string[];
@@ -374,7 +375,10 @@ function selectionReason(
           )
         ? `your onboarding evidence showed a gap in ${dimension}`
         : `${dimension} still needs direct evidence`;
-  return `We chose ${selected.title} because ${evidence}, and it supports your ${focus.targetJob} target.`;
+  return boundedReason(
+    `We chose ${selected.title} because ${evidence}, and it supports your ${targetJobTitle(focus.targetJob)} target.`,
+    500
+  );
 }
 
 function availableDifficulty(

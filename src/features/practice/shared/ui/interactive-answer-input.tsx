@@ -1,7 +1,10 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import type { InteractiveResponse, PracticeInteraction } from "../domain/interactive-response";
+import { CategoryPicker } from "./category-picker";
+import { NumberField } from "./number-field";
 
 const buttonClass =
   "inline-flex h-9 items-center justify-center rounded-lg border border-white/10 px-2.5 text-cream/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] disabled:opacity-30";
@@ -18,6 +21,13 @@ export function InteractiveAnswerInput({
   disabled: boolean;
   onChange: (response: InteractiveResponse) => void;
 }) {
+  const sequenceOrder = response.type === "sequence" ? response.order : [];
+  const flipRef = useFlipList(sequenceOrder);
+  const availableKeys =
+    interaction.type === "sequence"
+      ? interaction.items.filter((item) => !sequenceOrder.includes(item.id)).map((item) => item.id)
+      : [];
+  const availableFlipRef = useFlipList(availableKeys);
   let filled = 0;
   const total =
     interaction.type === "configuration" ? interaction.fields.length : interaction.items.length;
@@ -66,6 +76,7 @@ export function InteractiveAnswerInput({
               return (
                 <li
                   key={id}
+                  ref={flipRef(id)}
                   className="rounded-xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] p-3"
                 >
                   <div className="flex gap-3">
@@ -122,6 +133,7 @@ export function InteractiveAnswerInput({
               .map((item) => (
                 <button
                   key={item.id}
+                  ref={availableFlipRef(item.id)}
                   type="button"
                   onClick={() =>
                     onChange({ type: "sequence", order: [...response.order, item.id] })
@@ -142,65 +154,106 @@ export function InteractiveAnswerInput({
       {interaction.type === "classification" && response.type === "classification" ? (
         <div className="space-y-3">
           {interaction.items.map((item, index) => (
-            <label
-              key={item.id}
-              className="block rounded-xl border border-white/10 bg-black/20 p-4"
-            >
+            <div key={item.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--workspace-accent)]">
                 Evidence {index + 1}
               </span>
-              <span className="mb-3 mt-2 block text-sm leading-6 text-cream/80">{item.label}</span>
-              <select
-                value={response.assignments[item.id] ?? ""}
-                onChange={(event) => {
+              <span
+                id={`evidence-${item.id}`}
+                className="mb-3 mt-2 block text-sm leading-6 text-cream/80"
+              >
+                {item.label}
+              </span>
+              <CategoryPicker
+                value={response.assignments[item.id] ?? null}
+                options={interaction.categories}
+                placeholder="Choose a category…"
+                ariaLabelledBy={`evidence-${item.id}`}
+                disabled={disabled}
+                onChange={(categoryId) => {
                   const assignments = { ...response.assignments };
-                  if (event.target.value) assignments[item.id] = event.target.value;
+                  if (categoryId) assignments[item.id] = categoryId;
                   else delete assignments[item.id];
                   onChange({ type: "classification", assignments });
                 }}
-                className="w-full rounded-lg border border-white/15 bg-[#171a1f] p-2.5 text-sm text-cream focus:ring-2 focus:ring-[var(--workspace-accent)]"
-              >
-                <option value="">Choose a category…</option>
-                {interaction.categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
           ))}
         </div>
       ) : null}
       {interaction.type === "configuration" && response.type === "configuration" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {interaction.fields.map((field) => (
-            <label key={field.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <span className="block text-sm font-semibold text-cream/85">{field.label}</span>
-              <span className="mb-3 mt-1 block text-xs text-cream/45">
-                {field.min}–{field.max} {field.unit} · increments of {field.step}
-              </span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={field.min}
-                  max={field.max}
-                  step={field.step}
-                  value={response.values[field.id] ?? ""}
-                  onChange={(event) => {
-                    const values = { ...response.values };
-                    if (event.target.value === "" || !Number.isFinite(event.target.valueAsNumber))
-                      delete values[field.id];
-                    else values[field.id] = event.target.valueAsNumber;
-                    onChange({ type: "configuration", values });
-                  }}
-                  className="min-w-0 w-full rounded-lg border border-white/15 bg-[#171a1f] p-3 font-mono text-lg text-cream focus:ring-2 focus:ring-[var(--workspace-accent)]"
-                />
-                <span className="text-xs text-cream/50">{field.unit}</span>
-              </div>
-            </label>
+            <NumberField
+              key={field.id}
+              label={field.label}
+              unit={field.unit}
+              min={field.min}
+              max={field.max}
+              step={field.step}
+              value={response.values[field.id]}
+              disabled={disabled}
+              onChange={(value) => {
+                const values = { ...response.values };
+                if (value === undefined) delete values[field.id];
+                else values[field.id] = value;
+                onChange({ type: "configuration", values });
+              }}
+            />
           ))}
         </div>
       ) : null}
     </fieldset>
+  );
+}
+
+const MOVE_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+
+/**
+ * Smooth reordering (FLIP): after React reorders the list, each moved item
+ * starts at its previous position and glides to the new one; newly added
+ * items fade in. Skipped on first render and when reduced motion is requested.
+ */
+function useFlipList(keys: readonly string[]) {
+  const nodes = useRef(new Map<string, HTMLElement>());
+  const tops = useRef(new Map<string, number>());
+  const mounted = useRef(false);
+  const signature = keys.join("|");
+
+  useLayoutEffect(() => {
+    const reduced =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const next = new Map<string, number>();
+    nodes.current.forEach((node, key) => {
+      const top = node.getBoundingClientRect().top;
+      next.set(key, top);
+      if (!mounted.current || reduced || typeof node.animate !== "function") return;
+      const previous = tops.current.get(key);
+      if (previous === undefined) {
+        node.animate(
+          [
+            { opacity: 0, transform: "translateY(8px)" },
+            { opacity: 1, transform: "none" }
+          ],
+          { duration: 220, easing: MOVE_EASING }
+        );
+      } else if (previous !== top) {
+        node.animate([{ transform: `translateY(${previous - top}px)` }, { transform: "none" }], {
+          duration: 260,
+          easing: MOVE_EASING
+        });
+      }
+    });
+    tops.current = next;
+    mounted.current = true;
+  }, [signature]);
+
+  return useCallback(
+    (key: string) => (node: HTMLElement | null) => {
+      if (node) nodes.current.set(key, node);
+      else nodes.current.delete(key);
+    },
+    []
   );
 }

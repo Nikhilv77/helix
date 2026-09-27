@@ -4,6 +4,7 @@ import type { Role } from "@/lib/shared/types";
 import type { ReportsOverview } from "@/features/reports/contracts/reports";
 import { getAppContainer } from "@/server/app-container";
 import { getPrismaService } from "@/server/database/prisma.service";
+import { nodeTrackAssessmentReports } from "./assessment-reports";
 
 export interface ReportsPageData {
   reports: ReportsOverview;
@@ -15,13 +16,12 @@ export interface ReportsPageData {
 /** Reports has its own read model; it never needs roadmap or DSA page data. */
 export async function buildReportsPageData(ownerId: string, now = Date.now()) {
   const app = getAppContainer();
-  const coreRounds = app.coreTechnicalWorkspaceAnalyticsService.rounds(ownerId);
   const [reports, header, quotaStartedAt] = await Promise.all([
     app.interviewService.reportsOverview(
       ownerId,
       50,
       now,
-      coreRounds.then((rounds) => rounds.reports)
+      nodeTrackAssessmentReports(ownerId, now)
     ),
     getPrismaService().$queryRaw<Array<{ targetRole: string | null; fullName: string | null }>>(
       Prisma.sql`

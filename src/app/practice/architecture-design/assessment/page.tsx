@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AssessmentRoomLoading } from "@/features/practice/shared/ui/assessment-room-loading";
 import { redirect } from "next/navigation";
 import { ArchitectureDesignBlockAssessmentClient } from "@/features/practice/architecture-design/ui/architecture-design-block-assessment-client";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
@@ -24,9 +25,5 @@ export default async function ArchitectureDesignAssessmentPage({
 }
 
 function AssessmentLoading() {
-  return (
-    <main className="fixed inset-0 z-[100] grid place-items-center bg-black text-cream/56">
-      Preparing your Architecture &amp; Design checkpoint…
-    </main>
-  );
+  return <AssessmentRoomLoading />;
 }

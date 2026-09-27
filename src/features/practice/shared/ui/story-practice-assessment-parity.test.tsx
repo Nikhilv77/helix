@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { APPLIED_ENGINEERING_ASSESSMENT_EXPERIENCE } from "@/features/practice/applied-engineering/ui/applied-engineering-experience";
 import { CORE_TECHNICAL_ASSESSMENT_EXPERIENCE } from "@/features/practice/core-technical/ui/core-technical-assessment";
@@ -12,12 +12,45 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/avatars/teacher-context", () => ({
   useWorkspaceTeacher: () => ({ id: "maya", name: "Maya" })
 }));
-vi.mock("@/features/interviews/ui/shared/interview-room-navigation", () => ({
-  openInterviewRoom: vi.fn()
+const rooms = vi.hoisted(() => ({
+  openInterviewRoom: vi.fn(),
+  openAppliedEngineeringAssessmentRoom: vi.fn(),
+  openArchitectureDesignAssessmentRoom: vi.fn()
 }));
+vi.mock("@/features/interviews/ui/shared/interview-room-navigation", () => rooms);
 
 describe("story-practice assessment state parity", () => {
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
+  it("opens Applied Engineering in the typed assessment room, not a live voice room", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: { assessment: block("IN_PROGRESS").assessment, sessionId: "session-1" }
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    render(
+      <StoryPracticeAssessment
+        block={block("READY")}
+        terminalCount={2}
+        dedicatedRoom={false}
+        experience={APPLIED_ENGINEERING_ASSESSMENT_EXPERIENCE}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Start assessment" }));
+
+    await waitFor(() =>
+      expect(rooms.openAppliedEngineeringAssessmentRoom).toHaveBeenCalledWith("session-1")
+    );
+    expect(rooms.openInterviewRoom).not.toHaveBeenCalled();
+  });
 
   it.each(["LOCKED", "READY", "IN_PROGRESS", "FINALIZING", "COMPLETED"] as const)(
     "keeps Core and Applied %s geometry and semantics aligned",

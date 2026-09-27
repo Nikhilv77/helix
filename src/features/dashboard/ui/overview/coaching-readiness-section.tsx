@@ -13,20 +13,73 @@ import {
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
+import { useEffect, useRef, useState } from "react";
+import { overviewTourLine } from "@/features/dashboard/domain/overview-tour";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { DashboardScoreRing } from "./dashboard-score-ring";
 
+/**
+ * The Overview stays in the client router cache, so its server-rendered
+ * `introduce` can be stale after the tour played; this keeps one visit from
+ * hearing it twice.
+ */
+let tourHeardThisVisit = false;
+
 export function CoachingReadinessSection({
-  data
+  data,
+  introduce = false
 }: {
   data: Pick<DashboardOverviewData, "coaching" | "readiness">;
+  /** True only on the learner's first Overview after onboarding. */
+  introduce?: boolean;
 }) {
   const { state, speak, stop, awaitingGesture } = useMayaVoice();
+  const teacher = useWorkspaceTeacher();
   const speaking = state === "loading" || state === "speaking";
+  // The welcome tour waits here until it actually starts playing; if the
+  // browser blocks autoplay, the speaker button plays it instead.
+  const [tourPending, setTourPending] = useState(introduce && !tourHeardThisVisit);
+  const [tourPlaying, setTourPlaying] = useState(false);
+  const tourStarted = useRef(false);
+  const tourLine = introduce ? overviewTourLine() : null;
+
+  const playTour = () => {
+    if (!tourLine || tourHeardThisVisit) return;
+    void speak(tourLine, teacher.id).then((result) => {
+      if (result !== "started") return;
+      // Only now is the tour used up: a blocked autoplay is offered again.
+      tourHeardThisVisit = true;
+      setTourPending(false);
+      setTourPlaying(true);
+      void fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ overviewIntroduced: true }),
+        keepalive: true
+      }).catch(() => undefined);
+    });
+  };
+
+  useEffect(() => {
+    if (!tourLine || tourStarted.current) return;
+    tourStarted.current = true;
+    playTour();
+    // Runs once on arrival; the script is fixed for this visit.
+  }, []);
+
+  useEffect(() => {
+    if (tourPlaying && state === "idle") setTourPlaying(false);
+  }, [state, tourPlaying]);
 
   const toggleVoice = () => {
     if (speaking) {
       stop();
+      setTourPlaying(false);
+      return;
+    }
+    if (tourPending) {
+      playTour();
       return;
     }
     const variants: readonly string[] | undefined =
@@ -89,9 +142,13 @@ export function CoachingReadinessSection({
                 {state === "unavailable"
                   ? "Voice unavailable — tap to retry"
                   : awaitingGesture
-                    ? "Tap to hear the summary"
+                    ? tourPending
+                      ? "Tap to hear your welcome tour"
+                      : "Tap to hear the summary"
                     : speaking
-                      ? "Teacher summary is playing"
+                      ? tourPlaying
+                        ? "Welcome tour is playing"
+                        : "Teacher summary is playing"
                       : ""}
               </p>
               <Link
