@@ -9,21 +9,41 @@ import { buildArchitectureDesignPublicationPayloads } from "../src/features/prac
 import { ArchitectureDesignPersistenceService } from "../src/features/practice/architecture-design/server/persistence.service";
 import { PrismaService } from "../src/server/database/prisma.service";
 
-// Prisma's import can load .env before this module runs. Force the verified
-// local database back into the process before constructing PrismaService.
-const localEnvironment = loadEnvFile({ path: ".env.local", override: true });
-if (!localEnvironment.parsed?.DATABASE_URL) {
-  throw new Error("Architecture publication requires DATABASE_URL in .env.local.");
+const PRODUCTION_DATABASE_NAME = "/trailgrad-production";
+
+// Production runs only through scripts/architecture-design-publish-production.mjs,
+// which pulls the Vercel Production URL into the environment of this process.
+const production = process.argv.includes("--production");
+if (production) {
+  if (process.env.TRAILGRAD_PUBLISH_TARGET !== "production") {
+    throw new Error("Run pnpm architecture-design:publish:production to publish to production.");
+  }
+  if (
+    new URL(process.env.DATABASE_URL ?? "postgres://invalid/").pathname !== PRODUCTION_DATABASE_NAME
+  ) {
+    throw new Error("DATABASE_URL does not point to trailgrad-production.");
+  }
+} else {
+  // Prisma's import can load .env before this module runs. Force the verified
+  // local database back into the process before constructing PrismaService.
+  const localEnvironment = loadEnvFile({ path: ".env.local", override: true });
+  if (!localEnvironment.parsed?.DATABASE_URL) {
+    throw new Error("Architecture publication requires DATABASE_URL in .env.local.");
+  }
 }
 loadEnvFile();
 
 async function main(): Promise<void> {
   const requestedScenarioKeys = new Set<string>();
   for (const argument of process.argv.slice(2)) {
+    if (argument === "--production") continue;
     if (!argument.startsWith("--scenario=") || argument.length === "--scenario=".length) {
       throw new Error(`Unsupported argument: ${argument}`);
     }
     requestedScenarioKeys.add(argument.slice("--scenario=".length));
+  }
+  if (production && requestedScenarioKeys.size === 0) {
+    throw new Error("Production publication needs explicit --scenario keys.");
   }
   const approved = ARCHITECTURE_DESIGN_CONTENT_CANDIDATES.filter(
     (artifact) =>
@@ -57,6 +77,25 @@ async function main(): Promise<void> {
   try {
     await prisma.connect();
     const persistence = new ArchitectureDesignPersistenceService(prisma);
+    if (production) {
+      // Practice serves version 1 only, so production never gains a second version.
+      const existing = await prisma.architectureScenarioVersion.findMany({
+        where: { scenarioKey: { in: approved.map(({ scenario }) => scenario.key) } },
+        select: { scenarioKey: true, version: true, contentFingerprint: true }
+      });
+      const changed = existing.filter(
+        (row) =>
+          payloads.find(({ scenarioKey }) => scenarioKey === row.scenarioKey)
+            ?.contentFingerprint !== row.contentFingerprint
+      );
+      if (changed.length > 0) {
+        throw new Error(
+          `Production already has different content for: ${changed
+            .map(({ scenarioKey, version }) => `${scenarioKey}@${version}`)
+            .join(", ")}`
+        );
+      }
+    }
     const published = [];
     for (const artifact of approved) {
       const scenarioVersion = await persistence.publishReviewedScenarioVersion(artifact);
