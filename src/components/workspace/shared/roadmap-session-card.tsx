@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, Clock3 } from "lucide-react";
+import { Clock3 } from "lucide-react";
+import { LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
 
 export interface RoadmapSessionCardProps {
   href: string | null;
@@ -86,9 +87,10 @@ export function RoadmapSessionCard({
         <span className="interview-session-link inline-flex items-center gap-2 text-base font-medium text-cream/88 transition-colors group-hover:text-cream">
           {actionLabel}
           {!unavailable ? (
-            <ArrowRight
+            // Turns into a small spinner while the round's page loads.
+            <LinkPendingIcon
+              direction="forward"
               size={17}
-              aria-hidden="true"
               className="transition-transform duration-300 group-hover:translate-x-1"
             />
           ) : null}

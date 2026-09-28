@@ -3,6 +3,89 @@
 What changed, newest first. Each release lists what a deploy needs (migrations, files to commit,
 checks to run) under **Deploy notes**. Add an entry with every release.
 
+## Unreleased: Interview reliability, honest scores, better content (all five phases of the interview audit)
+
+- **Voice no longer drops mid-round.** The Live connection is replaced silently every 8 minutes,
+  on `goAway`, or when it closes unexpectedly, using a new `rotation` purpose on
+  `/api/interview/gemini-live/token` (fresh credential, saved history, silent start).
+- **Turns survive glitches.** The server replays a turn when only a background grade or code run
+  changed the session; the browser retries dropped, timed-out, 5xx, and busy turns with the same
+  turn ID.
+- **Reports settle quickly.** A finished round grades all its answers in parallel; the "report
+  ready" notification waits for the final score and is updated as grades land; visiting Reports
+  retries failed grades.
+
+**Phase 2: honest scores and rooms**
+
+- **The interviewer now receives its instructions.** The Live token locked every setting, so the
+  system instruction, context compression, and transcription settings sent by the browser were
+  ignored. They are now set in the token, and the instruction (with rubrics and the System Design
+  reference answer) is no longer sent to the browser. Expect the interviewer to behave noticeably
+  more like the written persona.
+- **Scores count unanswered questions.** Declined questions, and questions skipped by ending early,
+  count as zero; pacing skips and time cut-offs do not. Reports show "X of Y questions answered".
+- **System Design is hidden for Frontend and Data** (and learners with no declared role) instead
+  of failing to start; `/interview/design` redirects them to `/interviews`.
+- **`/interviews`:** Hiring Manager shows progress; a used-up daily limit says so and shows when the
+  next round opens.
+- Snapshot versions bumped: interviews 3, reports 3.
+
+**Phase 3: less repetition, content that fits the learner**
+
+- Hiring Manager has its own agenda (direction, energy and fit, learning fast, uncertainty,
+  conflict, mistakes, feedback, close) instead of repeating the Resume round.
+- Freshers get questions about college, internships, and their first role.
+- The Technical round picks a different project from the Resume round when it can; the Resume
+  round leaves multiple choice checks to the Technical round.
+- Technical fallback questions are weighted by role and shuffled; AI/ML questions already
+  practised go last.
+- System Design skips scenarios practised in Architecture & Design.
+- DSA asks one solved problem and one new problem from a practised pattern.
+- The resume interview kit is prepared in the background after onboarding and resume updates, and
+  rewritten when the role or level changes.
+
+**Phase 4: scores computed in code**
+
+- The evaluator rates each parameter 1–5 against written anchors; code converts levels to scores and
+  applies the verdict and test caps. Same answer, same score.
+- Background grading uses Gemini's reasoning model with Groq as fallback.
+- Each question is graded once, when it closes, instead of after every follow-up.
+- Scores from before this change stay as they were; new answers use the new scale.
+
+**Phase 5: cleanup**
+
+- Removed the retired setup screen, `/api/interview/start`, and the Fundamentals entry route; the
+  old Fundamentals page redirects to `/interviews`.
+- Removed the commented-out LiveKit transport from the voice room.
+- Opening a round looks up an unfinished room with one query.
+- Time limits: the Resume card says 24 minutes and the interviewer states each round's real cap;
+  the daily-limit copy describes the rolling 24-hour window.
+- `INTERVIEW_ENGINE.md` rewritten.
+
+**Rounds ended without an answer**
+
+- The room says "No report for this round" and links back to Interviews, instead of promising a
+  report that Reports (correctly) does not show. No "report ready" notification is sent.
+
+**Names**
+
+- First names from resumes written in capitals or lower case ("PRIYA", "ishan") are shown as
+  "Priya" and "Ishan" everywhere, through one shared `displayFirstName`. Analytics snapshot
+  version bumped to 5 so saved pages pick it up.
+
+**Interview entry screens**
+
+- The pre-recorded intro now plays straight away while the session is created in the background,
+  instead of waiting for the session first. The room opens when both are done, or at once with
+  "Continue to interview".
+
+**Deploy notes**
+
+- No migration and no new environment variables.
+- Test before deploying: one voice round longer than 10 minutes (the connection should rotate
+  with no visible error), and a round that ends with answers still grading (the notification
+  should change from "still being scored" to the score).
+
 ## 2026-09-28: Page-by-page hardening
 
 Shipped in two parts. Resume Roast, Progress, Reports (list), Trailmate, Profile and Manage went out

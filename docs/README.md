@@ -31,10 +31,12 @@ These track ongoing work and change often:
   files to commit, spot checks).
 - [LATENCY.md](LATENCY.md): how to read timings, the production baseline, open latency items,
   and lessons.
+- [INTERVIEW_AUDIT.md](INTERVIEW_AUDIT.md): end-to-end audit of the interview rounds, with
+  findings by severity and a suggested order.
 - [STATIC_VOICE_LINES.md](STATIC_VOICE_LINES.md): the pre-recorded teacher lines and how to
   regenerate them.
-- [CLEANUP.md](CLEANUP.md) and [CLEANUP_LEDGER.csv](CLEANUP_LEDGER.csv): the dead-code audit,
-  the removal plan, and the line-by-line ledger. Delete both once the cleanup is done.
+- [CLEANUP.md](CLEANUP.md): the dead-code audit and removal plan. Delete it once the cleanup is
+  done.
 
 Also in the repository root:
 

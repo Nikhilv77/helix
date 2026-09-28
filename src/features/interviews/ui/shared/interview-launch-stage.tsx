@@ -120,6 +120,9 @@ export function InterviewLaunchStage({
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const briefingStartedRef = useRef(false);
   const navigatingRef = useRef(false);
+  // Read through refs so the intro keeps playing when the session arrives.
+  const pendingSessionIdRef = useRef<string | null>(null);
+  const briefingFinishedRef = useRef(false);
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const scriptLines = useMemo(
@@ -132,15 +135,30 @@ export function InterviewLaunchStage({
     [copy.body, copy.script, copy.spokenVariants]
   );
   const script = scriptLines.join(" ");
+  const enterInterview = useCallback(
+    (sessionId: string) => {
+      if (navigatingRef.current) return;
+      navigatingRef.current = true;
+      if (navigateToInterview) {
+        navigateToInterview(sessionId);
+      } else {
+        window.location.replace(`/interview/voice?session=${sessionId}`);
+      }
+    },
+    [navigateToInterview]
+  );
+  /**
+   * The pre-recorded intro plays while the session is created. Whichever
+   * finishes last moves the learner into the room.
+   */
   const continueToInterview = useCallback(() => {
-    if (!pendingSessionId || navigatingRef.current) return;
-    navigatingRef.current = true;
-    if (navigateToInterview) {
-      navigateToInterview(pendingSessionId);
-    } else {
-      window.location.replace(`/interview/voice?session=${pendingSessionId}`);
+    const sessionId = pendingSessionIdRef.current;
+    if (!sessionId) {
+      briefingFinishedRef.current = true;
+      return;
     }
-  }, [navigateToInterview, pendingSessionId]);
+    enterInterview(sessionId);
+  }, [enterInterview]);
   const playBriefing = useCallback(
     (lineIndex: number) => {
       const line = scriptLines[lineIndex];
@@ -185,8 +203,10 @@ export function InterviewLaunchStage({
 
         if (cancelled) return;
         if (waitForVoiceBeforeNavigate) {
+          pendingSessionIdRef.current = payload.sessionId;
           setPendingSessionId(payload.sessionId);
           setStarting(false);
+          if (briefingFinishedRef.current) enterInterview(payload.sessionId);
         } else {
           window.location.replace(`/interview/voice?session=${payload.sessionId}`);
         }
@@ -218,6 +238,7 @@ export function InterviewLaunchStage({
       window.clearTimeout(timeout);
     };
   }, [
+    enterInterview,
     error,
     getToken,
     isLoaded,
@@ -229,8 +250,9 @@ export function InterviewLaunchStage({
     waitForVoiceBeforeNavigate
   ]);
 
+  // The intro is pre-recorded, so it starts at once instead of waiting for
+  // the session to be created.
   useEffect(() => {
-    if (waitForVoiceBeforeNavigate && !pendingSessionId) return;
     if (awaitingGesture || briefingStartedRef.current) return;
     const timer = window.setTimeout(() => {
       briefingStartedRef.current = true;
@@ -240,7 +262,7 @@ export function InterviewLaunchStage({
       window.clearTimeout(timer);
       stop();
     };
-  }, [awaitingGesture, pendingSessionId, playBriefing, script, stop, waitForVoiceBeforeNavigate]);
+  }, [awaitingGesture, playBriefing, script, stop]);
 
   useEffect(() => {
     if (!awaitingGesture) return;
@@ -329,6 +351,7 @@ export function InterviewLaunchStage({
               <button
                 type="button"
                 onClick={() => {
+                  pendingSessionIdRef.current = null;
                   setError(null);
                   setStartAttempt((value) => value + 1);
                 }}

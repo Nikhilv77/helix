@@ -17,10 +17,10 @@ export interface BuiltWorkspacePage<T> {
 // target the in-page resume upload needs.
 // trailmate 3: overview carries the online-mates count and leaderboard size.
 export const WORKSPACE_PAGE_SCHEMA_VERSION: Record<WorkspacePage, number> = {
-  interviews: 2,
+  interviews: 4,
   "resume-roast": 4,
   trailmate: 3,
-  reports: 2
+  reports: 3
 };
 const SCHEMA_VERSION = WORKSPACE_PAGE_SCHEMA_VERSION;
 /**

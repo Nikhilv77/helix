@@ -281,6 +281,12 @@ function baselinePlanningScore(
   return total / observed.length;
 }
 
+/**
+ * A resume update alone keeps the current plan; the next practice or
+ * interview result (which changes the performance or practice snapshot)
+ * regenerates it from the new resume. This keeps a resume edit from
+ * reshuffling the rounds the learner is part-way through.
+ */
 function matchesInputsExceptResume(
   plan: PersonalizedInterviewPlan,
   targetRole: TargetRoleRelevanceContext,

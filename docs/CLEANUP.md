@@ -34,14 +34,14 @@ The conservative code total is about 1.0% of the earlier 245,734-line source cou
 
 This is a defensible static-analysis floor and a larger review list, not proof that every possible dead branch, public class method, runtime feature flag, database column, external consumer, or persisted URL has been exhausted. Current production traffic/data were not queried. Age alone is not evidence of non-use.
 
-The complete removal ledger is [CLEANUP_LEDGER.csv](CLEANUP_LEDGER.csv): each file, original line range, symbol/selector, category, evidence, and file hash.
+The CSV ledger with original line ranges and file hashes is no longer in the repository; the checklists below are the record. Locate each item by name, not line number.
 
 ## Confirmed orphaned source files
 
 | File | Lines | Finding |
 | --- | ---: | --- |
-| [src/features/interviews/domain/interview-templates.ts](../src/features/interviews/domain/interview-templates.ts) | 215 | Old template catalogue; only the orphaned setup screen imports it. |
-| [src/features/interviews/ui/interview-setup-client.tsx](../src/features/interviews/ui/interview-setup-client.tsx) | 903 | Old setup flow; no route or other consumer imports it. Current interview routes launch their own flows. |
+| ~~src/features/interviews/domain/interview-templates.ts~~ | 215 | Deleted September 28 (interview phase 5). |
+| ~~src/features/interviews/ui/interview-setup-client.tsx~~ | 903 | Deleted September 28 (interview phase 5), with `/api/interview/start` and the Fundamentals entry route. |
 | [src/features/dashboard/ui/overview/dashboard-skeleton.tsx](../src/features/dashboard/ui/overview/dashboard-skeleton.tsx) | 203 | Old overview skeleton with no caller. |
 | [src/features/practice/architecture-design/ui/architecture-design-preparation.tsx](../src/features/practice/architecture-design/ui/architecture-design-preparation.tsx) | 8 | Unused wrapper around shared preparation UI. |
 | [src/features/practice/applied-engineering/ui/applied-engineering-preparation.tsx](../src/features/practice/applied-engineering/ui/applied-engineering-preparation.tsx) | 8 | Unused wrapper around shared preparation UI. |
@@ -136,7 +136,7 @@ No deployment, production database audit, traffic-log audit, full runtime test s
 
 ## Detailed Batch 2 checklist: remove these declarations
 
-Each row is a removal task within a file that must remain. Delete only the listed declarations and their bodies. The full original ranges and hashes are in [CLEANUP_LEDGER.csv](CLEANUP_LEDGER.csv). Total: **108 declarations, 1,113 lines**.
+Each row is a removal task within a file that must remain. Delete only the listed declarations and their bodies. Total: **108 declarations, 1,113 lines**.
 
 | Done | File to edit | Declarations to remove (original start line) | Lines |
 | --- | --- | --- | ---: |

@@ -10,7 +10,8 @@ the browser; LiveKit is used only for human peer-help calls.
 - Next.js 16, React 19, TypeScript, Tailwind CSS
 - PostgreSQL and Prisma
 - Clerk authentication
-- Gemini for interview planning, with optional Groq for low-latency turn decisions
+- Gemini for interview grading and generation, with optional Groq for low-latency turn decisions
+  and as a fallback
 - Gemini Live for native interview audio; LiveKit for peer-help calls
 
 ## Local setup

@@ -14,6 +14,7 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { LEVELS, ROLES } from "@/features/interviews/server/types";
 import { verifyResumePreview } from "@/features/profile/server/resume-preview-token";
+import { prepareInterviewKit } from "@/features/onboarding/server/resume/prepare-interview-kit";
 
 export const dynamic = "force-dynamic";
 
@@ -125,6 +126,8 @@ export async function POST(request: NextRequest) {
     // These writes are durable/idempotent but are not required for the browser
     // to enter the product. Run them concurrently after the response instead
     // of adding roadmap, Clerk, and email latency to the completion click.
+    // Written now so the first Resume or Technical round does not wait for it.
+    after(() => prepareInterviewKit(ownerId));
     after(async () => {
       const [roadmapResult, welcomeResult] = await Promise.allSettled([
         targetRole === "fullstack"

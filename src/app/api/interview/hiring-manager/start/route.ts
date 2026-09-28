@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
       const personalization = {
         resume: profile.resume,
         targetRole: profile.targetRole,
-        targetCompany: profile.targetCompany
+        targetCompany: profile.targetCompany,
+        level: profile.level
       };
       const plan = buildHiringManagerPlan(personalization);
       const result = await app.interviewService.start(

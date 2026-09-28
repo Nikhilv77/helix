@@ -15,7 +15,7 @@ import { existingInterviewOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { LIVE_END_OF_SPEECH_SILENCE_MS } from "@/features/interviews/domain/voice-turn-timing";
 import { voiceConnectionLifetimeMs } from "@/features/interviews/server/voice-connection-policy";
-import type { InterviewState } from "@/features/interviews/server/types";
+import { roundCaps, type InterviewState } from "@/features/interviews/server/types";
 import type { CandidateProfile } from "@/lib/shared/types";
 import {
   GEMINI_LED_INTERVIEW_TOOLS,
@@ -38,7 +38,12 @@ export const dynamic = "force-dynamic";
 
 const requestSchema = z.object({
   sessionId: z.string().uuid(),
-  purpose: z.enum(["session", "transcription-refresh"]).default("session")
+  /**
+   * `rotation` replaces a live connection mid-conversation (Gemini closes each
+   * one after about ten minutes). It returns a fresh credential and the saved
+   * history, with a silent start instead of a spoken opening.
+   */
+  purpose: z.enum(["session", "rotation", "transcription-refresh"]).default("session")
 });
 const TRANSCRIPTION_VOCABULARY_LIMIT = 100;
 export const INTERVIEW_TRANSCRIPTION_LANGUAGE_CODES = ["en-IN", "hi-IN"] as const;
@@ -144,13 +149,16 @@ export async function POST(request: NextRequest) {
       dsaDesignMode,
       isTechnicalProjectsRound: isTechnicalProjectsInterview
     });
-    const resuming = state.turns.some((turn) => turn.speaker === "user");
+    const rotation = parsed.data.purpose === "rotation";
+    const resuming = rotation || state.turns.some((turn) => turn.speaker === "user");
     const latestAgentTurn = [...state.turns]
       .reverse()
       .find((turn) => turn.speaker === "agent" && turn.action !== "intro");
-    const openingUtterance = resuming
-      ? `Welcome back. We'll continue where we left off. ${latestAgentTurn?.text ?? question?.text ?? "Please continue."}`
-      : initialOpeningUtterance;
+    const openingUtterance = rotation
+      ? ""
+      : resuming
+        ? `Welcome back. We'll continue where we left off. ${latestAgentTurn?.text ?? question?.text ?? "Please continue."}`
+        : initialOpeningUtterance;
     const client = new GoogleGenAI({ apiKey: app.config.geminiApiKey });
     const expiresAt = new Date(Date.now() + Math.min(remainingMs, 29 * 60 * 1000)).toISOString();
     const newSessionExpireTime = new Date(Date.now() + 60_000).toISOString();
@@ -205,6 +213,49 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Locked into the credential and never sent to the browser: it holds the
+    // rubric and, for System Design, the private reference answer.
+    const systemInstruction = buildSystemInstruction({
+      roundTitle: state.setup.templateTitle ?? "Behavioral interview",
+      interviewerName,
+      isHiringManagerRound,
+      isResumeBehaviouralRound,
+      isDsaDesignRound: isDsaOrDesignInterview,
+      dsaDesignMode,
+      isTechnicalProjectsRound: isTechnicalProjectsInterview,
+      question: question?.text ?? "Ask the current interview question.",
+      questionNumber: state.questionIndex + 1,
+      questionCount: state.plan.length,
+      followUpCount: state.followUpCount,
+      maxFollowUps: question?.maxFollowUps ?? 1,
+      currentStage: question?.stage ?? null,
+      mustHit: question?.mustHit ?? [],
+      openingUtterance,
+      limitMinutes: Math.round(roundCaps(state.setup).hardCapMs / 60_000),
+      resuming,
+      conversationHistory: resuming
+        ? state.turns.slice(-12).map((turn) => ({
+            speaker: turn.speaker,
+            text: turn.text.slice(0, 800)
+          }))
+        : [],
+      pronunciationVocabulary: transcriptionVocabulary,
+      plan: state.plan.map((item) => ({
+        text: item.text,
+        kind: item.kind ?? "conversation",
+        answerFormat: item.answerFormat ?? "spoken",
+        options: item.kind === "mcq" ? (item.options ?? []) : [],
+        mustHit: item.mustHit,
+        maxFollowUps: item.maxFollowUps ?? 1,
+        acceptsCandidateQuestions: item.acceptsCandidateQuestions === true,
+        interviewSection: item.interviewSection,
+        privateGuide:
+          item.interviewSection === "design"
+            ? item.storyPracticeInterviewerGuide?.expectedAnswer
+            : undefined
+      }))
+    });
+
     const createVoiceToken = () =>
       client.authTokens.create({
         config: {
@@ -234,7 +285,13 @@ export async function POST(request: NextRequest) {
                   ? ActivityHandling.START_OF_ACTIVITY_INTERRUPTS
                   : ActivityHandling.NO_INTERRUPTION
               },
+              // A token with constraints locks every Live setting: anything
+              // the browser sends is ignored (verified against the API on
+              // September 28). So everything the room depends on is set here.
+              systemInstruction,
+              ...(!geminiLedConversation ? { inputAudioTranscription: {} } : {}),
               sessionResumption: {},
+              contextWindowCompression: { slidingWindow: {} },
               ...(geminiLedConversation ? { tools: GEMINI_LED_INTERVIEW_TOOLS } : {})
             }
           }
@@ -267,46 +324,7 @@ export async function POST(request: NextRequest) {
               languageCodes: [...INTERVIEW_TRANSCRIPTION_LANGUAGE_CODES]
             }
           }
-        : {}),
-      systemInstruction: buildSystemInstruction({
-        roundTitle: state.setup.templateTitle ?? "Behavioral interview",
-        interviewerName,
-        isHiringManagerRound,
-        isResumeBehaviouralRound,
-        isDsaDesignRound: isDsaOrDesignInterview,
-        dsaDesignMode,
-        isTechnicalProjectsRound: isTechnicalProjectsInterview,
-        question: question?.text ?? "Ask the current interview question.",
-        questionNumber: state.questionIndex + 1,
-        questionCount: state.plan.length,
-        followUpCount: state.followUpCount,
-        maxFollowUps: question?.maxFollowUps ?? 1,
-        currentStage: question?.stage ?? null,
-        mustHit: question?.mustHit ?? [],
-        openingUtterance,
-        resuming,
-        conversationHistory: resuming
-          ? state.turns.slice(-12).map((turn) => ({
-              speaker: turn.speaker,
-              text: turn.text.slice(0, 800)
-            }))
-          : [],
-        pronunciationVocabulary: transcriptionVocabulary,
-        plan: state.plan.map((item) => ({
-          text: item.text,
-          kind: item.kind ?? "conversation",
-          answerFormat: item.answerFormat ?? "spoken",
-          options: item.kind === "mcq" ? (item.options ?? []) : [],
-          mustHit: item.mustHit,
-          maxFollowUps: item.maxFollowUps ?? 1,
-          acceptsCandidateQuestions: item.acceptsCandidateQuestions === true,
-          interviewSection: item.interviewSection,
-          privateGuide:
-            item.interviewSection === "design"
-              ? item.storyPracticeInterviewerGuide?.expectedAnswer
-              : undefined
-        }))
-      })
+        : {})
     });
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
@@ -397,6 +415,13 @@ export function buildTranscriptionVocabulary(
   return [...vocabulary.values()].slice(0, TRANSCRIPTION_VOCABULARY_LIMIT);
 }
 
+/** A rotated connection joins a conversation already in progress, so it starts silent. */
+function openingInstruction(openingUtterance: string): string {
+  return openingUtterance
+    ? `At the start of this session, say this opening exactly and completely: ${openingUtterance}`
+    : "This connection replaced an earlier one in the middle of the conversation. Say nothing at the start: wait for the candidate to speak or for the next approved response.";
+}
+
 export function buildSystemInstruction(input: {
   roundTitle: string;
   interviewerName?: "Claire" | "James";
@@ -413,6 +438,8 @@ export function buildSystemInstruction(input: {
   currentStage?: string | null;
   mustHit: string[];
   openingUtterance: string;
+  /** The round's hard time cap, in minutes. */
+  limitMinutes?: number;
   resuming?: boolean;
   conversationHistory?: Array<{ speaker: "user" | "agent"; text: string }>;
   pronunciationVocabulary?: string[];
@@ -470,7 +497,7 @@ Identity rule — this is mandatory and overrides any conflicting default behavi
 
 This interview follows a server-owned plan. You may discuss only the current interview topic and the direction returned by the complete_interview_turn tool. Never invent an interview question, company fact, policy, salary, benefit, hiring promise, or decision.
 
-At the start of this session, say this opening exactly and completely: ${input.openingUtterance}
+${openingInstruction(input.openingUtterance)}
 
 After every complete candidate utterance, call complete_interview_turn exactly once before you reply. Pass the candidate's words verbatim in answerText. This includes substantive answers, clarification requests, candidate questions, social asides, and requests to stop. Do not announce the tool call or say that you are processing the answer.
 
@@ -478,7 +505,7 @@ For a multiple-choice question, the candidate may click a choice, say its letter
 
 A trusted client message beginning "The coding workspace—not the candidate—reported an execution event" is a workspace status, not a candidate turn. Do not call complete_interview_turn for it, do not advance the question, and speak only its exact approved line.
 
-If the candidate says they want to end, stop, finish, leave, or quit the interview, call complete_interview_turn immediately with their exact words, candidateIntent end, and action move_on. Do not ask them to confirm and do not continue interviewing. When the tool response says action close, deliver the approved closing and ask nothing else. Completing the last planned question also ends the interview immediately; the ${input.isTechnicalProjectsRound ? "40-minute" : "30-minute"} limit is only a maximum, never a target duration.
+If the candidate says they want to end, stop, finish, leave, or quit the interview, call complete_interview_turn immediately with their exact words, candidateIntent end, and action move_on. Do not ask them to confirm and do not continue interviewing. When the tool response says action close, deliver the approved closing and ask nothing else. Completing the last planned question also ends the interview immediately; the ${input.limitMinutes ?? (input.isTechnicalProjectsRound ? 40 : 30)}-minute limit is only a maximum, never a target duration.
 
 If the candidate declines a question or cannot provide an answer—for example, "no idea", "I have no clue", "I don't know", "nothing comes to mind", discomfort, or an explicit refusal—respect that boundary immediately. Classify the meaning as candidateIntent decline and call complete_interview_turn once with their exact words and action move_on. This rule overrides the normal probe rules. Do not praise the refusal, claim it gave you useful evidence, challenge it, rephrase the same question, or probe for a partial answer. The server will either skip to the next approved question or end after repeated refusals.
 
@@ -511,7 +538,7 @@ The answer should cover: ${input.mustHit.join(", ") || "the question itself"}.
 Known candidate, company, project, and technical terms are: ${input.pronunciationVocabulary?.slice(0, 100).join(", ") || "none supplied"}. Preserve their spelling and pronounce them naturally.
 The server allows ${input.maxFollowUps} useful follow-up maximum; ${input.followUpCount} have already been used. Never ask another follow-up once that limit is reached.
 Use the current question and its format. For technical, coding, or multiple-choice questions, let the candidate reason aloud and accept typed answers as authoritative submissions.
-At the start of this session, say this opening exactly and completely: ${input.openingUtterance}
+${openingInstruction(input.openingUtterance)}
 You must never ask a question that is not supplied by the interview server. Do not substitute a similar question or choose a resume topic yourself.
 After a candidate finishes a substantive answer, do not answer, score, advance, repeat the question, or invent a follow-up. The browser submits the finalized transcript directly to the interview server. Wait silently for the server's next text instruction.
 When the interview server sends an exact response, speak it exactly once without adding, removing, or changing anything. Do not insert a separate processing acknowledgement.`;
@@ -554,7 +581,7 @@ ${reconnectContext}
 
 Identity rule — if asked your name, who you are, whether you are an AI, who created you, or what model/provider you use, say exactly: "I'm Claire from the recruiting team." Never mention Google, Gemini, DeepMind, an AI assistant, a language model, a bot, or a virtual assistant.
 
-At the start of this session, say this opening exactly and completely: ${input.openingUtterance}
+${openingInstruction(input.openingUtterance)}
 
 This interview follows a server-owned frozen plan. You may discuss only the current planned question and the direction returned by the complete_interview_turn tool. Never invent, reorder, replace, or reveal an unreached question. Never invent an employer fact, policy, salary, benefit, hiring promise, or hiring decision.
 
@@ -596,7 +623,7 @@ Design rules:
 - Accept a coherent alternative architecture when the candidate states assumptions and defends trade-offs.
 - Challenge only a concrete contradiction or unsupported guarantee, never speaking style.
 
-The tool response is authoritative. Speak approvedResponse exactly once, word for word, without adding an acknowledgement or question. If approvedResponse is empty, produce no audio and continue listening. Completing the final planned question ends the interview immediately; the 40-minute limit is only a maximum.
+The tool response is authoritative. Speak approvedResponse exactly once, word for word, without adding an acknowledgement or question. If approvedResponse is empty, produce no audio and continue listening. Completing the final planned question ends the interview immediately; the ${input.limitMinutes ?? 40}-minute limit is only a maximum.
 
 Current planned question: ${input.question}
 Current design act: ${input.currentStage ?? "not in the design portion"}

@@ -110,7 +110,8 @@ describe("Core Technical & Projects frozen plan", () => {
       kit: null,
       coreBlueprint: core,
       level: "0-2",
-      targetRole: "ai-ml"
+      targetRole: "ai-ml",
+      shuffle: (items) => items
     });
 
     expect(questions).toHaveLength(3);
@@ -302,5 +303,65 @@ describe("Core Technical & Projects frozen plan", () => {
       codeSnippet: "function handle(event) {}",
       codeTask: expect.stringContaining("replay-safe JavaScript handler")
     });
+  });
+
+  it("uses a different project from the resume round when another is still relevant", () => {
+    const withTwo = {
+      ...profile,
+      resume: {
+        ...profile.resume!,
+        projects: [
+          {
+            name: "Ledger Guard",
+            summary: "Payments.",
+            outcome: "",
+            skills: ["Node.js", "JavaScript"]
+          },
+          { name: "Queue Pilot", summary: "Jobs.", outcome: "", skills: ["JavaScript"] }
+        ]
+      }
+    } as CandidateProfile;
+    const withUnrelated = {
+      ...profile,
+      resume: {
+        ...profile.resume!,
+        projects: [
+          {
+            name: "Ledger Guard",
+            summary: "Payments.",
+            outcome: "",
+            skills: ["Node.js", "JavaScript"]
+          },
+          { name: "Portfolio", summary: "Site.", outcome: "", skills: ["Figma"] }
+        ]
+      }
+    } as CandidateProfile;
+    const select = (candidate: CandidateProfile) =>
+      selectGroundedProjectSource({
+        profile: candidate,
+        coreBlueprint: blueprint("core-technical"),
+        appliedBlueprint: blueprint("applied-engineering")
+      }).name;
+
+    expect(select(withTwo)).toBe("Queue Pilot");
+    expect(select(withUnrelated)).toBe("Ledger Guard");
+  });
+
+  it("asks AI/ML questions the learner has not practised first", () => {
+    const keep = <T>(items: T[]) => items;
+    const questions = selectTechnicalProjectMcqs({
+      kit: null,
+      coreBlueprint: blueprint("core-technical"),
+      level: "0-2",
+      targetRole: "ai-ml",
+      practisedAiMlKeys: new Set(["ai-ml-core-1", "ai-ml-core-2", "ai-ml-core-3"]),
+      shuffle: keep
+    });
+
+    expect(questions.map((question) => question.sourceId)).toEqual([
+      "ai-ml-core:4",
+      "ai-ml-core:5",
+      "ai-ml-core:6"
+    ]);
   });
 });

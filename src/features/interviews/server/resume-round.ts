@@ -1,4 +1,4 @@
-import type { CandidateResume, ResumeInterviewKit } from "@/lib/shared/types";
+import type { CandidateResume, Level, ResumeInterviewKit } from "@/lib/shared/types";
 import type { InterviewSetup, PlannedQuestion } from "./types";
 
 export const RESUME_SKILL_QUESTIONS = 4;
@@ -43,14 +43,18 @@ const RESUME_PARAMETERS = {
 /**
  * Turns the stored kit into the round's plan.
  *
- * Everything here is assembly, not generation. The kit was written once when
- * the resume was read, so starting a resume round costs no model call: the
- * skills stage, the coding task, and the experience stage are all already on
- * the candidate's profile.
+ * Everything here is assembly, not generation. The kit is written ahead of
+ * time (after onboarding or a resume update), so starting a resume round
+ * normally costs no model call: the skills stage, the coding task, and the
+ * experience stage are all already on the candidate's profile.
  */
 export function buildResumePlan(
   kit: ResumeInterviewKit,
-  options: { shuffle?: <T>(items: T[]) => T[]; resume?: CandidateResume } = {}
+  options: {
+    shuffle?: <T>(items: T[]) => T[];
+    resume?: CandidateResume;
+    level?: Level | null;
+  } = {}
 ): PlannedQuestion[] {
   const shuffle = options.shuffle ?? shuffleInPlace;
 
@@ -65,7 +69,16 @@ export function buildResumePlan(
       ? 1
       : LIVE_RESUME_SKILL_QUESTIONS
     : RESUME_SKILL_QUESTIONS;
-  const skills = shuffle([...kit.skillQuestions]).slice(0, skillQuestionCount);
+  // The Technical round asks the kit's multiple choice checks, so the live
+  // resume round prefers the spoken and typed ones and only falls back to a
+  // multiple choice question when nothing else is left.
+  const skills = options.resume
+    ? [
+        ...shuffle(kit.skillQuestions.filter((question) => question.format !== "mcq")),
+        ...shuffle(kit.skillQuestions.filter((question) => question.format === "mcq"))
+      ].slice(0, skillQuestionCount)
+    : shuffle([...kit.skillQuestions]).slice(0, skillQuestionCount);
+  const fresher = options.level === "fresher";
   const experience = kit.experienceQuestions.slice(
     0,
     options.resume ? LIVE_RESUME_EXPERIENCE_QUESTIONS : RESUME_EXPERIENCE_QUESTIONS
@@ -75,7 +88,9 @@ export function buildResumePlan(
   const openingQuestions: PlannedQuestion[] = options.resume
     ? [
         conversationalQuestion(
-          "Give me the two-minute version of your career so far: the choices you made, the work you own now, and why it prepares you for this role.",
+          fresher
+            ? "Give me the two-minute version of your journey so far: what you studied or built, what you enjoyed most, and why it points you toward this role."
+            : "Give me the two-minute version of your career so far: the choices you made, the work you own now, and why it prepares you for this role.",
           "Career narrative",
           "Learn the candidate's current scope and the thread they believe matters most.",
           ["a concise career story", "current responsibilities", "one relevant example"],
@@ -85,9 +100,13 @@ export function buildResumePlan(
           RESUME_PARAMETERS.career
         ),
         conversationalQuestion(
-          role
-            ? `At ${role.organization || "your current company"}, what outcome were you personally accountable for as ${role.role || "part of the team"}, and which difficult decision best demonstrates your level?`
-            : "In your most recent work, what outcome were you personally accountable for, and which difficult decision best demonstrates your level?",
+          fresher
+            ? role
+              ? `At ${role.organization || "your internship"}, what were you personally responsible for, and what was the hardest call you made there?`
+              : "In your internship or strongest college project, what were you personally responsible for, and what was the hardest call you made?"
+            : role
+              ? `At ${role.organization || "your current company"}, what outcome were you personally accountable for as ${role.role || "part of the team"}, and which difficult decision best demonstrates your level?`
+              : "In your most recent work, what outcome were you personally accountable for, and which difficult decision best demonstrates your level?",
           role?.summary || "Current role",
           "Establish personal ownership, constraints, and impact in the candidate's recent work.",
           ["specific responsibility", "a difficult problem", "personal action or decision"],
@@ -109,10 +128,12 @@ export function buildResumePlan(
           RESUME_PARAMETERS.decision
         ),
         conversationalQuestion(
-          "Tell me about a meaningful project setback or mistake. How did you diagnose your part in it, repair the impact, and change how you worked afterward?",
+          // The hiring manager round asks about mistakes and setbacks; this one
+          // stays on the resume's own work.
+          "Tell me about a time on one of these projects when the plan stopped working and you had to change your approach. What made you change course, and how did it turn out?",
           "Behavioural evidence",
-          "Collect evidence of ownership, judgement, and learning under pressure.",
-          ["specific situation", "personal action", "result", "lesson learned"],
+          "Collect evidence of ownership, judgement, and adaptability on the candidate's own work.",
+          ["specific situation", "personal action", "result", "what they learned"],
           "behavioral",
           "how-you-work",
           true,

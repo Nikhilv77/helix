@@ -87,23 +87,25 @@ Timings and open latency items: [LATENCY.md](LATENCY.md). History: [CHANGELOG.md
 
 ## Interviews
 
-**Learner sees:** six rounds on `/interviews`:
+**Learner sees:** five rounds on `/interviews` (four for AI/ML, which has no DSA round):
 
-1. DSA
-2. Core Technical
-3. Applied Engineering
-4. Architecture & System Design
-5. Resume & Behavioral Defense (hiring manager)
-6. Final Mock
+1. Resume & Behavioral Defense (James, 24 min)
+2. Core Technical & Projects (Claire, 40 min): three MCQs, three project questions, one coding task
+3. DSA Interview (Claire, 35 min): two problems the learner has solved; needs 10 solved
+4. System Design (James, 45 min): an authored scenario with a drawing canvas
+5. Hiring Manager & Final Behavioural (James, 30 min)
 
-Each round runs in a voice room (Gemini Live) or as text. Finished rounds show
-`Completed`, or `Completed · Updated round` if the plan adapted since.
+Every round is a Gemini Live voice room with typed and code answers where needed. Finished rounds
+show `Completed`, or `Completed · Updated round` if the plan adapted since. A full audit with known
+problems is in [INTERVIEW_AUDIT.md](INTERVIEW_AUDIT.md).
 
 **How it works**
 
 - The planner stores five internal kinds (`problem-solving`, `core-technical`,
-  `applied-engineering`, `architecture-system-design`, `final-mock`). The UI replaces
-  `problem-solving` with the dedicated DSA round and adds Resume & Behavioral.
+  `applied-engineering`, `architecture-system-design`, `final-mock`). Round 2 combines the
+  Core Technical and Applied Engineering blueprints; the `final-mock` blueprint is not used.
+- Each round has its own start route that builds the questions from stored content, so no model
+  plans questions at start (the resume kit is the exception, generated on first use).
 - Blueprints come from the candidate profile, target-role relevance, and demonstrated
   performance. Completed interviews adapt the next plan revision.
 - A server-side state machine enforces question count, follow-up budget, and time caps.
@@ -115,11 +117,11 @@ Each round runs in a voice room (Gemini Live) or as text. Finished rounds show
 
 Full design: [INTERVIEW_ENGINE.md](../INTERVIEW_ENGINE.md).
 
-**Routes:** `api/interview/*` (start, decide, dsa, design, fundamentals, hiring-manager, resume,
-technical-projects, gemini-live/token, operations, quota).
+**Routes:** `api/interview/*`: a `start` route per round (resume, technical-projects, dsa,
+design, hiring-manager), plus decide, gemini-live/token, the session route, operations, and quota.
 
-**Status:** not yet audited for latency and cost. This is the next major area. See
-[Future scope](09_FUTURE_SCOPE.md).
+**Status:** audited and hardened September 28 (reconnects, turn retries, honest scoring, role and
+level fit, scores computed in code). Details and what is left: [INTERVIEW_AUDIT.md](INTERVIEW_AUDIT.md).
 
 ---
 

@@ -36,7 +36,9 @@ const TECHNICAL_PARAMETERS = ["concept-depth", "technical-reasoning"];
 
 /**
  * Reuses the frozen resume-kit checks, then fills a thin kit from the authored
- * fundamentals bank. Nothing is generated while the interview is starting.
+ * banks: role-weighted fundamentals, or the AI/ML set with the questions the
+ * learner already practised moved to the back. Nothing is generated while the
+ * interview is starting.
  */
 export function selectTechnicalProjectMcqs(input: {
   kit: ResumeInterviewKit | null | undefined;
@@ -44,8 +46,12 @@ export function selectTechnicalProjectMcqs(input: {
   level: Level | null;
   targetRole?: CandidateProfile["targetRole"];
   count?: number;
+  /** `ai-ml-core-N` practice keys the learner has already answered. */
+  practisedAiMlKeys?: ReadonlySet<string>;
+  shuffle?: <T>(items: T[]) => T[];
 }): ReviewedTechnicalMcq[] {
   const count = input.count ?? 3;
+  const shuffle = input.shuffle ?? shuffleCopy;
   const isAiMl = input.targetRole === "ai-ml" || isAiMlBlueprint(input.coreBlueprint);
   const allowedSkills = new Set(
     input.coreBlueprint.topics.flatMap((topic) => topic.skillKeys.map(normalizeKey))
@@ -58,9 +64,14 @@ export function selectTechnicalProjectMcqs(input: {
       return rightMatch - leftMatch;
     })
     .map((question, index) => kitMcq(question, index));
+  const practised = input.practisedAiMlKeys ?? new Set<string>();
+  const aiMl = isAiMl ? shuffle(aiMlTechnicalQuestions()) : [];
   const fallback = isAiMl
-    ? aiMlTechnicalQuestions()
-    : buildFundamentalsPlan(input.level, { shuffle: (items) => items })
+    ? [
+        ...aiMl.filter((question) => !practised.has(aiMlPracticeKey(question))),
+        ...aiMl.filter((question) => practised.has(aiMlPracticeKey(question)))
+      ]
+    : buildFundamentalsPlan(input.level, { shuffle, role: input.targetRole })
         .filter(
           (question): question is PlannedQuestion & { options: string[]; answerIndex: number } =>
             question.kind === "mcq" &&
@@ -90,6 +101,20 @@ export function selectTechnicalProjectMcqs(input: {
       return true;
     })
     .slice(0, count);
+}
+
+/** `ai-ml-core:3` in the interview is `ai-ml-core-3` in AI/ML Practice. */
+function aiMlPracticeKey(question: ReviewedTechnicalMcq): string {
+  return question.sourceId.replace("ai-ml-core:", "ai-ml-core-");
+}
+
+function shuffleCopy<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swap]] = [copy[swap]!, copy[index]!];
+  }
+  return copy;
 }
 
 function isAiMlBlueprint(blueprint: SessionBlueprint): boolean {
@@ -141,7 +166,17 @@ export function selectGroundedProjectSource(input: {
   const projects = [...(input.profile.resume?.projects ?? [])]
     .map((project, index) => ({ project, index, score: overlap(project.skills, targetSkills) }))
     .sort((left, right) => right.score - left.score || left.index - right.index);
-  const selectedProject = projects[0];
+  // The resume round's deep dive uses the first project on the resume. Use a
+  // different one here when another still covers at least half as many of
+  // the role's skills, or when none of them match.
+  const best = projects[0];
+  const alternative = projects.find((candidate) => candidate.index !== 0);
+  const selectedProject =
+    best?.index === 0 &&
+    alternative &&
+    (best.score === 0 || (alternative.score > 0 && alternative.score * 2 >= best.score))
+      ? alternative
+      : best;
   if (selectedProject) {
     const { project, index } = selectedProject;
     return {
@@ -425,7 +460,9 @@ function fallbackAiMlCodeTask(project: GroundedProjectInterviewSource): {
                 "tests for empty and mixed-policy episodes"
               ]
             }
-          : /\b(?:mlops|serving|inference|deploy\w*|pipeline|monitor\w*|feature.store)\b/.test(evidence)
+          : /\b(?:mlops|serving|inference|deploy\w*|pipeline|monitor\w*|feature.store)\b/.test(
+                evidence
+              )
             ? {
                 brief:
                   "Given model release events with eventId, modelVersion, status, and timestamp, deduplicate retried events and return the latest status for each model version. Reject malformed events and make ties deterministic.",

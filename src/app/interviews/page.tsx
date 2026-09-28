@@ -5,7 +5,8 @@ import { getUserIdForRequest } from "@/server/auth/request-user";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import {
   buildInterviewsHomeForOwner,
-  currentInterviewQuota
+  currentInterviewQuota,
+  nextInterviewSessionAt
 } from "@/features/interviews/server/load-interviews-home";
 import { redirect } from "next/navigation";
 
@@ -31,6 +32,7 @@ export default async function InterviewsPage() {
   return (
     <InterviewsView
       quota={currentInterviewQuota(data)}
+      nextSessionAt={nextInterviewSessionAt(data)}
       sessions={data.sessions}
       firstName={data.firstName}
       roadmapSessions={data.roadmapSessions}

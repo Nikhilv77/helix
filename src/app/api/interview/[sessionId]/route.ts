@@ -48,7 +48,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     after(async () => {
       // Grade any queued answers before an assessment report is written.
       await app.interviewEvaluationRecoveryService
-        .runBatch(5, Date.now(), { sessionId: id })
+        .runBatch(20, Date.now(), { sessionId: id })
         .catch(() => undefined);
       await Promise.allSettled([
         access.kind === "owner"

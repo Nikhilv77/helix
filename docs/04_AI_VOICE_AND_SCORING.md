@@ -19,7 +19,8 @@ Routing:
 
 | Path | Primary | Fallback |
 | --- | --- | --- |
-| Interview planning, decisions, evaluation | Groq (if a key is set) | Gemini; each path has its own cooldown so an evaluator failure does not move the decider |
+| Interview decisions and live grading (server-led rounds) | Groq (if a key is set) | Gemini; each path has its own cooldown so an evaluator failure does not move the decider |
+| Interview grading after the response (all voice rounds) | Gemini reasoning, 15 s | Groq, 8 s |
 | General generation | Gemini | Groq |
 | Resume Roast (score pass and roast pass) | Gemini, 15 s timeout | Groq, 20 s timeout; no third attempt |
 | Resume analysis in onboarding | Gemini | Gemini reasoning model, hedged after 12 s, all inside a 52 s budget. Groq could not produce this extraction reliably, so it is not used here |
@@ -34,9 +35,9 @@ A response that does not validate counts as a failure and triggers the fallback.
 ```text
 Browser microphone ──► Gemini Live (token from /api/interview/gemini-live/token)
                             │
-                            │ submit_answer → POST /api/interview/decide
+                            │ complete_interview_turn → POST /api/interview/decide
                             ▼
-                     Next.js interview brain (state machine, follow-up budget, evaluation)
+                     Next.js interview brain (state machine, follow-up budget, grading queue)
                             │
                             ▼
                     Gemini Live audio ──► Browser speaker
@@ -46,6 +47,14 @@ The browser talks to Gemini Live directly for speech. The server decides what ha
 stores all state, so a call can run on any serverless instance. `GEMINI_LIVE_INTERVIEWS_ENABLED`
 turns the voice path on or off. Voice interviews cost about $0.68 per session, which makes them
 the most expensive feature.
+
+- **The server locks the Live settings into the one-use token:** system instruction, tools,
+  transcription, and context compression. A token with constraints ignores anything the browser
+  sends, so these must never be set only on the client. The browser never sees the instruction.
+- **Connections rotate** every 8 minutes, on `goAway`, or on an unexpected close, using a
+  `rotation` token (fresh credential, saved history, silent start). Gemini ends each connection
+  after about ten minutes, and resuming by handle loses context with ephemeral tokens.
+- Full engine design: [INTERVIEW_ENGINE.md](../INTERVIEW_ENGINE.md).
 
 ### Teacher speech (TTS)
 
@@ -71,15 +80,17 @@ This makes scores reproducible, explainable, and testable.
 
 ### Interviews
 
-- Blueprint topics and rubric weights each total 100.
-- Technical answers get a stored semantic correctness verdict. A clear but materially wrong
-  answer must score below 45.
+- The model rates each round parameter on an anchored 1–5 scale with evidence (0 = not asked by
+  this question) and gives a correctness verdict. Code converts levels to 94 / 78 / 55 / 30 / 10,
+  averages them, and caps the answer and every parameter by the verdict (incorrect ≤ 44, partially
+  correct ≤ 69, mostly correct ≤ 84) and by test results. Temperature 0, fixed seed.
 - DSA code runs store authored test results. Failed tests cap correctness. Running code without
   tests does not prove correctness.
 - MCQs use the authored answer key, not the model.
-- Resume and behavioural answers update ownership, decision, specificity, and outcome signals.
-- If the evaluator is down, the answer is marked unverified and left out of adaptation, rather
-  than guessed.
+- Each question is graded once, when it closes. The round score is answer quality times coverage:
+  declined questions and questions skipped by ending early count as zero.
+- If grading fails, the answer is marked unverified, left out of the score and adaptation, and
+  retried.
 
 ### Practice checkpoints
 

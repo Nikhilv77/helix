@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import type { PrismaService } from "@/server/database/prisma.service";
 import { Logger } from "@/server/common/logger";
 import { createInterviewReportSnapshot } from "./report";
+import { refreshInterviewReportNotification } from "./session-store";
 import type {
   TechnicalAnswerEvaluationInput,
   TechnicalAnswerEvaluator
@@ -15,7 +16,8 @@ const COMPLETED = "COMPLETED";
 const SUPERSEDED = "SUPERSEDED";
 const DEAD_LETTER = "DEAD_LETTER";
 const LEASE_MS = 60_000;
-const RECOVERY_ATTEMPT_TIMEOUT_MS = 12_000;
+/** Covers the reasoning model plus one fallback attempt. */
+const RECOVERY_ATTEMPT_TIMEOUT_MS = 25_000;
 const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000] as const;
 
 export interface EvaluationRecoveryPayload extends Omit<TechnicalAnswerEvaluationInput, "signal"> {
@@ -26,7 +28,12 @@ export interface EvaluationRecoveryPayload extends Omit<TechnicalAnswerEvaluatio
 }
 
 export type EvaluationRecoveryMutation =
-  | { action: "enqueue"; payload: EvaluationRecoveryPayload }
+  | {
+      action: "enqueue";
+      payload: EvaluationRecoveryPayload;
+      /** When grading may start; later answers to the same question replace the job. */
+      availableAt?: number;
+    }
   | { action: "resolve"; questionIndex: number };
 
 export interface ClaimedEvaluationJob {
@@ -82,15 +89,24 @@ export class InterviewEvaluationRecoveryService {
       deadLettered: 0
     };
 
-    for (const job of jobs) {
+    const grade = (job: ClaimedEvaluationJob) =>
+      withRecoveryDeadline((signal) =>
+        this.evaluator.evaluate({
+          ...job.payload,
+          evaluatedAt: Date.now(),
+          signal
+        })
+      );
+    // A finished round's answers are graded together so its report settles
+    // within one request. Results are still applied one at a time: every
+    // apply rewrites the same session row under its version check.
+    const graded = options.sessionId ? await Promise.allSettled(jobs.map(grade)) : null;
+
+    for (const [index, job] of jobs.entries()) {
       try {
-        const evaluation = await withRecoveryDeadline((signal) =>
-          this.evaluator.evaluate({
-            ...job.payload,
-            evaluatedAt: Date.now(),
-            signal
-          })
-        );
+        const settled = graded?.[index];
+        if (settled?.status === "rejected") throw settled.reason;
+        const evaluation = settled ? settled.value : await grade(job);
         const outcome = await this.repository.apply(
           job,
           {
@@ -193,19 +209,22 @@ export class PrismaEvaluationRecoveryRepository implements EvaluationRecoveryRep
         }
       };
       const touchedAt = session.touchedAt.getTime();
+      const reportSnapshot = createInterviewReportSnapshot(
+        { state: nextState, touchedAt },
+        touchedAt
+      );
       const updated = await transaction.interviewSession.updateMany({
         where: { id: session.id, version: session.version },
         data: {
           state: json(nextState),
-          reportSnapshot: json(
-            createInterviewReportSnapshot({ state: nextState, touchedAt }, touchedAt)
-          ),
+          reportSnapshot: json(reportSnapshot),
           version: { increment: 1 },
           // Recovery must not revive an expired live room.
           touchedAt: session.touchedAt
         }
       });
       if (updated.count !== 1) throw new Error("Interview changed during evaluation recovery");
+      await refreshInterviewReportNotification(transaction, nextState, reportSnapshot);
 
       await transaction.interviewEvaluationJob.update({
         where: { id: job.id },

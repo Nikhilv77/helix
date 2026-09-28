@@ -12,7 +12,8 @@ import { useLinkStatus } from "next/link";
 export function LinkPendingIcon({
   direction,
   size = 14,
-  icon
+  icon,
+  className
 }: {
   direction: "back" | "forward";
   size?: number;
@@ -21,6 +22,8 @@ export function LinkPendingIcon({
    * name, not a component, so Server Components can pass it.
    */
   icon?: "arrow" | "chevron";
+  /** Extra classes for the idle icon, such as a hover nudge. */
+  className?: string;
 }) {
   const { pending } = useLinkStatus();
   if (pending) {
@@ -34,7 +37,7 @@ export function LinkPendingIcon({
       : direction === "back"
         ? ArrowLeft
         : ArrowRight;
-  return <Icon size={size} aria-hidden="true" />;
+  return <Icon size={size} aria-hidden="true" className={className} />;
 }
 
 export function BackLinkIcon({ size = 14 }: { size?: number }) {

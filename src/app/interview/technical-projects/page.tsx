@@ -1,3 +1,4 @@
+import { displayFirstName } from "@/lib/shared/names";
 import { TechnicalProjectsInterviewEntry } from "@/features/interviews/ui/technical-projects/technical-projects-interview-entry";
 import { selectGroundedProjectSource } from "@/features/interviews/server/technical-projects-round";
 import { privatePageMetadata } from "@/lib/shared/seo";
@@ -29,7 +30,7 @@ export default async function TechnicalProjectsInterviewEntryPage() {
     <TechnicalProjectsInterviewEntry
       readyContent={hasBlueprints}
       sessionsRemaining={quota ? Math.max(0, quota.limit - quota.used) : null}
-      firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
+      firstName={displayFirstName(profile.resume?.fullName)}
       projectName={projectName}
       workspaceAccent={profile.workspaceAccent}
     />

@@ -61,6 +61,12 @@ export interface SessionStore {
   /** Restores a deliberately resumable durable session to the live-room window. */
   reactivateOwned(id: string, ownerId: string): Promise<VersionedInterviewSession | null>;
   listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]>;
+  /** The newest unfinished room of one interview family touched since `since`. */
+  findActiveByTemplate(
+    ownerId: string,
+    templateId: string,
+    since: number
+  ): Promise<InterviewState | null>;
   /**
    * Transcript-free read model used by the cross-session reports index,
    * newest first. `offset` pages further back through the same order.
@@ -203,6 +209,23 @@ export class MemorySessionStore implements SessionStore {
     return storedView(reactivated);
   }
 
+  async findActiveByTemplate(
+    ownerId: string,
+    templateId: string,
+    since: number
+  ): Promise<InterviewState | null> {
+    const active = [...this.durableSessions.values()]
+      .filter(
+        (session) =>
+          session.ownerId === ownerId &&
+          session.state.phase !== "done" &&
+          session.state.setup.templateId === templateId &&
+          session.touchedAt >= since
+      )
+      .sort((left, right) => right.state.startedAt - left.state.startedAt)[0];
+    return active?.state ?? null;
+  }
+
   async listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]> {
     return [...this.durableSessions.values()]
       .filter((session) => session.ownerId === ownerId)
@@ -217,13 +240,15 @@ export class MemorySessionStore implements SessionStore {
     now = Date.now(),
     offset = 0
   ): Promise<InterviewReport[]> {
-    return (await this.listByOwner(ownerId, offset + limit)).slice(offset).map((session) =>
-      readInterviewReportSnapshot(
-        createInterviewReportSnapshot(session, now),
-        session.touchedAt,
-        now
-      )
-    );
+    return (await this.listByOwner(ownerId, offset + limit))
+      .slice(offset)
+      .map((session) =>
+        readInterviewReportSnapshot(
+          createInterviewReportSnapshot(session, now),
+          session.touchedAt,
+          now
+        )
+      );
   }
 
   async reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number> {
@@ -397,6 +422,14 @@ export class MemorySessionStore implements SessionStore {
     return this.evaluationRecoveries.size;
   }
 
+  /** Test helper: the queued grading job for one question, if any. */
+  evaluationRecoveryFor(
+    sessionId: string,
+    questionIndex: number
+  ): EvaluationRecoveryMutation | undefined {
+    return this.evaluationRecoveries.get(`${sessionId}:${questionIndex}`);
+  }
+
   private recordEvaluationRecovery(
     sessionId: string,
     mutation: EvaluationRecoveryMutation | undefined
@@ -484,6 +517,26 @@ export class PrismaSessionStore implements SessionStore {
 
     const stored = await this.prisma.interviewSession.findFirst({ where: { id, ownerId } });
     return stored ? prismaStoredView(stored) : null;
+  }
+
+  async findActiveByTemplate(
+    ownerId: string,
+    templateId: string,
+    since: number
+  ): Promise<InterviewState | null> {
+    // One row, filtered in Postgres, instead of reading the owner's recent
+    // full interview states and filtering them here.
+    const row = await this.prisma.interviewSession.findFirst({
+      where: {
+        ownerId,
+        touchedAt: { gte: new Date(since) },
+        state: { path: ["setup", "templateId"], equals: templateId },
+        NOT: { state: { path: ["phase"], equals: "done" } }
+      },
+      orderBy: { startedAt: "desc" },
+      select: { state: true }
+    });
+    return row ? (row.state as unknown as InterviewState) : null;
   }
 
   async listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]> {
@@ -663,6 +716,7 @@ export class PrismaSessionStore implements SessionStore {
         });
       }
       await applyEvaluationRecoveryMutation(transaction, state.id, evaluationRecovery);
+      if (state.phase === "done") await releaseDeferredEvaluations(transaction, state.id);
       await recordInterviewReportNotification(transaction, state, reportSnapshot);
     });
     return expectedVersion + 1;
@@ -760,6 +814,7 @@ export class PrismaSessionStore implements SessionStore {
       });
       if (completed.count !== 1) throw new Error("Interview answer request is not processing");
       await applyEvaluationRecoveryMutation(transaction, state.id, evaluationRecovery);
+      if (state.phase === "done") await releaseDeferredEvaluations(transaction, state.id);
       await recordInterviewReportNotification(transaction, state, reportSnapshot);
     });
     return expectedVersion + 1;
@@ -803,6 +858,8 @@ async function recordInterviewReportNotification(
   snapshot: InterviewReportSnapshot
 ): Promise<void> {
   if (state.phase !== "done") return;
+  // A round closed before any answer has no report to open.
+  if (snapshot.report.answerCount === 0) return;
 
   const session = await transaction.interviewSession.findUnique({
     where: { id: state.id },
@@ -833,6 +890,24 @@ async function recordInterviewReportNotification(
   });
 }
 
+/**
+ * Answers are graded after the round ends, so the first notification can be
+ * written before its score is final. Each applied grade rewrites the copy,
+ * which settles on the real score once the last answer is graded.
+ */
+export async function refreshInterviewReportNotification(
+  transaction: Prisma.TransactionClient,
+  state: InterviewState,
+  snapshot: InterviewReportSnapshot
+): Promise<void> {
+  if (state.phase !== "done") return;
+  const copy = interviewReportNotificationCopy(state, snapshot);
+  await transaction.notification.updateMany({
+    where: { kind: NotificationKind.INTERVIEW_REPORT_READY, subjectId: state.id },
+    data: { title: copy.title, body: copy.body }
+  });
+}
+
 export function interviewReportNotificationCopy(
   state: InterviewState,
   snapshot: InterviewReportSnapshot
@@ -845,11 +920,39 @@ export function interviewReportNotificationCopy(
       body: "Your session summary is ready. Open it to review the interview and choose your next step."
     };
   }
+  if (hasUngradedAnswers(state)) {
+    return {
+      title,
+      body: "Your report is ready. A few answers are still being scored, so the final score will appear in a minute or two."
+    };
+  }
 
   return {
     title,
     body: `Your evidence score is ${snapshot.report.summary.evidenceScore}/100. See what landed, what needs work, and your next step.`
   };
+}
+
+function hasUngradedAnswers(state: InterviewState): boolean {
+  return Object.values(state.questionEvaluations ?? {}).some(
+    (evaluation) => evaluation?.source === "evaluation-unavailable"
+  );
+}
+
+/**
+ * Answers to a question that was still open wait before grading, because a
+ * follow-up would replace them. When the round ends, nothing more is coming:
+ * grade them now so the report is complete.
+ */
+async function releaseDeferredEvaluations(
+  transaction: Prisma.TransactionClient,
+  sessionId: string
+): Promise<void> {
+  const now = new Date();
+  await transaction.interviewEvaluationJob.updateMany({
+    where: { sessionId, status: "PENDING", availableAt: { gt: now } },
+    data: { availableAt: now }
+  });
 }
 
 async function applyEvaluationRecoveryMutation(
@@ -892,13 +995,13 @@ async function applyEvaluationRecoveryMutation(
       answerHash: mutation.payload.answerHash,
       payload: toJsonValue(mutation.payload),
       status: "PENDING",
-      availableAt: new Date()
+      availableAt: new Date(mutation.availableAt ?? Date.now())
     },
     update: {
       payload: toJsonValue(mutation.payload),
       status: "PENDING",
       attempts: 0,
-      availableAt: new Date(),
+      availableAt: new Date(mutation.availableAt ?? Date.now()),
       leaseUntil: null,
       lastError: null,
       completedAt: null

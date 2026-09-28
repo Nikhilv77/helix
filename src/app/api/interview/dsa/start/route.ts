@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { findQuestion } from "@/features/practice/dsa/domain/dsa";
+import { allQuestionSlugs, findQuestion, isEnriched } from "@/features/practice/dsa/domain/dsa";
 import { OPERATION_DSA_SLUGS } from "@/features/practice/dsa/domain/dsa-code-templates";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -8,7 +8,7 @@ import {
   attachInterviewOwnerCookie,
   resolveInterviewOwner
 } from "@/features/interviews/server/owner";
-import { selectDsaInterviewQuestions } from "@/features/interviews/server/dsa-session-selection";
+import { selectDsaInterviewPair } from "@/features/interviews/server/dsa-session-selection";
 import { buildDsaInterviewPlan } from "@/features/interviews/server/dsa-design-round";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import type { PlannedQuestion } from "@/features/interviews/server/types";
@@ -102,14 +102,23 @@ export async function POST(request: NextRequest) {
       )
         .filter((question): question is NonNullable<typeof question> => Boolean(question))
         .filter((question) => !solvedFunctionQuestions.some((item) => item.slug === question.slug));
-      // Problems the candidate has actually solved come first. The curated list
-      // only tops the round up when they have not solved enough of them, so a
-      // round is never filled with unseen problems while solved ones are left out.
-      const selected = selectDsaInterviewQuestions({
+      // Unseen problems must be fully written up and runnable in the workspace.
+      const unseenQuestions = allQuestionSlugs()
+        .map((slug) => findQuestion(slug)?.question)
+        .filter((question): question is NonNullable<typeof question> =>
+          Boolean(
+            question &&
+            !OPERATION_DSA_SLUGS.has(question.slug) &&
+            isEnriched(question) &&
+            question.examples?.length
+          )
+        );
+      // One problem they solved, one new problem from a pattern they know.
+      const selected = selectDsaInterviewPair({
         solved: solvedFunctionQuestions,
-        fallback: fallbackQuestions,
-        performance,
-        count: 2
+        unseen: unseenQuestions,
+        curated: fallbackQuestions,
+        performance
       });
       if (selected.length !== 2) {
         throw new Error("The DSA interview requires two selected coding problems");
@@ -122,8 +131,8 @@ export async function POST(request: NextRequest) {
       });
       const agenda = selected.map((item) => item.title);
       const context = [
-        "This is a coding-only DSA interview with two important function-based algorithm problems. Prefer problems the candidate has already solved in practice; use a curated fallback only when needed.",
-        `Selected solved problems: ${selected.map((item) => `${item.title} (${item.difficulty}, ${item.primaryPattern})`).join("; ")}.`,
+        "This is a coding-only DSA interview with two function-based algorithm problems. The first is one the candidate solved in practice; the second is usually new to them, from a pattern they have practised.",
+        `Selected problems: ${selected.map((item) => `${item.title} (${item.difficulty}, ${item.primaryPattern})`).join("; ")}.`,
         "Ask the candidate to explain the approach, complexity, correctness, and edge cases. Treat this as a real conversation: ask one question at a time, challenge assumptions when useful, and do not repeat generic acknowledgements.",
         profile.context
       ]

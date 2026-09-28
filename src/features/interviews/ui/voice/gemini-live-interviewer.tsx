@@ -26,6 +26,17 @@ const TRANSCRIPTION_ROTATION_MS = 8 * 60 * 1000;
 const TRANSCRIPTION_RETRY_MS = 15_000;
 const DUPLICATE_TURN_WINDOW_MS = 2_500;
 const APPROVED_AUDIO_FALLBACK_MS = 8_000;
+/**
+ * Gemini closes a Live connection after about ten minutes (sometimes without
+ * a goAway first), and a credential stops working after its expiry. Replace
+ * the connection a little earlier, at a quiet moment, so a long round never
+ * reaches either limit.
+ */
+const LIVE_CONNECTION_ROTATE_MS = 8 * 60 * 1000;
+/** How long a planned rotation waits for a pause before it goes ahead anyway. */
+const LIVE_ROTATION_IDLE_WAIT_MS = 60_000;
+const LIVE_ROTATION_POLL_MS = 250;
+const LIVE_ROTATION_RETRY_DELAYS_MS = [0, 1_500, 4_000] as const;
 
 type TranscriptionConnection = {
   token: string;
@@ -38,7 +49,6 @@ type LiveTokenResponse = {
   token: string;
   model: string;
   voiceName: string;
-  systemInstruction: string;
   openingUtterance: string;
   sessionStartedAt: number;
   conversationMode: "gemini-led" | "server-led";
@@ -173,6 +183,16 @@ export const GeminiLiveInterviewer = forwardRef<
       let avatarDestination: MediaStreamAudioDestinationNode | null = null;
       let processor: ScriptProcessorNode | null = null;
       let session: LiveSession | null = null;
+      /** Marks the current connection; a retired one's late events are ignored. */
+      let sessionMarker: { retired: boolean } | null = null;
+      let rotationInFlight = false;
+      let rotationTimer: number | null = null;
+      let connectionLost = false;
+      let openLiveSession:
+        | ((
+            liveConnection: LiveTokenResponse
+          ) => Promise<{ session: LiveSession; marker: { retired: boolean } }>)
+        | null = null;
       let transcriptionChannel: TranscriptionChannel | null = null;
       let transcriptionRefreshTimer: number | null = null;
       let transcriptionRefreshInFlight = false;
@@ -286,6 +306,10 @@ export const GeminiLiveInterviewer = forwardRef<
       };
 
       const teardown = () => {
+        if (rotationTimer !== null) {
+          window.clearTimeout(rotationTimer);
+          rotationTimer = null;
+        }
         if (candidateCommitTimer !== null) {
           window.clearTimeout(candidateCommitTimer);
           candidateCommitTimer = null;
@@ -522,6 +546,9 @@ export const GeminiLiveInterviewer = forwardRef<
         args?: Record<string, unknown>;
       }) => {
         if (!session || call.name !== COMPLETE_INTERVIEW_TURN_TOOL) return;
+        // The connection can rotate while the answer is being saved. A tool
+        // response belongs to the connection that asked for it.
+        const callSession = session;
         if (pendingWorkspaceUpdateText) {
           approvedGeminiTurnPending = true;
           approvedGeminiTurnStarted = false;
@@ -624,28 +651,30 @@ export const GeminiLiveInterviewer = forwardRef<
           if (!response) throw new Error("The interview turn was not saved.");
           if (call.id) completedToolCalls.add(call.id);
           decisionPending = false;
+          const rotated = session !== callSession;
 
           // The server intentionally holds ordinary spoken reasoning on a code
           // prompt until the candidate clicks Submit in the workspace. A blank
           // authoritative utterance is a silent acknowledgement, not a reason
           // to ask Gemini to speak or to advance the interview.
           if (!response.utterance.trim()) {
-            session.sendToolResponse({
-              functionResponses: [
-                {
-                  id: call.id,
-                  name: call.name,
-                  response: {
-                    saved: true,
-                    action: response.action,
-                    questionIndex: response.questionIndex,
-                    approvedResponse: "",
-                    instruction:
-                      "Produce no audio or text for this turn. Stay silent and continue listening while the candidate works in the coding workspace."
+            if (!rotated)
+              session.sendToolResponse({
+                functionResponses: [
+                  {
+                    id: call.id,
+                    name: call.name,
+                    response: {
+                      saved: true,
+                      action: response.action,
+                      questionIndex: response.questionIndex,
+                      approvedResponse: "",
+                      instruction:
+                        "Produce no audio or text for this turn. Stay silent and continue listening while the candidate works in the coding workspace."
+                    }
                   }
-                }
-              ]
-            });
+                ]
+              });
             resolvePendingTypedSubmission();
             callbacksRef.current.onAgentState("listening");
             return;
@@ -660,25 +689,32 @@ export const GeminiLiveInterviewer = forwardRef<
           approvedResponseHasAudio = false;
           approvedResponseTurnComplete = false;
           approvedResponseRetryCount = 0;
-          session.sendToolResponse({
-            functionResponses: [
-              {
-                id: call.id,
-                name: call.name,
-                response: {
-                  saved: true,
-                  action: response.phase === "done" ? "close" : response.action,
-                  questionIndex: response.questionIndex,
-                  approvedResponse: response.utterance,
-                  identity: `I'm ${interviewerName} from the recruiting team.`,
-                  instruction:
-                    response.phase === "done"
-                      ? "Speak approvedResponse exactly once, word for word. Finish the complete closing before stopping."
-                      : "Speak approvedResponse exactly once, word for word, without adding or paraphrasing anything. Never identify yourself as Google, Gemini, an AI, a model, a bot, or an assistant."
+          if (rotated) {
+            // The new connection never saw this tool call, so it gets the
+            // approved reply as a direct instruction instead.
+            session.sendRealtimeInput({
+              text: `The interview server approved the reply to the candidate's last answer. Speak this exact response now, once, without adding or changing anything: ${JSON.stringify(response.utterance)}`
+            });
+          } else
+            session.sendToolResponse({
+              functionResponses: [
+                {
+                  id: call.id,
+                  name: call.name,
+                  response: {
+                    saved: true,
+                    action: response.phase === "done" ? "close" : response.action,
+                    questionIndex: response.questionIndex,
+                    approvedResponse: response.utterance,
+                    identity: `I'm ${interviewerName} from the recruiting team.`,
+                    instruction:
+                      response.phase === "done"
+                        ? "Speak approvedResponse exactly once, word for word. Finish the complete closing before stopping."
+                        : "Speak approvedResponse exactly once, word for word, without adding or paraphrasing anything. Never identify yourself as Google, Gemini, an AI, a model, a bot, or an assistant."
+                  }
                 }
-              }
-            ]
-          });
+              ]
+            });
           const retryApprovedAudio = () => {
             approvedResponseFallbackTimer = null;
             if (!approvedResponseText || approvedResponseHasAudio || !session) return;
@@ -716,18 +752,19 @@ export const GeminiLiveInterviewer = forwardRef<
         } catch (error) {
           decisionPending = false;
           const failure = error instanceof Error ? error : new Error("Could not save your answer.");
-          session.sendToolResponse({
-            functionResponses: [
-              {
-                id: call.id,
-                name: call.name,
-                response: {
-                  error: failure.message,
-                  instruction: "Ask the candidate to repeat once."
+          if (session === callSession)
+            session.sendToolResponse({
+              functionResponses: [
+                {
+                  id: call.id,
+                  name: call.name,
+                  response: {
+                    error: failure.message,
+                    instruction: "Ask the candidate to repeat once."
+                  }
                 }
-              }
-            ]
-          });
+              ]
+            });
           pendingTypedSubmission?.reject(failure);
           if (pendingTypedSubmission) window.clearTimeout(pendingTypedSubmission.timeout);
           pendingTypedSubmission = null;
@@ -768,6 +805,139 @@ export const GeminiLiveInterviewer = forwardRef<
         );
         inputTranscriptRef.current = "";
         scheduleCandidateTurnCommit();
+      };
+
+      let initialOpeningUtterance = "";
+      const wait = (milliseconds: number) =>
+        new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+
+      const liveConversationIdle = () =>
+        !decisionPending &&
+        !hasPendingCandidateTurn() &&
+        scheduled.size === 0 &&
+        !openingTurnPending &&
+        !approvedGeminiTurnPending &&
+        !approvedResponseText &&
+        !pendingTypedSubmission &&
+        !pendingWorkspaceUpdateText &&
+        !closingResponsePending;
+
+      const scheduleRotationTimer = () => {
+        if (rotationTimer !== null) window.clearTimeout(rotationTimer);
+        rotationTimer = window.setTimeout(() => {
+          rotationTimer = null;
+          scheduleRotation();
+        }, LIVE_CONNECTION_ROTATE_MS);
+      };
+
+      /** Rotates at the next pause in the conversation, or when the wait runs out. */
+      const scheduleRotation = (maxWaitMs: number = LIVE_ROTATION_IDLE_WAIT_MS) => {
+        if (closed || rotationInFlight) return;
+        if (rotationTimer !== null) window.clearTimeout(rotationTimer);
+        const deadline = Date.now() + maxWaitMs;
+        const check = () => {
+          rotationTimer = null;
+          if (closed || rotationInFlight) return;
+          if (liveConversationIdle() || Date.now() >= deadline) {
+            void rotateConnection();
+            return;
+          }
+          rotationTimer = window.setTimeout(check, LIVE_ROTATION_POLL_MS);
+        };
+        check();
+      };
+
+      /**
+       * Replaces the Live connection with a new one primed from the saved
+       * interview. The candidate hears nothing unless the old one dropped.
+       */
+      const rotateConnection = async () => {
+        if (closed || rotationInFlight || !openLiveSession) return;
+        rotationInFlight = true;
+        if (rotationTimer !== null) {
+          window.clearTimeout(rotationTimer);
+          rotationTimer = null;
+        }
+        if (connectionLost) {
+          stopPlayback();
+          callbacksRef.current.onStatus("reconnecting");
+        }
+        try {
+          for (const delay of LIVE_ROTATION_RETRY_DELAYS_MS) {
+            if (delay) await wait(delay);
+            if (closed) return;
+            try {
+              const tokenResponse = await fetch("/api/interview/gemini-live/token", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ sessionId, purpose: "rotation" })
+              });
+              const payload = await tokenResponse.json();
+              // A finished or timed-out interview cannot be continued.
+              if (tokenResponse.status === 409) break;
+              if (!tokenResponse.ok || !payload?.success) continue;
+              const next = await openLiveSession(payload.data as LiveTokenResponse);
+              if (closed) {
+                next.marker.retired = true;
+                next.session.close();
+                return;
+              }
+              const previous = session;
+              if (sessionMarker) sessionMarker.retired = true;
+              session = next.session;
+              sessionMarker = next.marker;
+              connectionLost = false;
+              try {
+                previous?.close();
+              } catch {
+                // Already closed.
+              }
+              if (openingTurnPending && !openingTurnStarted && initialOpeningUtterance) {
+                // The opening had not been heard yet; the new connection says it.
+                session.sendClientContent({
+                  turns: [
+                    {
+                      role: "user",
+                      parts: [
+                        {
+                          text: `Start now. Your entire first spoken response must be this exact server-approved opening, with no additional words: ${JSON.stringify(initialOpeningUtterance)}`
+                        }
+                      ]
+                    }
+                  ],
+                  turnComplete: true
+                });
+              } else if (approvedResponseText && !approvedResponseHasAudio) {
+                // A reply saved just before the old connection dropped was never heard.
+                approvedGeminiTurnPending = true;
+                approvedGeminiTurnStarted = false;
+                session.sendRealtimeInput({
+                  text: `The interview server approved the reply to the candidate's last answer. Speak this exact response now, once, without adding or changing anything: ${JSON.stringify(approvedResponseText)}`
+                });
+              }
+              callbacksRef.current.onError(null);
+              callbacksRef.current.onStatus("live");
+              scheduleRotationTimer();
+              return;
+            } catch {
+              // Try the next attempt.
+            }
+          }
+          if (connectionLost) {
+            callbacksRef.current.onError(
+              "The live interviewer disconnected. Your saved answers are safe."
+            );
+            callbacksRef.current.onStatus("error");
+          } else {
+            // The current connection still works; try again shortly.
+            rotationTimer = window.setTimeout(() => {
+              rotationTimer = null;
+              scheduleRotation();
+            }, 30_000);
+          }
+        } finally {
+          rotationInFlight = false;
+        }
       };
 
       const connect = async () => {
@@ -944,197 +1114,79 @@ export const GeminiLiveInterviewer = forwardRef<
           const transcriptionPromise = connection.transcription
             ? createTranscriptionChannel(connection.transcription).catch(() => null)
             : Promise.resolve(null);
-          const ai = new GoogleGenAI({
-            apiKey: connection.token,
-            httpOptions: { apiVersion: "v1beta" }
-          });
-          session = await ai.live.connect({
-            model: connection.model,
-            config: {
-              responseModalities: [Modality.AUDIO],
-              // The server derives this from the reserved interviewer persona
-              // and locks the same value into the ephemeral token.
-              speechConfig: {
-                voiceConfig: { prebuiltVoiceConfig: { voiceName: connection.voiceName } }
-              },
-              realtimeInputConfig: {
-                automaticActivityDetection: {
-                  disabled: false,
-                  startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
-                  endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_LOW,
-                  prefixPaddingMs: 300,
-                  // Low end-of-speech sensitivity still protects natural pauses;
-                  // the shorter shared window avoids adding two idle seconds to
-                  // every conversational turn.
-                  silenceDurationMs: LIVE_END_OF_SPEECH_SILENCE_MS
+          openLiveSession = async (liveConnection) => {
+            const marker = { retired: false };
+            const liveAi = new GoogleGenAI({
+              apiKey: liveConnection.token,
+              httpOptions: { apiVersion: "v1beta" }
+            });
+            const opened = (await liveAi.live.connect({
+              model: liveConnection.model,
+              config: {
+                responseModalities: [Modality.AUDIO],
+                // The server derives this from the reserved interviewer persona
+                // and locks the same value into the ephemeral token.
+                speechConfig: {
+                  voiceConfig: { prebuiltVoiceConfig: { voiceName: liveConnection.voiceName } }
                 },
-                // The final behavioural room supports natural barge-in. Other
-                // rounds retain the conservative noise-resistant behavior.
-                activityHandling: geminiLedConversation
-                  ? ActivityHandling.START_OF_ACTIVITY_INTERRUPTS
-                  : ActivityHandling.NO_INTERRUPTION
+                realtimeInputConfig: {
+                  automaticActivityDetection: {
+                    disabled: false,
+                    startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
+                    endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_LOW,
+                    prefixPaddingMs: 300,
+                    // Low end-of-speech sensitivity still protects natural pauses;
+                    // the shorter shared window avoids adding two idle seconds to
+                    // every conversational turn.
+                    silenceDurationMs: LIVE_END_OF_SPEECH_SILENCE_MS
+                  },
+                  // The final behavioural room supports natural barge-in. Other
+                  // rounds retain the conservative noise-resistant behavior.
+                  activityHandling: geminiLedConversation
+                    ? ActivityHandling.START_OF_ACTIVITY_INTERRUPTS
+                    : ActivityHandling.NO_INTERRUPTION
+                },
+                // The credential locks every Live setting, including the system
+                // instruction the browser never receives; these values mirror it.
+                ...(geminiLedConversation ? { tools: GEMINI_LED_INTERVIEW_TOOLS } : {}),
+                // Server-led rounds need a fallback when their separate
+                // transcription socket disconnects. James's Gemini-led round
+                // persists the transcript supplied by its required tool call.
+                ...(!geminiLedConversation ? { inputAudioTranscription: {} } : {}),
+                sessionResumption: {},
+                contextWindowCompression: { slidingWindow: {} }
               },
-              systemInstruction: connection.systemInstruction,
-              ...(geminiLedConversation ? { tools: GEMINI_LED_INTERVIEW_TOOLS } : {}),
-              // Server-led rounds need a fallback when their separate
-              // transcription socket disconnects. James's Gemini-led round
-              // persists the transcript supplied by its required tool call.
-              ...(!geminiLedConversation ? { inputAudioTranscription: {} } : {}),
-              sessionResumption: {},
-              contextWindowCompression: { slidingWindow: {} }
-            },
-            callbacks: {
-              onopen: () => undefined,
-              onmessage: (message) => {
-                if (closed) return;
-                if (geminiLedConversation && message.toolCall?.functionCalls) {
-                  for (const call of message.toolCall.functionCalls) {
-                    void handleInterviewToolCall(call);
-                  }
-                }
-                const content = message.serverContent;
-                if (content?.interrupted) {
-                  stopPlayback();
-                  if (geminiLedConversation) {
-                    // Barge-in ends the previously authorized spoken turn. Do
-                    // not let that stale authorization make the next
-                    // pre-tool model response audible.
-                    if (openingTurnStarted) {
-                      openingTurnPending = false;
-                      openingTurnStarted = false;
-                    }
-                    if (approvedGeminiTurnStarted) {
-                      approvedGeminiTurnPending = false;
-                      approvedGeminiTurnStarted = false;
-                      clearApprovedResponse();
-                      resolvePendingTypedSubmission();
-                      pendingWorkspaceUpdateText = null;
-                      if (workspaceUpdateFallbackTimer !== null) {
-                        window.clearTimeout(workspaceUpdateFallbackTimer);
-                        workspaceUpdateFallbackTimer = null;
-                      }
-                    }
-                  }
-                  // Realtime text can interrupt the speculative response. The
-                  // next model content belongs to the authoritative prompt.
-                  if (authoritativePromptSent) suppressCurrentModelTurn = false;
-                }
-                if (!dedicatedTranscriptionReady && content?.inputTranscription?.text) {
-                  handleCandidateTranscript(content.inputTranscription, true);
-                }
-                if (!dedicatedTranscriptionReady && content?.interimInputTranscription?.text) {
-                  handleCandidateTranscript(content.interimInputTranscription, false);
-                }
-                if (content?.modelTurn?.parts) {
-                  if (geminiLedConversation) {
-                    const audibleTurn = openingTurnPending || approvedGeminiTurnPending;
-                    if (!audibleTurn) {
-                      // A reply before complete_interview_turn, or a
-                      // continuation caused by a duplicate tool response, is
-                      // not an approved spoken turn.
-                      outputTranscriptRef.current = "";
-                    } else {
-                      if (openingTurnPending) openingTurnStarted = true;
-                      if (approvedGeminiTurnPending) approvedGeminiTurnStarted = true;
-                      for (const part of content.modelTurn.parts) {
-                        if (!part.inlineData?.data || !outputContext) continue;
-                        if (approvedGeminiTurnPending && approvedResponseText) {
-                          approvedResponseHasAudio = true;
-                          callbacksRef.current.onError(null);
-                          if (approvedResponseFallbackTimer !== null) {
-                            window.clearTimeout(approvedResponseFallbackTimer);
-                            approvedResponseFallbackTimer = null;
-                          }
-                        }
-                        if (outputContext.state === "suspended") {
-                          void outputContext.resume();
-                        }
-                        schedulePcmAudio(
-                          outputContext,
-                          avatarDestination,
-                          part.inlineData.data,
-                          scheduled,
-                          updatePlaybackState,
-                          (time) => {
-                            nextPlaybackTime = Math.max(nextPlaybackTime, time);
-                            return nextPlaybackTime;
-                          }
-                        );
-                      }
-                    }
-                  } else {
-                    // If Gemini begins replying while there is an uncommitted
-                    // candidate transcript, it is attempting an unsupervised
-                    // reply. Persist the answer now and deliberately discard this
-                    // audio turn; the server's next response is the only question
-                    // James may speak. This prevents a generic Gemini follow-up
-                    // from being heard before the planned question.
-                    const completed = mergeFinalizedCandidateTranscript(
-                      candidateFinalizedTranscript,
-                      inputTranscriptRef.current
+              callbacks: {
+                onopen: () => undefined,
+                onmessage: (message) => {
+                  if (closed || marker.retired) return;
+                  if (message.goAway) {
+                    // Leave a few seconds to connect the replacement.
+                    scheduleRotation(
+                      Math.max(0, goAwayTimeLeftMs(message.goAway.timeLeft) - 5_000)
                     );
-                    if (completed) {
-                      suppressCurrentModelTurn = true;
-                      outputTranscriptRef.current = "";
-                      if (inputTranscriptRef.current.trim()) {
-                        // The voice channel also observed an end-of-speech
-                        // boundary. Stage its latest hypothesis even when the
-                        // dedicated transcriber is healthy; a later dedicated
-                        // final packet will merge into this text and restart the
-                        // same single-answer timer.
-                        handleCandidateTranscript({ text: inputTranscriptRef.current }, true);
-                      }
-                    } else if (decisionPending && !authoritativePromptSent) {
-                      suppressCurrentModelTurn = true;
-                      outputTranscriptRef.current = "";
-                    } else if (!openingTurnPending && !authoritativePromptSent) {
-                      // Gemini may try to answer directly before its final input
-                      // transcript packet arrives. Only the opening question and
-                      // server-approved responses are allowed onto the speakers.
-                      suppressCurrentModelTurn = true;
-                      outputTranscriptRef.current = "";
-                    } else if (!suppressCurrentModelTurn) {
-                      if (openingTurnPending) openingTurnStarted = true;
-                      if (authoritativePromptSent) authoritativeTurnStarted = true;
-                      for (const part of content.modelTurn.parts) {
-                        if (!part.inlineData?.data || !outputContext) continue;
-                        schedulePcmAudio(
-                          outputContext,
-                          avatarDestination,
-                          part.inlineData.data,
-                          scheduled,
-                          updatePlaybackState,
-                          (time) => {
-                            nextPlaybackTime = Math.max(nextPlaybackTime, time);
-                            return nextPlaybackTime;
-                          }
-                        );
-                      }
+                  }
+                  if (geminiLedConversation && message.toolCall?.functionCalls) {
+                    for (const call of message.toolCall.functionCalls) {
+                      void handleInterviewToolCall(call);
                     }
                   }
-                }
-                // A rejected Gemini response can arrive in many audio chunks.
-                // Keep all of them muted until its complete turn has ended.
-                if (content?.turnComplete) {
-                  if (geminiLedConversation) {
-                    if (openingTurnPending && openingTurnStarted) {
-                      openingTurnPending = false;
-                      openingTurnStarted = false;
-                    }
-                    const completedApprovedTurn =
-                      approvedGeminiTurnPending && approvedGeminiTurnStarted;
-                    if (completedApprovedTurn) {
-                      approvedGeminiTurnPending = false;
-                      approvedGeminiTurnStarted = false;
-                      if (approvedResponseText) {
-                        approvedResponseTurnComplete = true;
-                        finishApprovedResponsePlayback();
+                  const content = message.serverContent;
+                  if (content?.interrupted) {
+                    stopPlayback();
+                    if (geminiLedConversation) {
+                      // Barge-in ends the previously authorized spoken turn. Do
+                      // not let that stale authorization make the next
+                      // pre-tool model response audible.
+                      if (openingTurnStarted) {
+                        openingTurnPending = false;
+                        openingTurnStarted = false;
                       }
-                      if (pendingWorkspaceUpdateText) {
-                        callbacksRef.current.onOutputTranscript({
-                          text: pendingWorkspaceUpdateText,
-                          finished: true
-                        });
+                      if (approvedGeminiTurnStarted) {
+                        approvedGeminiTurnPending = false;
+                        approvedGeminiTurnStarted = false;
+                        clearApprovedResponse();
+                        resolvePendingTypedSubmission();
                         pendingWorkspaceUpdateText = null;
                         if (workspaceUpdateFallbackTimer !== null) {
                           window.clearTimeout(workspaceUpdateFallbackTimer);
@@ -1142,62 +1194,205 @@ export const GeminiLiveInterviewer = forwardRef<
                         }
                       }
                     }
-                    if (closingResponsePending && completedApprovedTurn && !approvedResponseText) {
-                      // Playback completion normally closes the room. If it
-                      // completed before this packet, finish the durable turn.
-                      completeClosingResponse();
-                    } else if (
-                      !closingResponsePending &&
-                      !decisionPending &&
-                      scheduled.size === 0
-                    ) {
-                      callbacksRef.current.onAgentState("listening");
+                    // Realtime text can interrupt the speculative response. The
+                    // next model content belongs to the authoritative prompt.
+                    if (authoritativePromptSent) suppressCurrentModelTurn = false;
+                  }
+                  if (!dedicatedTranscriptionReady && content?.inputTranscription?.text) {
+                    handleCandidateTranscript(content.inputTranscription, true);
+                  }
+                  if (!dedicatedTranscriptionReady && content?.interimInputTranscription?.text) {
+                    handleCandidateTranscript(content.interimInputTranscription, false);
+                  }
+                  if (content?.modelTurn?.parts) {
+                    if (geminiLedConversation) {
+                      const audibleTurn = openingTurnPending || approvedGeminiTurnPending;
+                      if (!audibleTurn) {
+                        // A reply before complete_interview_turn, or a
+                        // continuation caused by a duplicate tool response, is
+                        // not an approved spoken turn.
+                        outputTranscriptRef.current = "";
+                      } else {
+                        if (openingTurnPending) openingTurnStarted = true;
+                        if (approvedGeminiTurnPending) approvedGeminiTurnStarted = true;
+                        for (const part of content.modelTurn.parts) {
+                          if (!part.inlineData?.data || !outputContext) continue;
+                          if (approvedGeminiTurnPending && approvedResponseText) {
+                            approvedResponseHasAudio = true;
+                            callbacksRef.current.onError(null);
+                            if (approvedResponseFallbackTimer !== null) {
+                              window.clearTimeout(approvedResponseFallbackTimer);
+                              approvedResponseFallbackTimer = null;
+                            }
+                          }
+                          if (outputContext.state === "suspended") {
+                            void outputContext.resume();
+                          }
+                          schedulePcmAudio(
+                            outputContext,
+                            avatarDestination,
+                            part.inlineData.data,
+                            scheduled,
+                            updatePlaybackState,
+                            (time) => {
+                              nextPlaybackTime = Math.max(nextPlaybackTime, time);
+                              return nextPlaybackTime;
+                            }
+                          );
+                        }
+                      }
+                    } else {
+                      // If Gemini begins replying while there is an uncommitted
+                      // candidate transcript, it is attempting an unsupervised
+                      // reply. Persist the answer now and deliberately discard this
+                      // audio turn; the server's next response is the only question
+                      // James may speak. This prevents a generic Gemini follow-up
+                      // from being heard before the planned question.
+                      const completed = mergeFinalizedCandidateTranscript(
+                        candidateFinalizedTranscript,
+                        inputTranscriptRef.current
+                      );
+                      if (completed) {
+                        suppressCurrentModelTurn = true;
+                        outputTranscriptRef.current = "";
+                        if (inputTranscriptRef.current.trim()) {
+                          // The voice channel also observed an end-of-speech
+                          // boundary. Stage its latest hypothesis even when the
+                          // dedicated transcriber is healthy; a later dedicated
+                          // final packet will merge into this text and restart the
+                          // same single-answer timer.
+                          handleCandidateTranscript({ text: inputTranscriptRef.current }, true);
+                        }
+                      } else if (decisionPending && !authoritativePromptSent) {
+                        suppressCurrentModelTurn = true;
+                        outputTranscriptRef.current = "";
+                      } else if (!openingTurnPending && !authoritativePromptSent) {
+                        // Gemini may try to answer directly before its final input
+                        // transcript packet arrives. Only the opening question and
+                        // server-approved responses are allowed onto the speakers.
+                        suppressCurrentModelTurn = true;
+                        outputTranscriptRef.current = "";
+                      } else if (!suppressCurrentModelTurn) {
+                        if (openingTurnPending) openingTurnStarted = true;
+                        if (authoritativePromptSent) authoritativeTurnStarted = true;
+                        for (const part of content.modelTurn.parts) {
+                          if (!part.inlineData?.data || !outputContext) continue;
+                          schedulePcmAudio(
+                            outputContext,
+                            avatarDestination,
+                            part.inlineData.data,
+                            scheduled,
+                            updatePlaybackState,
+                            (time) => {
+                              nextPlaybackTime = Math.max(nextPlaybackTime, time);
+                              return nextPlaybackTime;
+                            }
+                          );
+                        }
+                      }
                     }
-                    return;
                   }
-                  const approvedOpeningTurn = openingTurnPending && openingTurnStarted;
-                  const approvedAuthoritativeTurn =
-                    authoritativePromptSent && authoritativeTurnStarted;
-                  const approvedTurn = approvedOpeningTurn || approvedAuthoritativeTurn;
-                  const rejectedTurn = suppressCurrentModelTurn || !approvedTurn;
-                  if (!rejectedTurn && approvedAuthoritativeTurn) {
-                    finishTranscript(outputTranscriptRef, callbacksRef.current.onOutputTranscript);
-                  } else {
-                    if (!authoritativePromptSent) outputTranscriptRef.current = "";
-                  }
-                  suppressCurrentModelTurn = false;
-                  if (rejectedTurn) {
-                    if (decisionPending || authoritativePromptSent) {
-                      callbacksRef.current.onAgentState("thinking");
+                  // A rejected Gemini response can arrive in many audio chunks.
+                  // Keep all of them muted until its complete turn has ended.
+                  if (content?.turnComplete) {
+                    if (geminiLedConversation) {
+                      if (openingTurnPending && openingTurnStarted) {
+                        openingTurnPending = false;
+                        openingTurnStarted = false;
+                      }
+                      const completedApprovedTurn =
+                        approvedGeminiTurnPending && approvedGeminiTurnStarted;
+                      if (completedApprovedTurn) {
+                        approvedGeminiTurnPending = false;
+                        approvedGeminiTurnStarted = false;
+                        if (approvedResponseText) {
+                          approvedResponseTurnComplete = true;
+                          finishApprovedResponsePlayback();
+                        }
+                        if (pendingWorkspaceUpdateText) {
+                          callbacksRef.current.onOutputTranscript({
+                            text: pendingWorkspaceUpdateText,
+                            finished: true
+                          });
+                          pendingWorkspaceUpdateText = null;
+                          if (workspaceUpdateFallbackTimer !== null) {
+                            window.clearTimeout(workspaceUpdateFallbackTimer);
+                            workspaceUpdateFallbackTimer = null;
+                          }
+                        }
+                      }
+                      if (
+                        closingResponsePending &&
+                        completedApprovedTurn &&
+                        !approvedResponseText
+                      ) {
+                        // Playback completion normally closes the room. If it
+                        // completed before this packet, finish the durable turn.
+                        completeClosingResponse();
+                      } else if (
+                        !closingResponsePending &&
+                        !decisionPending &&
+                        scheduled.size === 0
+                      ) {
+                        callbacksRef.current.onAgentState("listening");
+                      }
+                      return;
                     }
-                  } else if (approvedOpeningTurn) {
-                    openingTurnPending = false;
-                    openingTurnStarted = false;
-                  } else if (approvedAuthoritativeTurn) {
-                    authoritativePromptSent = false;
-                    authoritativeTurnStarted = false;
+                    const approvedOpeningTurn = openingTurnPending && openingTurnStarted;
+                    const approvedAuthoritativeTurn =
+                      authoritativePromptSent && authoritativeTurnStarted;
+                    const approvedTurn = approvedOpeningTurn || approvedAuthoritativeTurn;
+                    const rejectedTurn = suppressCurrentModelTurn || !approvedTurn;
+                    if (!rejectedTurn && approvedAuthoritativeTurn) {
+                      finishTranscript(
+                        outputTranscriptRef,
+                        callbacksRef.current.onOutputTranscript
+                      );
+                    } else {
+                      if (!authoritativePromptSent) outputTranscriptRef.current = "";
+                    }
+                    suppressCurrentModelTurn = false;
+                    if (rejectedTurn) {
+                      if (decisionPending || authoritativePromptSent) {
+                        callbacksRef.current.onAgentState("thinking");
+                      }
+                    } else if (approvedOpeningTurn) {
+                      openingTurnPending = false;
+                      openingTurnStarted = false;
+                    } else if (approvedAuthoritativeTurn) {
+                      authoritativePromptSent = false;
+                      authoritativeTurnStarted = false;
+                    }
                   }
+                },
+                onerror: () => {
+                  if (closed || marker.retired) return;
+                  connectionLost = true;
+                  void rotateConnection();
+                },
+                onclose: () => {
+                  if (closed || marker.retired) return;
+                  // Gemini ends every connection after about ten minutes, not
+                  // always with a goAway first. Replace it without asking the
+                  // candidate to do anything.
+                  connectionLost = true;
+                  void rotateConnection();
                 }
-              },
-              onerror: (event) => {
-                if (closed) return;
-                callbacksRef.current.onError(event.message || "The live interviewer disconnected.");
-                callbacksRef.current.onStatus("error");
-              },
-              onclose: () => {
-                if (closed) return;
-                callbacksRef.current.onError(
-                  "The live interviewer disconnected. Your saved answers are safe."
-                );
-                callbacksRef.current.onStatus("error");
               }
-            }
-          });
+            })) as LiveSession;
+            return { session: opened, marker };
+          };
+          initialOpeningUtterance = connection.openingUtterance;
+          const first = await openLiveSession(connection);
+          session = first.session;
+          sessionMarker = first.marker;
           if (closed) {
+            first.marker.retired = true;
             session.close();
             session = null;
             return;
           }
+          scheduleRotationTimer();
 
           // Do not hold James's opening on a second WebSocket handshake. The
           // fallback transcript remains active until this promise resolves.
@@ -1230,7 +1425,7 @@ export const GeminiLiveInterviewer = forwardRef<
                 role: "user",
                 parts: [
                   {
-                    text: `Start now. Your entire first spoken response must be this exact server-approved opening, with no additional words: ${JSON.stringify(connection.openingUtterance)}`
+                    text: `Start now. Your entire first spoken response must be this exact server-approved opening, with no additional words: ${JSON.stringify(initialOpeningUtterance)}`
                   }
                 ]
               }
@@ -1243,7 +1438,7 @@ export const GeminiLiveInterviewer = forwardRef<
           // inside Google's recommended 20–40 ms streaming window.
           processor = inputContext.createScriptProcessor(512, 1, 1);
           processor.onaudioprocess = (event) => {
-            if (closed || !session) return;
+            if (closed || !session || connectionLost) return;
             const pcm = resampleToPcm16(
               event.inputBuffer.getChannelData(0),
               inputContext?.sampleRate ?? INPUT_SAMPLE_RATE
@@ -1252,7 +1447,11 @@ export const GeminiLiveInterviewer = forwardRef<
               data: bytesToBase64(new Uint8Array(pcm.buffer)),
               mimeType: "audio/pcm;rate=16000"
             };
-            session.sendRealtimeInput({ audio });
+            try {
+              session.sendRealtimeInput({ audio });
+            } catch {
+              // The socket closed between packets; rotation replaces it.
+            }
             transcriptionChannel?.session.sendRealtimeInput({ audio });
           };
           source.connect(processor);
@@ -1337,6 +1536,7 @@ export const GeminiLiveInterviewer = forwardRef<
           reconnectRef.current = () => {
             if (!closed) {
               callbacksRef.current.onStatus("connecting");
+              if (sessionMarker) sessionMarker.retired = true;
               session?.close();
             }
           };
@@ -1592,4 +1792,11 @@ function bytesToBase64(bytes: Uint8Array): string {
 function base64ToBytes(value: string): Uint8Array {
   const text = atob(value);
   return Uint8Array.from(text, (character) => character.charCodeAt(0));
+}
+
+/** Parses the goAway `timeLeft` duration (for example "30s" or "1.5s"). */
+export function goAwayTimeLeftMs(timeLeft: unknown): number {
+  if (typeof timeLeft !== "string") return 0;
+  const seconds = Number.parseFloat(timeLeft.replace(/s$/, ""));
+  return Number.isFinite(seconds) && seconds > 0 ? seconds * 1_000 : 0;
 }

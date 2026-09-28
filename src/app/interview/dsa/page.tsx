@@ -1,3 +1,4 @@
+import { displayFirstName } from "@/lib/shared/names";
 import { DsaInterviewEntry } from "@/features/interviews/ui/dsa/dsa-interview-entry";
 import { OPERATION_DSA_SLUGS } from "@/features/practice/dsa/domain/dsa-code-templates";
 import { privatePageMetadata } from "@/lib/shared/seo";
@@ -25,7 +26,7 @@ export default async function DsaInterviewEntryPage() {
     <DsaInterviewEntry
       completedCount={eligible.length}
       sessionsRemaining={quota ? Math.max(0, quota.limit - quota.used) : null}
-      firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
+      firstName={displayFirstName(profile.resume?.fullName)}
       workspaceAccent={profile.workspaceAccent}
     />
   );

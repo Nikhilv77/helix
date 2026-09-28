@@ -9,6 +9,8 @@ import { authorizeInterviewSession } from "@/features/interviews/server/session-
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
+/** Leaves room to grade a finished round after the response. */
+export const maxDuration = 60;
 
 /**
  * The single home of the interview decision logic.
@@ -110,10 +112,10 @@ export async function POST(request: NextRequest) {
         after(() => app.interviewEvaluationRecoveryService.runBatch(2));
       } else {
         after(async () => {
-          // Grade this interview's queued answers before writing any report,
-          // or the report would freeze without them.
+          // Grade all of this interview's queued answers before writing any
+          // report, or the report would freeze without them.
           await app.interviewEvaluationRecoveryService
-            .runBatch(5, Date.now(), { sessionId: parsed.data.sessionId })
+            .runBatch(20, Date.now(), { sessionId: parsed.data.sessionId })
             .catch(() => undefined);
           await Promise.allSettled([
             access.kind === "owner"

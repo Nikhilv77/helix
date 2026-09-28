@@ -72,10 +72,12 @@ Write the way an experienced interviewer speaks: plain, direct, and grounded in 
 /**
  * Builds the resume round's question bank.
  *
- * This runs at most once per resume. The round itself, the plan, and multiple
- * choice grading then cost nothing, because everything they need is already
- * stored on the profile. The prompt is deliberately fed the extracted resume
- * rather than the original document text, which keeps the input small.
+ * This runs once per resume, target role, and level, in the background after
+ * onboarding or a resume update, so starting a round does not wait for it.
+ * The round itself, the plan, and multiple choice grading then cost nothing,
+ * because everything they need is already stored on the profile. The prompt
+ * is fed the extracted resume rather than the document text, which keeps the
+ * input small.
  */
 export class ResumeInterviewKitService {
   private readonly logger = new Logger(ResumeInterviewKitService.name);
@@ -92,14 +94,20 @@ export class ResumeInterviewKitService {
     targetRole: Role;
     level: Level;
   }): Promise<ResumeInterviewKit> {
+    const stored = input.resume.interviewKit;
     if (
-      isUsable(input.resume.interviewKit) &&
-      input.resume.interviewKit.version === RESUME_INTERVIEW_KIT_VERSION
+      isUsable(stored) &&
+      stored.version === RESUME_INTERVIEW_KIT_VERSION &&
+      stored.targetRole === input.targetRole &&
+      stored.level === input.level
     ) {
-      return input.resume.interviewKit;
+      return stored;
     }
 
-    const kit = await this.generate(input.resume, input.targetRole, input.level);
+    const { kit, generated } = await this.generate(input.resume, input.targetRole, input.level);
+    // The generic fallback is not stored, so the next round tries again for
+    // questions written from the resume.
+    if (!generated) return kit;
 
     try {
       await this.profiles.saveResumeInterviewKit(input.ownerId, kit);
@@ -120,7 +128,7 @@ export class ResumeInterviewKitService {
     resume: CandidateResume,
     targetRole: Role,
     level: Level
-  ): Promise<ResumeInterviewKit> {
+  ): Promise<{ kit: ResumeInterviewKit; generated: boolean }> {
     try {
       const raw = await this.ai.generateStructured({
         operation: "resume_interview_kit",
@@ -131,7 +139,10 @@ export class ResumeInterviewKitService {
         temperature: 0.3
       });
 
-      return normalise(raw, resume);
+      const kit = normalise(raw, resume);
+      return kit
+        ? { kit: { ...kit, targetRole, level }, generated: true }
+        : { kit: fallbackKit(resume), generated: false };
     } catch (error) {
       this.logger.warn(
         JSON.stringify({
@@ -140,7 +151,7 @@ export class ResumeInterviewKitService {
         })
       );
 
-      return fallbackKit(resume);
+      return { kit: fallbackKit(resume), generated: false };
     }
   }
 }
@@ -191,7 +202,10 @@ Stage 3 — experienceQuestions. Exactly ${EXPERIENCE_QUESTION_COUNT} questions 
 - probeIfMissing is one short fallback question for the most likely missing evidence.`;
 }
 
-function normalise(raw: z.infer<typeof kitSchema>, resume: CandidateResume): ResumeInterviewKit {
+function normalise(
+  raw: z.infer<typeof kitSchema>,
+  resume: CandidateResume
+): ResumeInterviewKit | null {
   const skillQuestions = raw.skillQuestions
     .flatMap((question) => {
       if (!question.prompt) return [];
@@ -239,7 +253,7 @@ function normalise(raw: z.infer<typeof kitSchema>, resume: CandidateResume): Res
     codingTask,
     experienceQuestions
   };
-  return isUsable(kit) ? kit : fallbackKit(resume);
+  return isUsable(kit) ? kit : null;
 }
 
 const EDITOR_LANGUAGES = new Set([

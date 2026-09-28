@@ -159,6 +159,44 @@ describe("personalized interview roadmap sessions", () => {
     expect(roadmapSessionHref(sessions[4]!)).toBe("/interview/hiring-manager");
   });
 
+  it("leaves System Design out for roles without scenarios", () => {
+    for (const targetRole of ["frontend", "data", null] as const) {
+      const sessions = interviewRoadmapSessions({
+        personalizedPlan: plan(),
+        roadmap: null,
+        history: [],
+        targetRole
+      });
+
+      expect(sessions.map((session) => session.id)).not.toContain("system-design");
+      expect(sessions.map((session) => session.order)).toEqual([1, 2, 3, 4]);
+    }
+    const backend = interviewRoadmapSessions({
+      personalizedPlan: plan(),
+      roadmap: null,
+      history: [],
+      targetRole: "backend"
+    }).find((session) => session.id === "system-design")!;
+    expect(roadmapSessionHref(backend)).toBe("/interview/design");
+  });
+
+  it("tracks Hiring Manager progress like the other rounds", () => {
+    const hiringManager = interviewRoadmapSessions({
+      personalizedPlan: plan(),
+      roadmap: null,
+      history: [
+        historyItem("hiring-manager-final", {
+          status: "completed",
+          questionCount: 8,
+          questionsCovered: 8
+        })
+      ]
+    }).find((session) => session.id === "hiring-manager-final")!;
+
+    expect(hiringManager.attemptStatus).toBe("completed");
+    expect(hiringManager.progressPercent).toBe(100);
+  });
+
   it("does not render a separate DSA round for AI/ML", () => {
     const sessions = interviewRoadmapSessions({
       personalizedPlan: aiMlPlan(),

@@ -9,7 +9,11 @@ import type {
 import { SESSION_TTL_MS } from "./session-constants";
 import { learnerNextStep } from "@/features/interviews/domain/learner-next-step";
 import type { StoredInterviewSession } from "./session-store";
-import type { QuestionEvaluation } from "./types";
+import { isResumableBlockAssessment, roundCaps, type QuestionEvaluation } from "./types";
+import {
+  coverageAdjustedScore,
+  type ReportCoverage
+} from "@/features/interviews/domain/report-coverage";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 
 export interface InterviewReportSnapshot {
@@ -108,14 +112,13 @@ export function createInterviewReport(
         .filter((score) => score.rubricKey === parameter.key)
         .map((score) => score.score);
     });
-    return values.length
-      ? [values.reduce((total, value) => total + value, 0) / values.length]
-      : [];
+    return values.length ? [values.reduce((total, value) => total + value, 0) / values.length] : [];
   });
   // The headline is the arithmetic mean of the six visible round-specific
   // parameters. Fall back to legacy per-question scores only when an older
   // evaluation did not persist the parameter rubric.
-  const evidenceScore = parameterScores.length
+  const coverage = reportCoverage(session.state, competencies, history.durationMs);
+  const qualityScore = parameterScores.length
     ? Math.round(
         parameterScores.reduce((total, value) => total + value, 0) / parameterScores.length
       )
@@ -125,9 +128,11 @@ export function createInterviewReport(
             scoredCompetencies.length
         )
       : 0;
+  const evidenceScore = coverageAdjustedScore(qualityScore, coverage);
 
   return {
     ...history,
+    ...(coverage ? { coverage } : {}),
     competencies,
     interaction: {
       probes: agentTurns.filter((turn) => turn.action === "probe").length,
@@ -163,6 +168,34 @@ export function createInterviewReport(
     },
     transcript: state.turns.map(publicTranscriptTurn)
   };
+}
+
+/**
+ * Counts every answered question, every question asked but not answered,
+ * and, when the candidate ended the round before time ran out, the questions
+ * they never reached. Pacing skips and questions cut off by the clock do not
+ * count. Practice checkpoints have their own scoring and are left alone.
+ */
+function reportCoverage(
+  state: StoredInterviewSession["state"],
+  competencies: InterviewCompetencyReport[],
+  durationMs: number
+): ReportCoverage | undefined {
+  if (isResumableBlockAssessment(state.setup)) return undefined;
+  const skipped = new Set(state.skippedQuestionIndexes ?? []);
+  const endedEarly = state.phase === "done" && durationMs < roundCaps(state.setup).softWrapMs;
+  const boundary = endedEarly ? state.plan.length : state.questionIndex;
+  let answered = 0;
+  let counted = 0;
+  competencies.forEach((competency, index) => {
+    if (competency.answered) {
+      answered += 1;
+      counted += 1;
+    } else if (!skipped.has(index) && index < boundary) {
+      counted += 1;
+    }
+  });
+  return { answered, counted };
 }
 
 function publicTranscriptTurn(stateTurn: StoredInterviewSession["state"]["turns"][number]) {
@@ -217,7 +250,10 @@ function withLearnerNextSteps<T extends Pick<InterviewReport, "competencies" | "
   report: T
 ): T {
   const legacy = (text: string | null | undefined) => Boolean(text && LEGACY_NEXT_STEP.test(text));
-  if (!legacy(report.summary?.nextStep) && !report.competencies?.some((item) => legacy(item.nextStep))) {
+  if (
+    !legacy(report.summary?.nextStep) &&
+    !report.competencies?.some((item) => legacy(item.nextStep))
+  ) {
     return report;
   }
   return {
@@ -457,7 +493,10 @@ function assessedTechnicalAnswer(
       summary: evaluation.summary,
       strengths: evaluation.strengths,
       gaps: evaluation.gaps,
-      rubricScores: evaluation.rubricScores.map((item) => ({ ...item, score: Math.round(item.score) })),
+      rubricScores: evaluation.rubricScores.map((item) => ({
+        ...item,
+        score: Math.round(item.score)
+      })),
       evidenceQuotes: evaluation.evidenceQuotes,
       execution: evaluation.execution
         ? {

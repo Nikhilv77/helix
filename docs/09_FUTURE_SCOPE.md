@@ -27,15 +27,65 @@ Nothing below should jump that order without a reason from real usage data.
 | Raise or plan AI provider quota | 429 at about 16 calls/min will fail under a small launch | Hours plus billing |
 | Watch the new logs | `resume_roast.generation`, `help.request.*`, fresh-wait logs | Ongoing |
 
-## Next: audit voice interviews
+## Next: measure voice interviews
 
-The next major area, and the most expensive one.
+The audit and its five fix phases are done ([INTERVIEW_AUDIT.md](INTERVIEW_AUDIT.md)). What is
+left needs real sessions:
 
 - Measure turn latency end to end: learner stops speaking, decision made, first audio back.
-- Reconnect behaviour: dropped network, tab switch, second tab.
-- Cost per session by provider, and where to cut it (shorter prompts, cached plans, fewer
-  evaluator calls, pre-recorded hand-offs).
+- Cost per session by provider, and where to cut it (shorter instructions, fewer grading calls,
+  pre-recorded hand-offs).
+- Write Frontend and Data System Design scenarios and data-engineering MCQs.
 - Decide the free allowance and the metered unit (see [Monetisation](#monetisation)).
+
+## System Design for Frontend and Data
+
+Decided September 28, 2026; deferred. Today these learners do not see the System Design
+interview round (it is hidden, and `/interview/design` redirects) and have no Architecture Practice
+track.
+
+**Decisions already made**
+
+- Frontend and Data get the round in both Architecture Practice and the interview, like Backend,
+  Full-stack, and AI/ML. The same scenarios power both.
+- They reuse the existing architecture: round, canvas, five stages, interviewer, grading, report.
+- About 6 scenarios per role (12 total): about 4 on the Practice path and 2 marked interview-only,
+  because the interview skips scenarios the learner has practised.
+- Ship Frontend first, then Data, each as soon as its content is reviewed.
+- Consider hiding the round for freshers in these roles; real interviews rarely ask them.
+
+**Code (1–1.5 days)**
+
+1. Add `frontend` and `data` to `architectureDesignRoleSchema`
+   (`src/features/practice/architecture-design/domain/contracts.ts`), the families enum, and
+   `systemDesignSupportsRole` (`src/features/interviews/domain/dsa-design-round.ts`).
+2. Make the fixed stage prompts and "listen for" lists in `designQuestions`
+   (`src/features/interviews/server/dsa-design-round.ts`) and the design rules in the Live
+   instruction (`buildDsaDesignSystemInstruction` in the token route) role-specific. They assume
+   backend today (storage, async boundaries, partitioning, idempotency).
+3. Add an interview-only flag to scenarios and respect it in Practice ranking.
+4. Show the Architecture track in Practice home, the track list, and progress for these roles.
+5. Tests for both paths and both roles.
+
+**Content (2–3 days including review)**
+
+Each scenario: premise, realism anchors (the pressure tests), four questions with a reference
+answer and rubric points, roles, seniorities, and human review approval. Same shape as
+`src/features/practice/architecture-design/domain/ai-ml-scenarios.ts`.
+
+- Frontend ideas: news feed with infinite scroll and offline support; instant autocomplete search;
+  a collaborative editor's front end; image-heavy product page performance; a design system rollout;
+  a real-time dashboard.
+- Data ideas: clickstream pipeline into a warehouse; change data capture into a data lake; daily
+  revenue with late-arriving data; real-time fraud features; data quality and lineage; a metrics
+  layer with backfills.
+
+**Related, larger rounds**
+
+| Round | For | Size | Notes |
+| --- | --- | --- | --- |
+| SQL | Data | 3–4 days | Reuse the DSA room and Judge0 (SQLite); needs a result-set checker and 20–30 SQL problems with sample tables. Bigger gap for Data than System Design. |
+| Machine Coding | Frontend | 5–7 days | Build a UI component in 60–90 minutes, common in Indian product companies. Needs an in-room HTML/CSS/JS preview and a new grading approach. |
 
 ## Soon: product gaps
 

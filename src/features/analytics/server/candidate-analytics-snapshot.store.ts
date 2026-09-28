@@ -15,7 +15,7 @@ type Builder = () => Promise<BuiltAnalytics>;
 // 3: Overview and Progress include AI/ML cohorts for AI/ML candidates.
 // 4: Overview and Progress include Core Technical, Applied Engineering, and
 //    Architecture practice for the roles that have those tracks.
-export const CANDIDATE_ANALYTICS_SCHEMA_VERSION = 4;
+export const CANDIDATE_ANALYTICS_SCHEMA_VERSION = 5;
 const SCHEMA_VERSION = CANDIDATE_ANALYTICS_SCHEMA_VERSION;
 const todayUtc = () => new Date().toISOString().slice(0, 10);
 const logger = new Logger("CandidateAnalyticsSnapshot");

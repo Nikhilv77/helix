@@ -1,4 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
+import { after } from "next/server";
+import { prepareInterviewKit } from "@/features/onboarding/server/resume/prepare-interview-kit";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import {
@@ -74,6 +76,8 @@ export async function POST(request: NextRequest) {
       document: extraction.document,
       evidence: extraction.evidence
     });
+    // A new resume clears the stored kit; write the next one in the background.
+    after(() => prepareInterviewKit(ownerId));
     const response = apiSuccess({ profile });
     response.headers.set("cache-control", "no-store");
     return response;

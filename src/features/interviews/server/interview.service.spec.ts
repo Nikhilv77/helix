@@ -847,6 +847,60 @@ describe("InterviewService resume round", () => {
     expect(store.evaluationRecoveryCount()).toBe(1);
   });
 
+  it("waits to grade an open question and grades it at once when it closes", async () => {
+    const placeholder: QuestionEvaluation = {
+      source: "evaluation-unavailable",
+      score: 0,
+      verdict: "insufficient-evidence",
+      confidence: 0,
+      summary: "Placeholder",
+      strengths: [],
+      gaps: [],
+      rubricScores: [],
+      answerExcerpts: [],
+      execution: null,
+      evaluatedAt: 2_000
+    };
+    const { service, store, decide, evaluate } = harness(questions, placeholder);
+    evaluate.mockRejectedValue(new Error("provider unavailable"));
+    const started = await service.start(setup, "user-1", 1_000, questions);
+    decide.mockResolvedValueOnce({
+      action: "probe",
+      missing: "outcome",
+      reason: "needs outcome",
+      acknowledgement: "",
+      line: "What changed afterwards?"
+    });
+
+    await service.answer(
+      started.state.id,
+      { text: "I owned the conflict resolver.", startMs: 0, endMs: 900 },
+      2_000,
+      "12121212-1212-4212-8212-121212121212"
+    );
+    expect(store.evaluationRecoveryFor(started.state.id, 0)).toMatchObject({
+      action: "enqueue",
+      availableAt: 2_000 + 10 * 60_000
+    });
+
+    decide.mockResolvedValueOnce({
+      action: "move_on",
+      missing: "none",
+      reason: "answered",
+      acknowledgement: "",
+      line: ""
+    });
+    await service.answer(
+      started.state.id,
+      { text: "Merge failures dropped by a third.", startMs: 1_000, endMs: 1_900 },
+      3_000,
+      "34343434-3434-4434-8434-343434343434"
+    );
+    const closing = store.evaluationRecoveryFor(started.state.id, 0);
+    expect(closing).toMatchObject({ action: "enqueue" });
+    expect(closing && "availableAt" in closing ? closing.availableAt : undefined).toBeUndefined();
+  });
+
   it("uses the frozen five-metric rubric and excludes stale DSA and Core execution", () => {
     const blockSetup: InterviewSetup = {
       ...setup,
@@ -1674,6 +1728,39 @@ describe("InterviewService answer idempotency", () => {
     expect(rejected?.reason).toMatchObject({ code: "SESSION_VERSION_CONFLICT" });
     const finalState = await service.get(started.state.id);
     expect(finalState.turns.filter((turn) => turn.speaker === "user")).toHaveLength(1);
+  });
+
+  it("replays a turn when a grade, not another answer, changed the session first", async () => {
+    const { service, store, decide } = harness();
+    let releaseDecision!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseDecision = resolve;
+    });
+    decide.mockImplementation(async () => {
+      await gate;
+      return decision;
+    });
+    const started = await service.start(setup, "user-1", 1_000);
+    const pending = service.answer(
+      started.state.id,
+      answer,
+      6_000,
+      "abababab-abab-4bab-8bab-abababababab"
+    );
+
+    while (decide.mock.calls.length < 1) await Promise.resolve();
+    // A background grade lands while the turn is being decided.
+    const current = await store.getVersioned(started.state.id);
+    await store.save(
+      { ...current!.state, questionEvaluations: { "9": { score: 70 } as never } },
+      current!.version
+    );
+    releaseDecision();
+    const result = await pending;
+
+    expect(result.state.turns.filter((turn) => turn.speaker === "user")).toHaveLength(1);
+    const finalState = await service.get(started.state.id);
+    expect(finalState.questionEvaluations?.["9"]).toMatchObject({ score: 70 });
   });
 });
 

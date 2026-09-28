@@ -1,3 +1,4 @@
+import { displayFirstName } from "@/lib/shared/names";
 import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
 import { buildDashboardOverview } from "@/features/dashboard/application/build-dashboard-overview";
 import type { ProgressBriefingOverview } from "@/features/progress/contracts/progress";
@@ -227,7 +228,7 @@ export async function buildCandidateAnalytics(
       dashboard: buildDashboardOverview(profile, reports, dashboardPractice, now, trailmate),
       progressBriefing,
       progressPage: {
-        firstName: profile.resume?.fullName?.trim().split(/\s+/)[0] ?? "",
+        firstName: displayFirstName(profile.resume?.fullName),
         starterQuestions:
           profile.targetRole === "ai-ml"
             ? aiMlStarterPractice(profile)

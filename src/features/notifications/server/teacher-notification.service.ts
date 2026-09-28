@@ -1,3 +1,4 @@
+import { displayFirstName } from "@/lib/shared/names";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { MAYA, personaById } from "@/lib/avatars/personas";
@@ -351,16 +352,6 @@ function activityTime(question: {
     question.draftUpdatedAt?.getTime() ?? 0,
     question.lastAttemptedAt?.getTime() ?? 0
   );
-}
-
-function firstName(value: string): string {
-  return value.trim().split(/\s+/)[0] ?? "";
-}
-
-function displayFirstName(value: string): string {
-  const name = firstName(value);
-  if (!name || name !== name.toUpperCase()) return name;
-  return name[0]!.toUpperCase() + name.slice(1).toLowerCase();
 }
 
 function humanizeRole(role: string): string {

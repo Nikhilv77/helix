@@ -95,6 +95,25 @@ describe("Gemini Live interview instruction", () => {
     expect(instruction).toContain("do not restart the interview");
   });
 
+  it("starts a rotated connection silently instead of speaking an opening", () => {
+    const instruction = buildSystemInstruction({
+      roundTitle: "Hiring Manager & Final Behavioural",
+      isHiringManagerRound: true,
+      question: "What did you personally change?",
+      questionNumber: 4,
+      questionCount: 8,
+      followUpCount: 1,
+      maxFollowUps: 2,
+      mustHit: ["personal action"],
+      openingUtterance: "",
+      resuming: true,
+      conversationHistory: [{ speaker: "user", text: "I investigated the failed deployment." }]
+    });
+
+    expect(instruction).toContain("Say nothing at the start");
+    expect(instruction).not.toContain("say this opening exactly");
+  });
+
   it("gives Claire the silent coding and connected design contract", () => {
     const instruction = buildSystemInstruction({
       roundTitle: "DSA & Design interview",

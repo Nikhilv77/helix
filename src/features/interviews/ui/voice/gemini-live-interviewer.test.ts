@@ -4,6 +4,7 @@ import {
   buildCandidateTranscriptionConfig,
   candidateAnswerWasRecentlySubmitted,
   finishAuthoritativeInputTranscript,
+  goAwayTimeLeftMs,
   liveConversationProposalFromToolArgs,
   mergeFinalizedCandidateTranscript,
   resampleToPcm16,
@@ -193,5 +194,14 @@ describe("Gemini Live microphone resampling", () => {
     expect(output).toHaveLength(2);
     expect(Math.abs(output[0]!)).toBeLessThan(16_384);
     expect(Math.abs(output[1]!)).toBeLessThan(16_384);
+  });
+});
+
+describe("Gemini Live connection rotation", () => {
+  it("reads the goAway time left as milliseconds", () => {
+    expect(goAwayTimeLeftMs("30s")).toBe(30_000);
+    expect(goAwayTimeLeftMs("1.5s")).toBe(1_500);
+    expect(goAwayTimeLeftMs(undefined)).toBe(0);
+    expect(goAwayTimeLeftMs("soon")).toBe(0);
   });
 });

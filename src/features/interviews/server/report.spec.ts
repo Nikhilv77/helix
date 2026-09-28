@@ -7,6 +7,7 @@ import {
   readInterviewReportSnapshot
 } from "./report";
 import type { InterviewState } from "./types";
+import { roundParameterScore } from "@/features/reports/application/reports-overview";
 
 const state: InterviewState = {
   id: "44444444-4444-4444-8444-444444444444",
@@ -109,6 +110,79 @@ describe("interview report", () => {
       signals: expect.arrayContaining(["Personal ownership"])
     });
     expect(report.summary.evidenceScore).toBeGreaterThan(0);
+  });
+
+  describe("coverage", () => {
+    const extra = [
+      {
+        text: "How did you test it?",
+        competency: "Testing",
+        mustHit: ["tests"],
+        probeIfMissing: "What would fail first?"
+      },
+      {
+        text: "What would you change?",
+        competency: "Reflection",
+        mustHit: ["change"],
+        probeIfMissing: "Why that?"
+      }
+    ];
+    const firstAnswerOnly = state.turns.slice(0, 4);
+
+    it("counts questions the candidate never reached after ending early", () => {
+      const ended: InterviewState = {
+        ...state,
+        plan: [state.plan[0]!, state.plan[1]!, ...extra],
+        questionIndex: 0,
+        turns: [
+          ...firstAnswerOnly,
+          {
+            speaker: "user",
+            text: "Let's stop here.",
+            startMs: 7_100,
+            endMs: 8_000,
+            endedInterview: true
+          }
+        ]
+      };
+      const oneQuestion: InterviewState = { ...ended, plan: [state.plan[0]!] };
+
+      const report = createInterviewReport({ state: ended, touchedAt: 9_000 }, 20_000);
+      const full = createInterviewReport({ state: oneQuestion, touchedAt: 9_000 }, 20_000);
+
+      expect(full.summary.evidenceScore).toBeGreaterThan(20);
+      expect(report.coverage).toEqual({ answered: 1, counted: 4 });
+      expect(full.coverage).toEqual({ answered: 1, counted: 1 });
+      expect(report.summary.evidenceScore).toBe(Math.round(full.summary.evidenceScore / 4));
+      expect(roundParameterScore(report)).toBe(Math.round(roundParameterScore(full) / 4));
+    });
+
+    it("counts a declined question but not pacing skips or questions cut off by time", () => {
+      const timed: InterviewState = {
+        ...state,
+        setup: { ...state.setup, durationMinutes: 5 },
+        plan: [state.plan[0]!, state.plan[1]!, ...extra],
+        questionIndex: 2,
+        skippedQuestionIndexes: [3],
+        turns: [
+          ...firstAnswerOnly,
+          {
+            speaker: "user",
+            text: "I don't know this one.",
+            startMs: 7_100,
+            endMs: 600_000,
+            questionIndex: 1,
+            skipped: true,
+            assessmentExcluded: true
+          }
+        ]
+      };
+
+      const report = createInterviewReport({ state: timed, touchedAt: 601_000 }, 700_000);
+
+      // Q0 answered, Q1 declined; Q2 was cut off by the clock and Q3 skipped for pacing.
+      expect(report.coverage).toEqual({ answered: 1, counted: 2 });
+    });
   });
 
   it("does not expose internal decision telemetry in report transcripts", () => {
@@ -253,10 +327,7 @@ describe("interview report", () => {
       }
     };
 
-    const report = createInterviewReport(
-      { state: hiringManagerState, touchedAt: 14_000 },
-      20_000
-    );
+    const report = createInterviewReport({ state: hiringManagerState, touchedAt: 14_000 }, 20_000);
 
     expect(report.summary.evidenceScore).toBe(35);
   });

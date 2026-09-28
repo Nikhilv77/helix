@@ -12,11 +12,27 @@ import type { AiCallTrace } from "@/server/ai/interfaces/system-designer-ai-prov
 import { INTERVIEW_ENGINE_VERSION, INTERVIEW_EVALUATOR_PROMPT_VERSION } from "./runtime-version";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 
+/**
+ * The model observes; code scores. It rates each targeted parameter on this
+ * anchored five-point scale, the way an interviewer fills in a scorecard, and
+ * the numbers below turn those ratings into the 0-100 scores the reports use.
+ * The same answer and rating always produce the same score.
+ */
+export const EVIDENCE_LEVEL_SCORES = { 1: 10, 2: 30, 3: 55, 4: 78, 5: 94 } as const;
+export type EvidenceLevel = keyof typeof EVIDENCE_LEVEL_SCORES;
+
+const LEVEL_GUIDE = `Rate each parameter with a level from 1 to 5:
+- 5: exceptional. Precise, complete, and credible; a senior interviewer would be impressed.
+- 4: strong. Concrete and correct, with only minor omissions.
+- 3: adequate. Credible, but one meaningful part is missing or thin.
+- 2: weak. Vague, mostly unsupported, or with a material error.
+- 1: absent. No usable evidence, refused, unrelated, or wrong at the core.
+Most real answers are a 2, 3, or 4. Give a 5 only when nothing important is missing. A true but shallow answer is a 2, not a 1: keep 1 for answers that are wrong, refused, or say nothing relevant. Missing evidence for a targeted parameter is a low level, not a skipped one.`;
+
 const evaluationSchema = z.object({
   // Keep the provider boundary tolerant and normalize below. Sparse answers
-  // often make models return one extra gap or a decimal score; neither should
+  // often make models return one extra gap or a decimal level; neither should
   // turn a valid judgement into an unavailable evaluation.
-  score: z.number().min(0).max(100),
   verdict: z.enum([
     "correct",
     "mostly-correct",
@@ -32,7 +48,8 @@ const evaluationSchema = z.object({
     .array(
       z.object({
         rubricKey: z.string().trim().min(1).max(120),
-        score: z.number().min(0).max(100),
+        /** 0 means the question did not ask for this parameter at all. */
+        level: z.number().min(0).max(5),
         rationale: z.string().min(1).max(400),
         evidenceQuotes: z.array(z.string().min(1).max(400)).max(2).optional()
       })
@@ -66,8 +83,18 @@ const RESUME_CODE_SYSTEM_INSTRUCTION = `You are a strict but fair senior enginee
 
 Judge the submitted implementation against the task. Treat successful execution without tests only as evidence that the program compiled and ran, not that it is correct. Do not score conversational filler such as requests for more time. Use short, specific explanations grounded in the submitted code.`;
 
+/** Fixed so the same answer is rated the same way on every attempt. */
+const EVALUATION_SEED = 11;
+
 export class TechnicalAnswerEvaluator {
-  constructor(private readonly ai: Pick<AiService, "generateStructured">) {}
+  constructor(
+    private readonly ai: Pick<AiService, "generateStructured">,
+    /**
+     * Background grading has time for the reasoning model; the live path in
+     * server-led rounds keeps the fast one.
+     */
+    private readonly modelClass: "fast" | "reasoning" = "fast"
+  ) {}
 
   async evaluate(input: TechnicalAnswerEvaluationInput): Promise<QuestionEvaluation> {
     const calls: AiCallTrace[] = [];
@@ -88,8 +115,9 @@ export class TechnicalAnswerEvaluator {
           ? buildResumeAnswerEvaluationPrompt(input)
           : buildTechnicalEvaluationPrompt(input),
       schema: evaluationSchema,
-      modelClass: "fast",
-      temperature: 0.1,
+      modelClass: this.modelClass,
+      temperature: 0,
+      seed: EVALUATION_SEED,
       // A second Groq attempt used to finish after the live evaluator deadline
       // and overwrite the question with `evaluation-unavailable`. Fail over to
       // Gemini after one attempt while there is still latency budget left.
@@ -138,18 +166,20 @@ ${submittedAnswers.map((answer, index) => `Submission ${index + 1}:\n"""\n${answ
 Execution evidence:
 ${formatExecutionEvidence(input.execution)}
 
-Score the overall implementation from 0 to 100:
-- 85-100: correct and complete for the task, with sound handling of important edge cases.
-- 70-84: mostly correct, with only minor omissions.
-- 45-69: useful partial implementation with a material correctness gap.
-- 0-44: incorrect, placeholder-only, non-working, or too incomplete to meet the task.
+Choose the verdict for the implementation as a whole:
+- correct: correct and complete for the task, with sound handling of important edge cases.
+- mostly-correct: minor omissions only.
+- partially-correct: useful partial implementation with a material correctness gap.
+- incorrect: wrong, placeholder-only, non-working, or too incomplete to meet the task.
 - Successful execution with zero tests proves only that the submitted file ran.
 
 Interpret the round parameters specifically for this coding exercise:
 ${formatEvaluationParameters(targetedParameters)}
 
+${LEVEL_GUIDE}
+
 Return rubricScores with exactly these keys and no others: ${targetedParameters.map((parameter) => parameter.key).join(", ")}.
-Every score must be out of 100. Ground evidenceQuotes in the submitted code or explanation, never in the starter code or conversational filler.`;
+Ground evidenceQuotes in the submitted code or explanation, never in the starter code or conversational filler.`;
 }
 
 function submittedCodeAnswers(answers: string[]): string[] {
@@ -187,13 +217,44 @@ export function normalizeTechnicalEvaluation(
       ? input.question.evaluationParameterKeys
       : profile.parameters.map((parameter) => parameter.key)
   );
-  const semanticScore = verdictBoundedScore(Math.round(raw.score), raw.verdict);
+  const rawRubricScores = new Map(
+    uniqueBy(raw.rubricScores, (item) => item.rubricKey.trim().toLowerCase()).map((item) => [
+      item.rubricKey.trim().toLowerCase(),
+      item
+    ])
+  );
+  // Level 0 marks a parameter the question never asked about; only questions
+  // without a targeted parameter list may leave one out.
+  const canSkip = !input.question.evaluationParameterKeys?.length;
+  const targeted = profile.parameters.filter(
+    (parameter) =>
+      targetedParameterKeys.has(parameter.key) &&
+      !(canSkip && rawRubricScores.get(parameter.key)?.level === 0)
+  );
+  // A parameter the model left out is judged from the ones it rated; with no
+  // ratings at all, the correctness verdict stands in.
+  const ratedLevels = targeted
+    .map((parameter) => rawRubricScores.get(parameter.key)?.level)
+    .filter((level): level is number => typeof level === "number" && level >= 1);
+  const fallbackLevel = ratedLevels.length
+    ? ratedLevels.reduce((total, level) => total + level, 0) / ratedLevels.length
+    : VERDICT_LEVEL[raw.verdict];
+  const parameterScores = targeted.map((parameter) => {
+    const item = rawRubricScores.get(parameter.key);
+    const level = item?.level && item.level >= 1 ? item.level : fallbackLevel;
+    return { parameter, item, score: levelScore(level) };
+  });
+  const answerScore = parameterScores.length
+    ? Math.round(
+        parameterScores.reduce((total, entry) => total + entry.score, 0) / parameterScores.length
+      )
+    : levelScore(fallbackLevel);
+  const semanticScore = verdictBoundedScore(answerScore, raw.verdict);
   const score = executionBoundedScore(semanticScore, raw.verdict, input.execution);
   const verdict = boundedVerdict(raw.verdict, score);
-  const rawRubricScores = new Map(
-    uniqueBy(rubricScoresOutOf100(raw), (item) => item.rubricKey.trim().toLowerCase()).map(
-      (item) => [item.rubricKey.trim().toLowerCase(), item]
-    )
+  const parameterCap = Math.min(
+    verdictCeiling(raw.verdict),
+    executionBoundedScore(100, raw.verdict, input.execution)
   );
 
   return {
@@ -208,21 +269,20 @@ export function normalizeTechnicalEvaluation(
     gaps: unique(raw.gaps)
       .slice(0, 3)
       .map((value) => truncate(value, 140)),
-    rubricScores: profile.parameters
-      .filter((parameter) => targetedParameterKeys.has(parameter.key))
-      .map((parameter) => {
-        const item = rawRubricScores.get(parameter.key);
-        return {
-          rubricKey: parameter.key,
-          score: Math.round(item?.score ?? score),
-          rationale: truncate(
-            item?.rationale ??
-              `The provider did not separate this parameter from the overall answer.`,
-            180
-          ),
-          evidenceQuotes: groundedEvidenceQuotes(item?.evidenceQuotes ?? [], input.answers)
-        };
-      }),
+    rubricScores: parameterScores.map(({ parameter, item, score: parameterScore }) => {
+      return {
+        rubricKey: parameter.key,
+        // The verdict and test results cap every parameter, so a clear
+        // but wrong answer cannot score well through its other parameters.
+        score: Math.min(parameterScore, parameterCap),
+        rationale: truncate(
+          item?.rationale ??
+            `The provider did not separate this parameter from the overall answer.`,
+          180
+        ),
+        evidenceQuotes: groundedEvidenceQuotes(item?.evidenceQuotes ?? [], input.answers)
+      };
+    }),
     evidenceQuotes: groundedEvidenceQuotes(raw.evidenceQuotes ?? [], input.answers),
     answerExcerpts: input.answers
       .map((answer) => answer.replace(/\s+/g, " ").trim().slice(0, 240))
@@ -233,16 +293,31 @@ export function normalizeTechnicalEvaluation(
   };
 }
 
-/**
- * Models sometimes score parameters out of 10 while the overall score is out
- * of 100 (seen as 9, 8, 10 beside an overall in the eighties). When every
- * parameter is 10 or less but the overall is above 10, rescale them.
- */
-function rubricScoresOutOf100(raw: RawTechnicalEvaluation): RawTechnicalEvaluation["rubricScores"] {
-  const scores = raw.rubricScores;
-  const tenPointScale =
-    raw.score > 10 && scores.length > 0 && scores.every((item) => item.score <= 10);
-  return tenPointScale ? scores.map((item) => ({ ...item, score: item.score * 10 })) : scores;
+/** Converts a (possibly fractional) level into its anchored score. */
+export function levelScore(level: number): number {
+  const clamped = Math.min(5, Math.max(1, level));
+  const lower = Math.floor(clamped) as EvidenceLevel;
+  const upper = Math.ceil(clamped) as EvidenceLevel;
+  if (lower === upper) return EVIDENCE_LEVEL_SCORES[lower];
+  const weight = clamped - lower;
+  return Math.round(
+    EVIDENCE_LEVEL_SCORES[lower] * (1 - weight) + EVIDENCE_LEVEL_SCORES[upper] * weight
+  );
+}
+
+const VERDICT_LEVEL: Record<TechnicalVerdict, number> = {
+  correct: 5,
+  "mostly-correct": 4,
+  "partially-correct": 3,
+  "insufficient-evidence": 1,
+  incorrect: 1
+};
+
+function verdictCeiling(verdict: TechnicalVerdict): number {
+  if (verdict === "incorrect" || verdict === "insufficient-evidence") return 44;
+  if (verdict === "partially-correct") return 69;
+  if (verdict === "mostly-correct") return 84;
+  return 100;
 }
 
 function groundedEvidenceQuotes(quotes: string[], answers: string[]): string[] {
@@ -291,22 +366,16 @@ ${question.mustHit.map((item) => `- ${item}`).join("\n")}
 Candidate's saved answer${answers.length > 1 ? "s" : ""}:
 ${answers.map((answer, index) => `Answer ${index + 1}:\n"""\n${answer.trim()}\n"""`).join("\n\n")}
 
-This question intentionally assesses only the following ${profile.label} parameters. Score each from 0 to 100 using only supported evidence:
+This question intentionally assesses only the following ${profile.label} parameters. Rate each using only supported evidence:
 ${formatEvaluationParameters(targetedParameters)}
 
-Scale requirement: every score is out of 100, never out of 5 or 10. For example, a six-out-of-ten assessment must be returned as 60, not 6.
+${LEVEL_GUIDE}
 
-Overall score guide:
-- 90-100: exceptional, independently credible evidence with precise ownership, judgement, and demonstrated impact.
-- 75-89: strong, concrete, personally owned evidence with only minor omissions.
-- 60-74: adequate and credible, but one meaningful part of the evidence chain is missing.
-- 40-59: developing evidence; important context, ownership, reasoning, or outcome is unclear.
-- 20-39: very weak evidence whose central claim remains unsupported.
-- 0-19: absent, refused, unrelated, or provides no assessable evidence.
+For the verdict, use correct for a fully credible answer, mostly-correct when only minor detail is missing, partially-correct when one meaningful part of the evidence chain is missing, insufficient-evidence when the answer is too thin to judge, and incorrect when it contradicts itself or the resume.
 
 Return rubricScores with exactly these keys and no others: ${targetedParameters.map((parameter) => parameter.key).join(", ")}.
-Do not score parameters that this question does not target. Missing evidence for a targeted parameter is a genuine low score, not an omitted score.
-For every rubric score, include evidenceQuotes containing up to two short exact phrases from the candidate's answer that explain that specific score. A low score must cite the concerning phrase when one exists; when the problem is missing evidence, use an empty list and say exactly what was missing in the rationale.
+Do not rate parameters that this question does not target.
+For every rubric level, include evidenceQuotes containing up to two short exact phrases from the candidate's answer that explain that specific score. A low level must cite the concerning phrase when one exists; when the problem is missing evidence, use an empty list and say exactly what was missing in the rationale.
 For the top-level evidenceQuotes, copy up to two short exact phrases that best support the overall judgement.
 Keep summary, strengths, gaps, and rationales short, specific, and human. Never say the candidate is good or bad as a person.`;
 }
@@ -371,18 +440,20 @@ ${answers.map((answer, index) => `Answer ${index + 1}:\n"""\n${answer.trim()}\n"
 Execution evidence:
 ${executionEvidence}
 
-Scoring rules:
-- 85-100: technically correct and complete for the assigned difficulty.
-- 70-84: mostly correct; minor omissions do not break the central mechanism.
-- 45-69: partially correct; useful understanding but at least one material gap.
-- 0-44: incorrect, contradictory, non-working, or too incomplete to support the claim.
-- A clear answer with a false central mechanism belongs below 45.
+Verdict rules:
+- correct: technically correct and complete for the assigned difficulty.
+- mostly-correct: minor omissions do not break the central mechanism.
+- partially-correct: useful understanding but at least one material gap.
+- incorrect: wrong, contradictory, or non-working. A clear answer with a false central mechanism is incorrect, however fluent.
+- insufficient-evidence: true as far as it goes but too thin to show the mechanism. Shallow is not the same as wrong.
 - Passing all supplied tests is strong correctness evidence but does not prove quality, complexity, or completeness beyond those tests.
 - Compilation or execution without tests is not proof of correctness.
-- Failed supplied tests or compilation must be reflected in the score and gaps.
+- Failed supplied tests or compilation must be reflected in the verdict, levels, and gaps.
 
-Return one overall score plus rubricScores with exactly these keys: ${profile.parameters.map((parameter) => parameter.key).join(", ")}.
-Every score, overall and per key, must be out of 100 (not out of 10).
+${LEVEL_GUIDE}
+
+Return rubricScores with exactly these keys: ${profile.parameters.map((parameter) => parameter.key).join(", ")}.
+If this question did not ask for evidence of a parameter at all (for example, project ownership on a pure concept question), give it level 0 instead of a low level. Never use 0 for evidence the question asked for but the candidate did not give.
 Use up to two short evidenceQuotes copied exactly from the candidate's answer. The summary and gaps must identify concrete evidence, not writing style.`;
 }
 

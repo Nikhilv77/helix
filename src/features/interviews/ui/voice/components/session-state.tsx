@@ -127,7 +127,8 @@ export function SessionStateScreen({
   storyPracticeAssessment = null,
   evaluationLabel = "interview",
   evaluationParameters = [],
-  interviewerName = "James"
+  interviewerName = "James",
+  answers
 }: {
   kind: "expired" | "complete";
   duration?: number;
@@ -146,6 +147,53 @@ export function SessionStateScreen({
 }) {
   const teacher = useWorkspaceTeacher();
   const complete = kind === "complete";
+  // A round closed before any answer has nothing to grade and no report, so
+  // it gets its own honest ending instead of the report hand-off.
+  const answeredNothing =
+    complete &&
+    answers === 0 &&
+    !blockAssessmentBlockId &&
+    !coreTechnicalBlockId &&
+    !storyPracticeAssessment;
+
+  if (answeredNothing) {
+    return (
+      <VoiceShell workspaceAccent={workspaceAccent}>
+        <section className="flex flex-1 items-center justify-center py-12">
+          <div className="w-full max-w-2xl text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.09] bg-white/[0.035] text-[var(--workspace-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl">
+              <Clock3 size={24} aria-hidden="true" />
+            </span>
+            <p className="mt-7 text-sm font-mono uppercase tracking-[0.2em] text-cream/38">
+              Session closed
+            </p>
+            <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-cream sm:text-5xl">
+              No report for this round
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-cream/64 sm:text-base">
+              You ended before answering a question, so there is nothing for {interviewerName} to
+              score and it will not appear in Reports. Start it again whenever you are ready.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/interviews"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#10131a] transition hover:bg-white"
+              >
+                Back to interviews
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex min-h-11 items-center rounded-lg border border-cream/15 px-5 text-sm font-semibold text-cream/60 transition hover:border-cream/35 hover:text-cream"
+              >
+                Return to Trailgrad
+              </Link>
+            </div>
+          </div>
+        </section>
+      </VoiceShell>
+    );
+  }
 
   if (complete) {
     return (

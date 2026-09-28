@@ -33,8 +33,23 @@ Each is under an hour unless noted.
 
 ## 3. Next areas to audit
 
-- [ ] **Live voice interviews.** The most latency-sensitive part of the app: turn latency, TTS,
-      reconnects, cost per session. See [LATENCY.md](LATENCY.md#open-items).
+- [x] **Live voice interviews: audit.** Done September 28, see [INTERVIEW_AUDIT.md](INTERVIEW_AUDIT.md).
+- [x] **Interview phase 1** (reconnects, turn retries, grading). Done, uncommitted; test a voice
+      round longer than 10 minutes before deploying.
+- [x] **Interview phase 2** (fair scoring, instructions locked into the token, card states,
+      System Design gate). Done, uncommitted; test with phase 1.
+- [x] **Interview phase 3** (less repetition, fresher questions, role-weighted fallbacks, unseen
+      DSA problem, background kit). Done, uncommitted; test with phases 1–2.
+- [x] **Interview phase 4** (scoring in code, graded once per question, reasoning model for
+      grading). Done, uncommitted; test with phases 1–3.
+- [ ] **Re-run the interview eval** (`pnpm interview:quality`) once the dev Gemini quota recovers,
+      to check shallow answers now land around 30 rather than 15.
+- [x] **Interview phase 5** (cleanup). Done, uncommitted.
+- [ ] **Test all five interview phases together**, then commit and deploy.
+- [ ] **Later: System Design (Practice and Interview) for Frontend and Data** (about 4–5 days).
+      Decided September 28, deferred for now. Plan in
+      [Future scope](09_FUTURE_SCOPE.md#system-design-for-frontend-and-data).
+- [ ] **Later: data-engineering MCQs** for the fundamentals bank (about 15, an afternoon).
 - [ ] **Pricing.** Principles in [Future scope](09_FUTURE_SCOPE.md#monetisation).
 
 ## 4. Later, when growth needs it

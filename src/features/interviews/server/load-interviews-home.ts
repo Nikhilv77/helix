@@ -1,3 +1,4 @@
+import { displayFirstName } from "@/lib/shared/names";
 import { isResumableBlockAssessment } from "@/features/interviews/server/types";
 import type { InterviewsHomeData } from "@/features/interviews/contracts/interviews-home";
 import { interviewRoadmapSessions } from "@/features/interviews/domain/interview-roadmap-sessions";
@@ -47,7 +48,7 @@ export async function buildInterviewsHome(
     .map((session) => session.updatedAt + SESSION_TTL_MS)
     .filter((expiry) => expiry > now)
     .sort((left, right) => left - right)[0];
-  const firstName = profile.resume?.fullName?.trim().split(/\s+/)[0] ?? "";
+  const firstName = displayFirstName(profile.resume?.fullName);
   return {
     cacheable,
     expiresAt: nextRoomExpiry ? new Date(nextRoomExpiry) : null,
@@ -64,7 +65,8 @@ export async function buildInterviewsHome(
       roadmapSessions: interviewRoadmapSessions({
         personalizedPlan,
         roadmap: null,
-        history: sessions
+        history: sessions,
+        targetRole: profile.targetRole ?? null
       })
     }
   };
@@ -84,4 +86,17 @@ export function currentInterviewQuota(data: InterviewsHomeData, now = Date.now()
     ),
     limit: data.quota.limit
   };
+}
+
+/**
+ * When the rolling limit is used up, the time the oldest counted start leaves
+ * the 24-hour window and another round can begin. Null while rounds remain.
+ */
+export function nextInterviewSessionAt(data: InterviewsHomeData, now = Date.now()): number | null {
+  const starts = data.quotaStartedAt
+    .filter((startedAt) => startedAt >= now - DAY_MS)
+    .sort((left, right) => left - right);
+  if (starts.length < data.quota.limit) return null;
+  const freeing = starts[starts.length - data.quota.limit];
+  return freeing === undefined ? null : freeing + DAY_MS;
 }

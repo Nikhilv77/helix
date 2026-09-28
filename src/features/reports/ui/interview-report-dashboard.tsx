@@ -1,5 +1,6 @@
 "use client";
 
+import { displayFirstName } from "@/lib/shared/names";
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import {
   ArrowUpRight,
@@ -76,7 +77,7 @@ export function InterviewReportDashboard({
   if (!report) {
     return (
       <ReportEmptyStage
-        firstName={candidate.name.split(/\s+/)[0] ?? ""}
+        firstName={displayFirstName(candidate.name)}
         exhausted={quota.used >= quota.limit}
       />
     );
@@ -429,7 +430,9 @@ function ReportQuickRead({
         </div>
         <p className="mt-2 text-sm font-medium text-cream/72">{signalStatus(overallScore)}</p>
         <p className="mt-2 text-xs leading-5 text-cream/44">
-          Evidence quality · {report.questionsCovered}/{report.questionCount} questions answered
+          {report.coverage && report.coverage.answered < report.coverage.counted
+            ? `${report.coverage.answered} of ${report.coverage.counted} questions answered · unanswered ones count as zero`
+            : `Evidence quality · ${report.questionsCovered}/${report.questionCount} questions answered`}
         </p>
       </div>
 
@@ -661,7 +664,7 @@ function mayaSummary(
   strongest: string,
   gap: string
 ) {
-  const firstName = candidateName.split(/\s+/)[0] || "there";
+  const firstName = displayFirstName(candidateName) || "there";
   const nextStep = report.summary.nextStep || `focus on ${gap.toLowerCase()}`;
   const profile = evaluationProfileForSetup(report.setup);
   const overallScore = roundParameterScore(report);

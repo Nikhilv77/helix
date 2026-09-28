@@ -66,7 +66,7 @@ describe("Hiring Manager start → voice transcript → close → report", () =>
     expect(started.utterance).toContain("Senior Engineer at Northstar");
     expect(voiceOpening).toContain(started.state.plan[0]!.text);
     expect(started.state.plan[1]?.text).toContain("Backend Engineer role at Acme");
-    expect(started.state.plan[2]?.text).toContain("Ledger Guard");
+    expect(started.state.plan[2]?.text).toContain("learn something unfamiliar");
 
     let finalUtterance = "";
     for (let index = 0; index < plan.length; index += 1) {

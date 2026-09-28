@@ -36,7 +36,7 @@ describe("hiring manager round", () => {
     expect(hiringManagerRoundContext()).toContain("real conversation rather than a checklist");
   });
 
-  it("grounds the opening, proud-work, and role-fit questions in the resume and target job", () => {
+  it("grounds the opening and role-fit questions in the resume and target job", () => {
     const resume = {
       experience: [{ role: "Senior Engineer", organization: "Northstar" }],
       projects: [{ name: "Ledger Guard" }]
@@ -51,7 +51,8 @@ describe("hiring manager round", () => {
 
     expect(plan[0]?.text).toContain("Senior Engineer at Northstar");
     expect(plan[1]?.text).toContain("Backend Engineer role at Acme");
-    expect(plan[2]?.text).toContain("Ledger Guard");
+    // The resume round owns the project deep dive; this round does not repeat it.
+    expect(plan.some((question) => question.text.includes("Ledger Guard"))).toBe(false);
     expect(hiringManagerRoundContext(input)).toContain(
       "preparing for a Backend Engineer role at Acme"
     );
@@ -70,5 +71,14 @@ describe("hiring manager round", () => {
     expect(plan[0]?.text).not.toContain("\n");
     expect(plan[1]?.text).toContain("Frontend Engineer role at Company");
     expect(plan[2]?.text.length).toBeLessThan(260);
+  });
+
+  it("asks a fresher about college, internships, and first-role direction", () => {
+    const plan = buildHiringManagerPlan({ level: "fresher", targetRole: "frontend" });
+
+    expect(plan[0]?.text).toContain("first role");
+    expect(plan[0]?.text).not.toContain("right time for a change");
+    expect(plan[4]?.text).toContain("teammate or a lead on a project");
+    expect(hiringManagerRoundContext({ level: "fresher" })).toContain("early in their career");
   });
 });

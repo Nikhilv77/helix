@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getToken: vi.fn(async () => "session-token"),
-  speak: vi.fn(async () => "unavailable" as const),
+  speak: vi.fn<(...args: unknown[]) => Promise<string>>(async () => "unavailable"),
   stop: vi.fn(),
   setAwaitingGesture: vi.fn()
 }));
@@ -96,5 +96,45 @@ describe("InterviewLaunchStage", () => {
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("session-after-race"));
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("plays the recorded intro while the session is still being created", async () => {
+    const navigate = vi.fn();
+    let finishIntro!: () => void;
+    mocks.speak.mockImplementationOnce(async (...args: unknown[]) => {
+      finishIntro = () => (args[2] as { onEnded: () => void }).onEnded();
+      return "playing";
+    });
+    let releaseStart!: () => void;
+    const startGate = new Promise<void>((resolve) => {
+      releaseStart = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        await startGate;
+        return Response.json({ success: true, data: { sessionId: "session-slow" } });
+      })
+    );
+
+    render(
+      <InterviewLaunchStage
+        ready
+        startPath="/api/interview/resume/start"
+        copy={{ eyebrow: "Resume interview", headline: "Ready", body: "Prepare", script: "Go" }}
+        workspaceAccent="ember"
+        waitForVoiceBeforeNavigate
+        navigateToInterview={navigate}
+      />
+    );
+
+    // The intro starts before the start request has answered.
+    await waitFor(() => expect(mocks.speak).toHaveBeenCalledOnce());
+    finishIntro();
+    expect(navigate).not.toHaveBeenCalled();
+
+    // The room opens as soon as the session exists.
+    releaseStart();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("session-slow"));
   });
 });

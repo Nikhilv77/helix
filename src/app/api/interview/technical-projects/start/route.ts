@@ -15,6 +15,7 @@ import {
   resolveInterviewOwner
 } from "@/features/interviews/server/owner";
 import { getAppContainer } from "@/server/app-container";
+import { practisedAiMlCoreQuestionKeys } from "@/features/interviews/server/practised-content";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
@@ -90,7 +91,9 @@ export async function POST(request: NextRequest) {
         kit,
         coreBlueprint,
         level: profile.level,
-        targetRole: profile.targetRole
+        targetRole: profile.targetRole,
+        practisedAiMlKeys:
+          profile.targetRole === "ai-ml" ? await practisedAiMlCoreQuestionKeys(ownerId) : undefined
       });
       const project = selectGroundedProjectSource({ profile, coreBlueprint, appliedBlueprint });
       const plan = buildTechnicalProjectsPlan({

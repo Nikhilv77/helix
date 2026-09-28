@@ -7,9 +7,7 @@ import type {
   Level,
   ResumeExtractionResponse,
   Role,
-  InterviewSetup,
   SessionResponse,
-  StartResponse,
   WorkspaceAccent
 } from "../shared/types";
 import type {
@@ -94,10 +92,6 @@ function isErrorEnvelope(value: unknown): value is ApiErrorResponse {
   return isRecord(value) && value.success === false && isRecord(value.error);
 }
 
-export function startInterview(setup: InterviewSetup): Promise<StartResponse> {
-  return request<StartResponse>("/api/interview/start", { method: "POST", body: setup });
-}
-
 export function submitAnswer(params: {
   sessionId: string;
   turnId?: string;
@@ -115,10 +109,58 @@ export function submitAnswer(params: {
     candidateResponse?: string;
   };
 }): Promise<DecideResponse> {
-  return request<DecideResponse>("/api/interview/decide", {
-    method: "POST",
-    body: { ...params, turnId: params.turnId ?? crypto.randomUUID() }
-  });
+  // One turn ID for every attempt: the server replays a turn it already
+  // saved, so a retry can never record the same answer twice.
+  const body = { ...params, turnId: params.turnId ?? crypto.randomUUID() };
+  return withTurnRetries((signal) =>
+    request<DecideResponse>("/api/interview/decide", { method: "POST", body, signal })
+  );
+}
+
+const TURN_ATTEMPT_TIMEOUT_MS = 20_000;
+const TURN_RETRY_DELAYS_MS = [600, 1_500, 3_000] as const;
+/** Busy states that clear on their own once the previous turn finishes. */
+const RETRYABLE_TURN_CODES = new Set(["ANSWER_IN_PROGRESS", "ANSWER_EVALUATION_IN_PROGRESS"]);
+
+/**
+ * A spoken answer must survive a dropped request, a cold start, or a turn the
+ * server is still finishing. Validation and ownership errors fail at once.
+ */
+export async function withTurnRetries<T>(
+  attempt: (signal: AbortSignal) => Promise<T>,
+  wait: (milliseconds: number) => Promise<void> = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds))
+): Promise<T> {
+  for (let index = 0; ; index += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TURN_ATTEMPT_TIMEOUT_MS);
+    try {
+      return await attempt(controller.signal);
+    } catch (error) {
+      const delay = TURN_RETRY_DELAYS_MS[index];
+      if (delay === undefined || !isRetryableTurnError(error)) throw error;
+      const requested =
+        error instanceof ApiClientError && typeof error.details.retryAfterMs === "number"
+          ? Math.min(5_000, error.details.retryAfterMs)
+          : 0;
+      await wait(Math.max(delay, requested));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+function isRetryableTurnError(error: unknown): boolean {
+  if (error instanceof ApiClientError) {
+    return (
+      error.status >= 500 ||
+      RETRYABLE_TURN_CODES.has(error.code) ||
+      (error.status === 409 && error.details.retryable === true)
+    );
+  }
+  // fetch rejects with a TypeError when the network fails, and with an
+  // AbortError when the attempt timed out.
+  return error instanceof TypeError || (error instanceof Error && error.name === "AbortError");
 }
 
 export function skipDsaBlockAssessmentCode(params: {

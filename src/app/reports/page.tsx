@@ -5,6 +5,7 @@ import { buildReportsPageData } from "@/features/reports/server/reports-page-dat
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getUserIdForRequest } from "@/server/auth/request-user";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const unstable_dynamicStaleTime = 30;
@@ -30,6 +31,15 @@ export default async function ReportsPage() {
     "reports",
     () => buildReportsPageData(ownerId, now),
     { waitForFreshMs: REPORTS_FRESH_WAIT_MS }
+  );
+  // Grades that failed at the end of a round retry on a delay, and nothing
+  // else may run them before the daily cron. Opening Reports is the moment
+  // someone wants them, so work the queue after this response.
+  after(() =>
+    container.interviewEvaluationRecoveryService.runBatch(5).then(
+      () => undefined,
+      () => undefined
+    )
   );
   const quota = {
     used: Math.min(

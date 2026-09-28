@@ -1,4 +1,5 @@
 import { formatShortDate, roundShortLabel } from "@/lib/shared/labels";
+import { coverageAdjustedScore } from "@/features/interviews/domain/report-coverage";
 import {
   evidenceLevel,
   type ReportCompetencyRow,
@@ -169,8 +170,11 @@ export function roundParameterScore(report: InterviewReport): number {
   const scored = isTargetedResumeEvaluation ? directlyEvaluated : parameters;
   const totalWeight = sum(scored, (parameter) => parameter.weightPercent ?? 1);
   if (!scored.length || totalWeight <= 0) return 0;
-  return Math.round(
-    sum(scored, (parameter) => parameter.score * (parameter.weightPercent ?? 1)) / totalWeight
+  return coverageAdjustedScore(
+    Math.round(
+      sum(scored, (parameter) => parameter.score * (parameter.weightPercent ?? 1)) / totalWeight
+    ),
+    report.coverage
   );
 }
 

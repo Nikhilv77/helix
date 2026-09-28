@@ -113,6 +113,27 @@ describe("buildResumePlan", () => {
     expect(plan[5]?.evaluationParameterKeys).toContain("impact-learning");
   });
 
+  it("leaves the multiple choice checks to the Technical round", () => {
+    const plan = buildResumePlan(
+      { ...kit, codingTask: null },
+      { resume, shuffle: (items) => items }
+    );
+
+    expect(plan.filter((question) => question.stage === "skills").map((q) => q.skill)).toEqual([
+      "TypeScript",
+      "PostgreSQL"
+    ]);
+    expect(plan.some((question) => question.kind === "mcq")).toBe(false);
+  });
+
+  it("asks a fresher about their journey and internship instead of their level", () => {
+    const plan = buildResumePlan(kit, { resume, level: "fresher", shuffle: (items) => items });
+
+    expect(plan[0]?.text).toContain("journey so far");
+    expect(plan[1]?.text).toContain("hardest call you made");
+    expect(plan[1]?.text).not.toContain("demonstrates your level");
+  });
+
   it("replaces a missing coding task with a second skill and stays at eight questions", () => {
     const plan = buildResumePlan(
       { ...kit, codingTask: null },

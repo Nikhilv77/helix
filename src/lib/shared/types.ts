@@ -166,6 +166,9 @@ export interface ResumeProjectEntry {
 export interface ResumeInterviewKit {
   /** Regenerates cached question banks when the interview-quality contract changes. */
   version?: number;
+  /** The target role and level the questions were written for. */
+  targetRole?: Role;
+  level?: Level;
   skillQuestions: ResumeSkillQuestion[];
   codingTask: ResumeCodingTask | null;
   experienceQuestions: ResumeExperienceQuestion[];
@@ -512,6 +515,8 @@ export interface InterviewCompetencyReport {
 }
 
 export interface InterviewReport extends InterviewHistoryItem {
+  /** Answered versus counted questions; absent on reports saved before it existed. */
+  coverage?: { answered: number; counted: number };
   /** Final durable architecture artifact for a System Design interview. */
   designCanvas?: VersionedSystemDesignCanvas | null;
   competencies: InterviewCompetencyReport[];

@@ -21,7 +21,7 @@ When an item is fixed, remove it here and note it in that release's [CHANGELOG](
 
 | Severity | Issue | Detail | When it matters |
 | --- | --- | --- | --- |
-| High | Voice interviews not audited | The most latency-sensitive and expensive feature (about $0.68 a session). Turn latency, reconnects, and cost per session have not been measured. | Before any launch or paid tier |
+| High | Voice interviews: remaining audit items | Phase 1 (reconnects, turn retries, grading) is done. Scoring fairness, rubric exposure, repeated content, and role gaps remain; see [INTERVIEW_AUDIT.md](INTERVIEW_AUDIT.md). | Before any launch or paid tier |
 | High | AI provider quota | The Gemini key hit 429 at about 16 calls per minute in the roast eval. A small burst of real users could hit it. Fallbacks help but Groq also rate-limits. | Before any launch |
 | Medium | No production latency baseline | `api.action_timing` exists, but the p50/p95 table in [LATENCY.md](LATENCY.md) is empty. All latency claims so far come from code reading and local runs. | Now, once there is traffic |
 | Medium | Helper matching scans every profile | Each Trailmate request scores every candidate profile (about 1.3 ms per profile on dev). | Around 1,000–2,000 users |
@@ -63,6 +63,4 @@ When an item is fixed, remove it here and note it in that release's [CHANGELOG](
 
 | Severity | Issue | Detail |
 | --- | --- | --- |
-| Low | `INTERVIEW_ENGINE.md` paths are stale | Its "Key files" list points at `src/server/interview/…` and `src/lib/interviews/…`; most of that code now lives in `src/features/interviews/`. |
-| Low | README is dated | It says Groq is "for low-latency turn decisions" only. The docs in this folder are more current. |
 | Low | Root-level requirement docs | `HELP_AND_NOTIFICATIONS_REQUIREMENTS.md` and `trailgrad-contextual-peer-help.md` describe plans, parts of which are built. Treat them as history, not a spec. |

@@ -1,3 +1,4 @@
+import { displayFirstName } from "@/lib/shared/names";
 import { HiringManagerInterviewEntry } from "@/features/interviews/ui/hiring-manager/hiring-manager-interview-entry";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -16,7 +17,7 @@ export default async function HiringManagerInterviewPage() {
   return (
     <HiringManagerInterviewEntry
       sessionsRemaining={quota ? Math.max(0, quota.limit - quota.used) : null}
-      firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
+      firstName={displayFirstName(profile.resume?.fullName)}
       workspaceAccent={profile.workspaceAccent}
     />
   );

@@ -30,14 +30,20 @@ const question: PlannedQuestion = {
   probeIfMissing: "How does retrying stop?"
 };
 
+const parameterKeys = evaluationProfileForSetup(setup).parameters.map((parameter) => parameter.key);
+
+/** Every round parameter rated at the same level. */
+function rated(level: number) {
+  return parameterKeys.map((rubricKey) => ({ rubricKey, level, rationale: "Rated." }));
+}
+
 const rawEvaluation = {
-  score: 94,
   verdict: "correct" as const,
   confidence: 0.9,
   summary: "The implementation handles the required behavior.",
   strengths: ["Bounds retry attempts."],
   gaps: [],
-  rubricScores: [{ rubricKey: "technical-correctness", score: 94, rationale: "Correct behavior." }]
+  rubricScores: rated(5)
 };
 
 function execution(overrides: Partial<CodeExecutionEvidence> = {}): CodeExecutionEvidence {
@@ -97,7 +103,27 @@ describe("technical answer evaluator", () => {
     expect(prompt).toContain("Accept a different coherent design");
   });
 
-  it("caps a fluent high-scoring answer when supplied tests fail", () => {
+  it("turns anchored levels into scores in code", () => {
+    const result = normalizeTechnicalEvaluation(
+      { ...rawEvaluation, verdict: "mostly-correct", rubricScores: rated(4) },
+      input(null)
+    );
+
+    expect(result.score).toBe(78);
+    expect(result.rubricScores.every((item) => item.score === 78)).toBe(true);
+    expect(result.verdict).toBe("mostly-correct");
+  });
+
+  it("gives the same score for the same ratings every time", () => {
+    const ratings = { ...rawEvaluation, rubricScores: rated(3) };
+    const first = normalizeTechnicalEvaluation(ratings, input(null));
+    const second = normalizeTechnicalEvaluation(ratings, input(null));
+
+    expect(first.score).toBe(second.score);
+    expect(first.rubricScores).toEqual(second.rubricScores);
+  });
+
+  it("caps a fluent answer and each parameter when supplied tests fail", () => {
     const result = normalizeTechnicalEvaluation(
       rawEvaluation,
       input(
@@ -107,62 +133,95 @@ describe("technical answer evaluator", () => {
 
     expect(result.score).toBe(43);
     expect(result.verdict).toBe("incorrect");
+    expect(result.rubricScores.every((item) => item.score <= 43)).toBe(true);
     expect(result.execution?.testsPassed).toBe(1);
   });
 
-  it("does not let an internally incorrect verdict keep a high score", () => {
+  it("does not let a clear but incorrect answer score well", () => {
     const result = normalizeTechnicalEvaluation(
-      { ...rawEvaluation, score: 92, verdict: "incorrect" },
+      { ...rawEvaluation, verdict: "incorrect" },
       input(null)
     );
 
     expect(result.score).toBe(44);
     expect(result.verdict).toBe("incorrect");
+    expect(result.rubricScores.every((item) => item.score <= 44)).toBe(true);
   });
 
-  it("rescales parameter scores the model returned out of ten", () => {
-    const keys = evaluationProfileForSetup(setup).parameters.map((parameter) => parameter.key);
+  it("keeps genuinely weak answers low", () => {
+    const result = normalizeTechnicalEvaluation(
+      { ...rawEvaluation, verdict: "incorrect", rubricScores: rated(1) },
+      input(null)
+    );
+
+    expect(result.score).toBe(10);
+    expect(result.rubricScores.map((item) => item.score)).toEqual(parameterKeys.map(() => 10));
+  });
+
+  it("judges a parameter the model skipped from the ones it rated", () => {
     const result = normalizeTechnicalEvaluation(
       {
         ...rawEvaluation,
-        score: 84,
         verdict: "mostly-correct",
-        rubricScores: keys.map((rubricKey, index) => ({
+        rubricScores: [
+          { rubricKey: parameterKeys[0]!, level: 4, rationale: "Strong." },
+          { rubricKey: parameterKeys[1]!, level: 2, rationale: "Weak." }
+        ]
+      },
+      input(null)
+    );
+
+    expect(result.rubricScores.map((item) => item.score)).toEqual([
+      78,
+      30,
+      ...parameterKeys.slice(2).map(() => 55)
+    ]);
+  });
+
+  it("leaves out a parameter the question never asked about", () => {
+    const result = normalizeTechnicalEvaluation(
+      {
+        ...rawEvaluation,
+        verdict: "mostly-correct",
+        rubricScores: parameterKeys.map((rubricKey, index) => ({
           rubricKey,
-          score: [9, 8, 10, 5, 8, 5][index] ?? 7,
-          rationale: "Scored out of ten."
+          level: index === 0 ? 0 : 4,
+          rationale: index === 0 ? "Not asked." : "Strong."
         }))
       },
       input(null)
     );
 
-    expect(result.rubricScores.map((item) => item.score)).toEqual(
-      keys.map((_key, index) => ([9, 8, 10, 5, 8, 5][index] ?? 7) * 10)
-    );
+    expect(result.rubricScores.map((item) => item.rubricKey)).toEqual(parameterKeys.slice(1));
+    expect(result.score).toBe(78);
   });
 
-  it("keeps genuinely low parameter scores on the hundred-point scale", () => {
-    const keys = evaluationProfileForSetup(setup).parameters.map((parameter) => parameter.key);
+  it("does not let a targeted question skip a parameter it asked for", () => {
     const result = normalizeTechnicalEvaluation(
       {
         ...rawEvaluation,
-        score: 8,
-        verdict: "incorrect",
-        rubricScores: keys.map((rubricKey) => ({ rubricKey, score: 5, rationale: "Weak." }))
+        verdict: "partially-correct",
+        rubricScores: [
+          { rubricKey: parameterKeys[0]!, level: 0, rationale: "Skipped." },
+          { rubricKey: parameterKeys[1]!, level: 4, rationale: "Strong." }
+        ]
       },
-      input(null)
+      {
+        ...input(null),
+        question: { ...question, evaluationParameterKeys: parameterKeys.slice(0, 2) }
+      }
     );
 
-    expect(result.rubricScores.map((item) => item.score)).toEqual(keys.map(() => 5));
+    expect(result.rubricScores.map((item) => item.rubricKey)).toEqual(parameterKeys.slice(0, 2));
   });
 
   it("does not treat successful execution without tests as proof of correctness", () => {
     const result = normalizeTechnicalEvaluation(
-      { ...rawEvaluation, score: 42, verdict: "incorrect" },
+      { ...rawEvaluation, verdict: "incorrect", rubricScores: rated(2) },
       input(execution({ testCount: 0, testsPassed: 0 }))
     );
 
-    expect(result.score).toBe(42);
+    expect(result.score).toBe(30);
     expect(result.verdict).toBe("incorrect");
   });
 
@@ -170,12 +229,11 @@ describe("technical answer evaluator", () => {
     const result = normalizeTechnicalEvaluation(
       {
         ...rawEvaluation,
-        score: 93.6,
         strengths: ["A".repeat(200), "Second", "Third", "Fourth"],
         gaps: ["One", "Two", "Three", "Four"],
         rubricScores: Array.from({ length: 8 }, (_, index) => ({
           rubricKey: index === 0 ? "concept-depth" : `rubric-${index}`,
-          score: 80.4,
+          level: 4.4,
           rationale: "R".repeat(220)
         })),
         evidenceQuotes: ["not present in the answer"]
@@ -183,24 +241,24 @@ describe("technical answer evaluator", () => {
       input(null)
     );
 
-    expect(result.score).toBe(94);
     expect(result.strengths).toHaveLength(3);
     expect(result.strengths[0]).toHaveLength(140);
     expect(result.gaps).toHaveLength(3);
     expect(result.rubricScores).toHaveLength(6);
-    expect(result.rubricScores[0]).toMatchObject({ rubricKey: "concept-depth", score: 80 });
+    expect(result.rubricScores[0]).toMatchObject({ rubricKey: "concept-depth", score: 84 });
     expect(result.rubricScores[0]?.rationale).toHaveLength(180);
     expect(result.evidenceQuotes).toEqual([]);
   });
 
-  it("keeps only answer-grounded evidence for each scored parameter", () => {
+  it("keeps only answer-grounded evidence for each rated parameter", () => {
     const result = normalizeTechnicalEvaluation(
       {
         ...rawEvaluation,
+        verdict: "partially-correct",
         rubricScores: [
           {
             rubricKey: "concept-depth",
-            score: 31,
+            level: 2,
             rationale: "The answer did not explain the mechanism.",
             evidenceQuotes: ["return true", "this was never said"]
           }
@@ -211,41 +269,9 @@ describe("technical answer evaluator", () => {
 
     expect(result.rubricScores[0]).toMatchObject({
       rubricKey: "concept-depth",
-      score: 31,
+      score: 30,
       evidenceQuotes: ["return true"]
     });
-  });
-
-  it("preserves low scores because the evaluator contract already uses a 0-100 scale", () => {
-    const hrInput: TechnicalAnswerEvaluationInput = {
-      ...input(null),
-      setup: { ...setup, roundType: "hiring-manager", resumeRound: true },
-      question: { ...question, kind: "conversation", stage: "career" },
-      answers: ["I chose this role because I wanted to build reliable products."]
-    };
-    const rubricKeys = [
-      "motivation-fit",
-      "judgement",
-      "collaboration",
-      "accountability",
-      "self-awareness",
-      "communication"
-    ];
-    const result = normalizeTechnicalEvaluation(
-      {
-        ...rawEvaluation,
-        score: 3,
-        rubricScores: rubricKeys.map((rubricKey, index) => ({
-          rubricKey,
-          score: index + 1,
-          rationale: "Limited evidence on the hundred-point scale."
-        }))
-      },
-      hrInput
-    );
-
-    expect(result.score).toBe(3);
-    expect(result.rubricScores.map((item) => item.score)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   it("persists only the report parameters intentionally assessed by a resume question", () => {
@@ -268,9 +294,9 @@ describe("technical answer evaluator", () => {
       {
         ...rawEvaluation,
         rubricScores: [
-          { rubricKey: "claim-credibility", score: 72, rationale: "Grounded claim." },
-          { rubricKey: "communication", score: 68, rationale: "Mostly direct." },
-          { rubricKey: "impact-learning", score: 5, rationale: "Not targeted." }
+          { rubricKey: "claim-credibility", level: 4, rationale: "Grounded claim." },
+          { rubricKey: "communication", level: 3, rationale: "Mostly direct." },
+          { rubricKey: "impact-learning", level: 1, rationale: "Not targeted." }
         ]
       },
       resumeInput
@@ -294,9 +320,13 @@ describe("technical answer evaluator", () => {
     expect(generateStructured).toHaveBeenCalledWith(
       expect.objectContaining({
         operation: "interview.answer.evaluate",
-        temperature: 0.1,
+        temperature: 0,
+        seed: expect.any(Number),
+        modelClass: "fast",
         maxAttempts: 1,
-        prompt: expect.stringContaining("false central mechanism belongs below 45")
+        prompt: expect.stringContaining(
+          "A clear answer with a false central mechanism is incorrect"
+        )
       })
     );
     expect(buildTechnicalEvaluationPrompt(input(null))).toContain(

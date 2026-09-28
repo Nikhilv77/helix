@@ -27,7 +27,7 @@ export function SystemDesignInterviewEntry({
           ? {
               eyebrow: "System Design interview",
               headline: `${greeting} that's it for today.`,
-              body: "You've used all your interview sessions for today. Your next round unlocks tomorrow."
+              body: "You've used today's interview rounds. The next one opens 24 hours after your earliest round today; the Interviews page shows the exact time."
             }
           : !contentReady
             ? {

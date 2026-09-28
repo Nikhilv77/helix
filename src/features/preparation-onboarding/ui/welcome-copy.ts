@@ -1,3 +1,4 @@
+import { displayFirstName } from "@/lib/shared/names";
 import type { CandidateProfile } from "@/lib/shared/types";
 
 export function preparationWelcomeIntroCopy(
@@ -5,7 +6,7 @@ export function preparationWelcomeIntroCopy(
   teacherName: string
 ) {
   const resume = profile.resume;
-  const firstName = resume?.fullName.trim().split(/\s+/)[0] || "there";
+  const firstName = displayFirstName(resume?.fullName) || "there";
   const topEvidence = resume?.experience[0]
     ? `${resume.experience[0].role || "your work"} at ${resume.experience[0].organization}`
     : resume?.projects[0]?.name || profile.headline || "your resume evidence";

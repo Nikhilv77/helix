@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { practisedArchitectureScenarioKeys } from "@/features/interviews/server/practised-content";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import {
@@ -39,9 +40,10 @@ export async function POST(request: NextRequest) {
       if (active) return activeResponse(active, owner, app.config);
 
       await guard.enforce(RATE_LIMIT_POLICIES.interviewCreation, ownerId);
-      const [profile, history] = await Promise.all([
+      const [profile, history, practisedScenarioKeys] = await Promise.all([
         app.profileService.get(ownerId),
-        app.interviewService.history(ownerId, 50).catch(() => [])
+        app.interviewService.history(ownerId, 50).catch(() => []),
+        practisedArchitectureScenarioKeys(ownerId)
       ]);
       if (profile.targetRole === "ai-ml") {
         const eligibility = await app.architectureDesign.eligibility.forProfile(profile);
@@ -52,17 +54,22 @@ export async function POST(request: NextRequest) {
           );
         }
       }
-      const recentScenarioKeys = history
+      // Skip scenarios already met here or practised (with their reference
+      // answers) in Architecture & Design. Ranking falls back to the full
+      // catalogue once everything has been seen.
+      const interviewScenarioKeys = history
         .filter((item) => item.status === "completed")
         .map((item) => item.setup.dsaDesignRound?.designScenarioKey)
         .filter((key): key is string => Boolean(key));
+      const recentScenarioKeys = [...interviewScenarioKeys, ...practisedScenarioKeys];
       const focus = await app.architectureDesign.focus.confirm(ownerId, {
         path: "role-aligned"
       });
       const selection = rankDsaDesignScenarioWithFallback(
         app.architectureDesign.ranking,
         focus,
-        recentScenarioKeys
+        recentScenarioKeys,
+        interviewScenarioKeys
       );
       const artifact = ARCHITECTURE_DESIGN_CONTENT_CANDIDATES.find(
         (candidate) => candidate.scenario.key === selection.selectedScenario.scenarioKey

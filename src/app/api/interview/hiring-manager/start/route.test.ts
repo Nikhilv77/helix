@@ -67,7 +67,7 @@ describe("POST /api/interview/hiring-manager/start", () => {
       expect.any(Number),
       expect.arrayContaining([
         expect.objectContaining({ text: expect.stringContaining("Senior Engineer at Northstar") }),
-        expect.objectContaining({ text: expect.stringContaining("Ledger Guard") }),
+        expect.objectContaining({ text: expect.stringContaining("learn something unfamiliar") }),
         expect.objectContaining({ requiredForPacing: true })
       ])
     );

@@ -329,9 +329,20 @@ export function getAppContainer(): AppContainer {
     config.interviewDailyLimit,
     interviewAnswerEvaluator
   );
+  // Queued answers are graded after the response, so they can use Gemini's
+  // reasoning model, with Groq only as the fallback. Live grading in
+  // server-led rounds keeps the fast path above.
+  const backgroundGradingAi =
+    interviewAi === geminiAi
+      ? geminiAi
+      : new FallbackAiService(geminiAi, interviewAi, 60_000, Date.now, {
+          primaryTimeoutMs: 15_000,
+          fallbackTimeoutMs: 8_000,
+          recoverPrimaryAfterFallbackFailure: false
+        });
   const interviewEvaluationRecoveryService = new InterviewEvaluationRecoveryService(
     new PrismaEvaluationRecoveryRepository(prisma),
-    interviewAnswerEvaluator
+    new TechnicalAnswerEvaluator(backgroundGradingAi, "reasoning")
   );
   const interviewQualityRunner = new InterviewQualityRunner(
     interviewDecider,

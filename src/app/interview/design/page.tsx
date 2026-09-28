@@ -1,7 +1,10 @@
+import { displayFirstName } from "@/lib/shared/names";
+import { redirect } from "next/navigation";
 import { SystemDesignInterviewEntry } from "@/features/interviews/ui/design/system-design-interview-entry";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { systemDesignSupportsRole } from "@/features/interviews/domain/dsa-design-round";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -11,6 +14,9 @@ export const metadata = privatePageMetadata(
 
 export default async function SystemDesignInterviewEntryPage() {
   const { ownerId, profile } = await requireOnboardedProfile();
+  // Frontend and Data have no System Design scenarios yet, so the round is
+  // not offered to them.
+  if (!systemDesignSupportsRole(profile.targetRole)) redirect("/interviews");
   const app = getAppContainer();
   const [quota, designEligibility] = await Promise.all([
     app.interviewService.quota(ownerId).catch(() => null),
@@ -22,7 +28,7 @@ export default async function SystemDesignInterviewEntryPage() {
   return (
     <SystemDesignInterviewEntry
       sessionsRemaining={quota ? Math.max(0, quota.limit - quota.used) : null}
-      firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
+      firstName={displayFirstName(profile.resume?.fullName)}
       workspaceAccent={profile.workspaceAccent}
       contentReady={profile.targetRole !== "ai-ml" || designEligibility?.available === true}
     />

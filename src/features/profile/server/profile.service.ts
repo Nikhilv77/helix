@@ -1049,6 +1049,8 @@ function resumeInterviewKitFromJson(
       typeof record.version === "number" && Number.isInteger(record.version)
         ? record.version
         : undefined,
+    targetRole: typeof record.targetRole === "string" ? (record.targetRole as Role) : undefined,
+    level: typeof record.level === "string" ? (record.level as Level) : undefined,
     skillQuestions,
     codingTask,
     experienceQuestions

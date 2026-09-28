@@ -164,6 +164,23 @@ describe("interview report notification copy", () => {
     });
   });
 
+  it("holds back the score while answers are still being graded", () => {
+    const completed = {
+      ...state("99999999-9999-4999-8999-999999999999", Date.now()),
+      phase: "done" as const,
+      questionEvaluations: {
+        "0": { source: "evaluation-unavailable", score: 0 } as never
+      }
+    };
+    const snapshot = {
+      report: { answerCount: 3, summary: { evidenceScore: 20 } }
+    } as InterviewReportSnapshot;
+
+    expect(interviewReportNotificationCopy(completed, snapshot).body).toBe(
+      "Your report is ready. A few answers are still being scored, so the final score will appear in a minute or two."
+    );
+  });
+
   it("uses supportive summary copy when an interview ended without an answer", () => {
     const completed = {
       ...state("88888888-8888-4888-8888-888888888888", Date.now()),

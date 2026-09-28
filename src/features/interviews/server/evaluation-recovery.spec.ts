@@ -123,4 +123,38 @@ describe("interview evaluation recovery", () => {
     expect(evaluationAnswerHash(["  I owned   it. "])).toBe(evaluationAnswerHash(["I owned it."]));
     expect(evaluationAnswerHash(["I owned it."])).not.toBe(evaluationAnswerHash(["We owned it."]));
   });
+
+  it("grades a finished round's answers together and applies them one at a time", async () => {
+    const jobs = [job(), { ...job(), id: "33333333-3333-4333-8333-333333333333" }];
+    let inFlight = 0;
+    let peak = 0;
+    const evaluator = {
+      evaluate: vi.fn(async () => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        inFlight -= 1;
+        return evaluation;
+      })
+    };
+    const applied: string[] = [];
+    const repository = {
+      claim: vi.fn().mockResolvedValue(jobs),
+      apply: vi.fn(async (claimed: ClaimedEvaluationJob) => {
+        applied.push(claimed.id);
+        return "applied" as const;
+      }),
+      fail: vi.fn()
+    } satisfies EvaluationRecoveryRepository;
+    const service = new InterviewEvaluationRecoveryService(
+      repository,
+      evaluator as unknown as TechnicalAnswerEvaluator
+    );
+
+    const result = await service.runBatch(20, 1_000, { sessionId: jobs[0]!.payload.sessionId });
+
+    expect(peak).toBe(2);
+    expect(applied).toEqual(jobs.map((item) => item.id));
+    expect(result).toMatchObject({ claimed: 2, recovered: 2 });
+  });
 });

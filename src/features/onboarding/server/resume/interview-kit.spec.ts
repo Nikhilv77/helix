@@ -66,7 +66,12 @@ describe("ResumeInterviewKitService", () => {
   });
 
   it("reuses a kit generated under the current quality contract", async () => {
-    const current = { ...generated, version: RESUME_INTERVIEW_KIT_VERSION };
+    const current = {
+      ...generated,
+      version: RESUME_INTERVIEW_KIT_VERSION,
+      targetRole: "backend" as const,
+      level: "3-5" as const
+    };
     const generateStructured = vi.fn();
     const saveResumeInterviewKit = vi.fn();
     const service = new ResumeInterviewKitService(
@@ -83,6 +88,51 @@ describe("ResumeInterviewKitService", () => {
 
     expect(kit).toBe(current);
     expect(generateStructured).not.toHaveBeenCalled();
+    expect(saveResumeInterviewKit).not.toHaveBeenCalled();
+  });
+
+  it("writes new questions when the target role or level changes", async () => {
+    const stored = {
+      ...generated,
+      version: RESUME_INTERVIEW_KIT_VERSION,
+      targetRole: "frontend" as const,
+      level: "3-5" as const
+    };
+    const generateStructured = vi.fn().mockResolvedValue(generated);
+    const saveResumeInterviewKit = vi.fn().mockResolvedValue(undefined);
+    const service = new ResumeInterviewKitService(
+      { generateStructured } as never,
+      { saveResumeInterviewKit } as never
+    );
+
+    const kit = await service.ensure({
+      ownerId: "user-1",
+      resume: resume(stored),
+      targetRole: "backend",
+      level: "3-5"
+    });
+
+    expect(generateStructured).toHaveBeenCalledOnce();
+    expect(kit).toMatchObject({ targetRole: "backend", level: "3-5" });
+    expect(saveResumeInterviewKit).toHaveBeenCalledWith("user-1", kit);
+  });
+
+  it("does not store the generic fallback when generation fails", async () => {
+    const generateStructured = vi.fn().mockRejectedValue(new Error("quota"));
+    const saveResumeInterviewKit = vi.fn();
+    const service = new ResumeInterviewKitService(
+      { generateStructured } as never,
+      { saveResumeInterviewKit } as never
+    );
+
+    const kit = await service.ensure({
+      ownerId: "user-1",
+      resume: resume(null),
+      targetRole: "backend",
+      level: "3-5"
+    });
+
+    expect(kit.skillQuestions.length).toBeGreaterThan(0);
     expect(saveResumeInterviewKit).not.toHaveBeenCalled();
   });
 });

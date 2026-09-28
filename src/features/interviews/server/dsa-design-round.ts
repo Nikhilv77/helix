@@ -12,12 +12,23 @@ export function rankDsaDesignScenarioWithFallback<TFocus, TSelection>(
     ) => TSelection;
   },
   focus: TFocus,
-  recentScenarioKeys: string[]
+  recentScenarioKeys: string[],
+  /** A narrower exclusion list to try before dropping recency altogether. */
+  fallbackRecentScenarioKeys?: string[]
 ): TSelection {
   try {
     return ranking.rankFirstScenario(focus, { recentScenarioKeys });
   } catch {
-    // Recency is a preference, not an availability gate. A second failure is
+    if (fallbackRecentScenarioKeys?.length) {
+      try {
+        return ranking.rankFirstScenario(focus, {
+          recentScenarioKeys: fallbackRecentScenarioKeys
+        });
+      } catch {
+        // Fall through to the unrestricted catalogue.
+      }
+    }
+    // Recency is a preference, not an availability gate. A final failure is
     // a genuine catalogue/configuration error and intentionally propagates.
     return ranking.rankFirstScenario(focus, { recentScenarioKeys: [] });
   }

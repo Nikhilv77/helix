@@ -1,3 +1,4 @@
+import { displayFirstName } from "@/lib/shared/names";
 import { ResumeInterviewEntry } from "@/features/interviews/ui/resume/resume-interview-entry";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -19,7 +20,7 @@ export default async function ResumeInterviewEntryPage() {
     <ResumeInterviewEntry
       hasResume={Boolean(profile.resume)}
       sessionsRemaining={quota ? Math.max(0, quota.limit - quota.used) : null}
-      firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
+      firstName={displayFirstName(profile.resume?.fullName)}
       skills={profile.resume?.skills ?? []}
       workspaceAccent={profile.workspaceAccent}
     />

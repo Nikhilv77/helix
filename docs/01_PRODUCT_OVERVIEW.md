@@ -32,7 +32,8 @@ Sign up (Clerk)
   → Welcome on the home page (teacher greeting, Overview tour)
   → Practice tracks (DSA, Core Technical, Applied Engineering, Architecture & Design,
     AI/ML, Frontend, Data) with checkpoint assessments
-  → Personalised mock interviews (DSA, three technical rounds, Resume & Behavioral, Final Mock)
+  → Mock interviews: Resume & Behavioral, Core Technical & Projects, DSA, System Design,
+    Hiring Manager & Final Behavioural
   → Reports per round, overall Progress, Resume Roast
   → Stuck? Ask a Trailmate for live help
 ```

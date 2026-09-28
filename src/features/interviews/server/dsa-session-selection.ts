@@ -97,3 +97,60 @@ function shuffle<T>(items: T[], random: () => number): T[] {
   }
   return copy;
 }
+
+/**
+ * A real coding interview asks a problem the candidate has not seen. The pair
+ * is one solved problem (they can defend it in depth) and one unseen problem
+ * from a pattern they practised, preferring the first problem's own pattern.
+ * Falls back to the curated list, then to a second solved problem.
+ */
+export function selectDsaInterviewPair<T extends DsaSelectionCandidate>({
+  solved,
+  unseen,
+  curated,
+  performance,
+  random = Math.random
+}: {
+  solved: T[];
+  unseen: T[];
+  curated: T[];
+  performance: CandidatePerformanceProfile | null;
+  random?: () => number;
+}): T[] {
+  const [first] = selectDsaInterviewQuestions({
+    solved,
+    fallback: curated,
+    performance,
+    count: 1,
+    random
+  });
+  if (!first) return [];
+
+  const solvedSlugs = new Set(solved.map((item) => item.slug));
+  const practisedPatterns = new Set(solved.map((item) => item.primaryPattern));
+  const fresh = unseen.filter((item) => !solvedSlugs.has(item.slug) && item.slug !== first.slug);
+  const samePattern = fresh.filter((item) => item.primaryPattern === first.primaryPattern);
+  const practisedPattern = fresh.filter((item) => practisedPatterns.has(item.primaryPattern));
+  const pool = samePattern.length
+    ? samePattern
+    : practisedPattern.length
+      ? practisedPattern
+      : curated.filter((item) => !solvedSlugs.has(item.slug) && item.slug !== first.slug);
+  const [second] = selectDsaInterviewQuestions({
+    solved: [],
+    fallback: pool,
+    performance,
+    count: 1,
+    random
+  });
+  if (second) return [first, second];
+
+  const [anotherSolved] = selectDsaInterviewQuestions({
+    solved: solved.filter((item) => item.slug !== first.slug),
+    fallback: [],
+    performance,
+    count: 1,
+    random
+  });
+  return anotherSolved ? [first, anotherSolved] : [first];
+}

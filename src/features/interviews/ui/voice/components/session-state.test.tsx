@@ -108,4 +108,22 @@ describe("SessionStateScreen block assessment completion", () => {
     expect(screen.getByText("Collaboration")).toBeVisible();
     expect(screen.getByText(/you completed the interview/i)).toBeVisible();
   });
+
+  it("does not promise a report when the round ended before any answer", () => {
+    render(
+      <SessionStateScreen
+        kind="complete"
+        workspaceAccent="ember"
+        interviewerName="James"
+        answers={0}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "No report for this round" })).toBeVisible();
+    expect(screen.getByRole("link", { name: /back to interviews/i })).toHaveAttribute(
+      "href",
+      "/interviews"
+    );
+    expect(screen.queryByText(/review my report/i)).toBeNull();
+  });
 });

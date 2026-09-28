@@ -1,138 +1,150 @@
 # Interview Engine
 
+Last updated: September 28, 2026. The audit behind the current design, with its history, is in
+[docs/INTERVIEW_AUDIT.md](docs/INTERVIEW_AUDIT.md).
+
 ## Purpose
 
-Trailgrad builds one adaptive interview path from grounded candidate evidence. Historical profiles,
-plans, sessions, and performance revisions remain immutable.
+Trailgrad runs mock interviews built from the learner's own resume, target role, level, and
+practice history. Each round is a live voice conversation with a reserved interviewer (Claire or
+James). The server owns the plan, the state, every decision, and every score. The model hears
+and speaks, proposes the next move, and rates answers against written anchors.
+
+Scores guide practice. They are not hiring decisions.
+
+## The rounds
+
+| # | Round | Interviewer | Cap | Built from |
+| --- | --- | --- | --- | --- |
+| 1 | Resume & Behavioral Defense | James | 24 min | Resume interview kit + fixed resume-grounded prompts |
+| 2 | Core Technical & Projects | Claire | 40 min | 3 MCQs (kit, then a role-weighted bank), 3 project questions, 1 coding task |
+| 3 | DSA Interview | Claire | 35 min | One solved problem and one unseen problem from a practised pattern (needs 10 solved) |
+| 4 | System Design | Claire | 45 min | An authored Architecture scenario the learner has not practised |
+| 5 | Hiring Manager & Final Behavioural | James | 30 min | Fixed agenda: direction, fit, learning, uncertainty, conflict, mistakes, feedback, close |
+
+- AI/ML learners have no DSA round (coding is assessed inside the technical rounds).
+- Frontend and Data learners do not see System Design until their scenarios exist (see
+  "System Design for Frontend and Data" in docs/09_FUTURE_SCOPE.md).
+- Freshers get college, internship, and first-role versions of the behavioural questions.
+- Each round has its own start route under `src/app/api/interview/<round>/start`, which builds the
+  questions from stored content. No model plans questions at start.
+- Limit: 2 round starts per rolling 24 hours; resuming an open room is free.
+
+## Evidence and planning
 
 ```text
 Resume upload
   → structured extraction + deterministic technology detection
-  → candidate interview profile
-  → relevance ranking
-  → five personalized blueprints
-  → live guarded interviews
-  → correctness and behavioral evidence
-  → demonstrated-performance profile
-  → adapted plan revision
+  → candidate interview profile (versioned)
+  → relevance ranking against the target role
+  → personalized plan: five blueprints (problem-solving, core-technical,
+    applied-engineering, architecture-system-design, final-mock)
+  → rounds, graded answers
+  → demonstrated-performance profile → next plan revision
 ```
 
-## Candidate-facing path
+- Plans are deterministic (no model call) and versioned. Only one plan per owner is `READY`;
+  publishing a replacement marks the old one `SUPERSEDED`.
+- Round 2 uses the core-technical and applied-engineering blueprints. The final-mock blueprint is
+  generated but not used by any round.
+- A resume update alone keeps the current plan; the next practice or interview result regenerates
+  it. Visible progress is matched by round kind, so finished rounds stay finished and show
+  `Completed · Updated round`.
+- The resume interview kit (skill questions, a coding task, experience questions) is written in
+  the background after onboarding and after a resume update, for the current role and level.
 
-The planner keeps five stable internal kinds:
+## A live turn
 
-1. `problem-solving`
-2. `core-technical`
-3. `applied-engineering`
-4. `architecture-system-design`
-5. `final-mock`
+```text
+Browser mic ──► Gemini Live (credential and settings locked by the server)
+                    │ complete_interview_turn(answer, proposed action)
+                    ▼
+            POST /api/interview/decide
+              · owner check, rate limit, one turn at a time per session
+              · idempotent turn ID (a retry replays the saved reply)
+              · state machine: question count, follow-up budget, time caps
+              · answer saved; grading queued
+                    │ approved reply
+                    ▼
+            Gemini Live speaks the approved reply
+```
 
-The UI displays six sessions: dedicated DSA, three technical sessions, Resume and Behavioral
-Defense, and the Final Mock. DSA replaces the generic problem-solving card.
+- **Settings are locked into the credential.** The token route puts the system instruction (plan,
+  rubric, private design guide), transcription, context compression, and tools into the ephemeral
+  token. The browser never receives the instruction. (Before September 28 the browser sent them
+  and the API ignored them.)
+- **Connections rotate.** Gemini closes each Live connection after about ten minutes. The client
+  replaces it every 8 minutes, on `goAway`, or on an unexpected close, using a `rotation`
+  credential with the saved history and a silent start.
+- **Turns are resilient.** The browser retries network errors, timeouts, 5xx, and busy responses
+  with the same turn ID. The server replays a turn when only a grade or code run changed the
+  session in between.
 
-## Evidence
+## Grading and scores
 
-Candidate evidence is assembled server-side from:
+The model observes; code scores.
 
-- grounded structured resume extraction;
-- deterministic exact technology detection over the original document text;
-- target-role relevance;
-- completed interview performance.
-
-The deterministic pass recovers explicit technologies missed by the model and normalizes aliases
-such as `React.js` → `React`. Ambiguous names such as `Go`, `R`, and `C` require a skills section or
-clear technical context. Evidence sources, excerpts, confidence, and weights are not shown in the
-onboarding UI.
-
-Resume evidence precedence is work experience, projects, repeated use, recency, then skills-only
-mentions. Demonstrated performance adjusts future coverage and difficulty without rewriting the
-historical resume profile.
-
-## Planning and runtime
-
-- Candidate profiles and plans use versioned Zod contracts.
-- Exactly five blueprints are generated in the stable order above.
-- Topics and rubric weights must total 100.
-- Launch APIs resolve plan and blueprint IDs on the server.
-- Live session APIs require the signed-in owner, a signed anonymous-browser identity, or a
-  short-lived voice-worker capability bound to that session.
-- Questions and follow-ups stay inside the selected blueprint.
-- The state machine enforces question count, follow-up budgets, and time caps.
-- Session mutations use optimistic versions, so concurrent answers or code runs cannot overwrite
-  newer state.
-- Every answer carries a unique turn ID; completed retries replay the stored response, while
-  simultaneous different turns produce a conflict instead of double-advancing.
-- Shared Redis limits interview starts, answer evaluation, LiveKit tokens, code execution, resume
-  uploads, and uncached TTS generation across every web instance.
-- Distributed leases allow one answer evaluation and one code run at a time per scope. LiveKit
-  reconnects reuse one session room and candidate identity, preventing duplicate active rooms.
-- Provider failures use bounded in-topic fallbacks.
-
-## Evaluation and adaptation
-
-- Technical answers receive a persisted semantic correctness verdict.
-- Clear but materially incorrect answers must score below 45.
-- DSA code runs persist authored test results and execution errors.
-- Failed tests cap correctness; execution without tests does not prove correctness.
-- MCQs use the authored answer key.
-- Resume/behavioral answers update ownership, decision, specificity, and outcome signals.
-- Evaluator outages are marked unverified and excluded from adaptation.
-- Performance profile schema version 3 includes personalized, DSA, and behavioral sessions.
-- The Final Mock includes weak technical, DSA-pattern, and behavioral signals.
-
-## Progress across plan revisions
-
-Blueprint IDs change when the plan adapts, but visible progress is matched by stable session kind.
-
-- Completed slots remain completed.
-- Changed blueprints display `Completed · Updated round`.
-- Starting again launches the newest blueprint.
-- In-progress sessions from superseded plans resume their existing room.
+- The evaluator rates each round parameter on an anchored 1–5 scale (5 exceptional, 4 strong,
+  3 adequate, 2 weak or shallow, 1 absent or wrong) with evidence quotes, plus a correctness
+  verdict. Level 0 marks a parameter the question did not ask about.
+- Code converts levels to scores (94, 78, 55, 30, 10), averages them, and caps the answer and each
+  parameter by the verdict (incorrect ≤ 44, partially correct ≤ 69, mostly correct ≤ 84) and by
+  test results. MCQs use the stored answer key.
+- Grading runs after the response, on Gemini's reasoning model with Groq as fallback, temperature
+  0 and a fixed seed. Each question is graded once when it closes; an open question's answer waits
+  10 minutes in case a follow-up replaces it. Ending the round grades everything left.
+- The round score is answer quality times coverage: declined questions, and questions skipped by
+  ending early, count as zero; pacing skips and time cut-offs do not. Reports show "X of Y questions
+  answered".
+- Unavailable grades are marked, excluded from the score and from adaptation, and retried.
 
 ## Persistence
 
-Primary records:
-
-- `CandidateInterviewProfileVersion`
-- `PersonalizedInterviewPlanVersion`
-- `InterviewSessionBlueprint`
-- `InterviewSession`
-- `CandidatePerformanceProfileVersion`
-
-Only one plan per owner is `READY`. Publishing a replacement marks the previous plan
-`SUPERSEDED`; it is never overwritten.
+| Model | Holds |
+| --- | --- |
+| `CandidateInterviewProfileVersion` | Resume-derived evidence |
+| `PersonalizedInterviewPlanVersion`, `InterviewSessionBlueprint` | The plan and its blueprints |
+| `InterviewSession` | State, turns, version, report snapshot |
+| `InterviewAnswerRequest` | One row per turn ID |
+| `InterviewEvaluationJob` | Queued grading, with retries and dead-lettering |
+| `CandidatePerformanceProfileVersion` | What interviews showed; feeds the next plan |
 
 ## Key files
 
-- Contracts: `src/lib/interviews/personalized-plan.ts`
-- Performance: `src/lib/interviews/performance-profile.ts`
-- Resume compiler: `src/server/interview/candidate-profile-compiler.ts`
-- Technology detector: `src/server/onboarding/resume/technology-detector.ts`
-- Relevance: `src/server/interview/relevance-engine.ts`
-- Plan generator: `src/server/interview/personalized-plan-generator.ts`
-- Planning service: `src/server/interview/personalized-interview-planning.service.ts`
-- Blueprint runtime: `src/server/interview/personalized-blueprint-runtime.ts`
-- Live service: `src/server/interview/interview.service.ts`
-- Correctness evaluator: `src/server/interview/technical-answer-evaluator.ts`
-- Performance aggregation: `src/server/interview/performance-profile-aggregator.ts`
-- Visible progress: `src/lib/interviews/interview-roadmap-sessions.ts`
+- Rounds and entry points: `src/app/api/interview/*/start/route.ts`, `src/app/interview/*/page.tsx`
+- Visible rounds: `src/features/interviews/domain/interview-roadmap-sessions.ts`
+- Plan contracts: `src/features/interviews/domain/personalized-plan.ts`
+- Resume compiler: `src/features/interviews/server/candidate-profile-compiler.ts`
+- Technology detector: `src/features/onboarding/server/resume/technology-detector.ts`
+- Resume interview kit: `src/features/onboarding/server/resume/interview-kit.ts`
+- Relevance: `src/features/interviews/server/relevance-engine.ts`
+- Plan generator and service: `src/features/interviews/server/personalized-plan-generator.ts`,
+  `personalized-interview-planning.service.ts`
+- Round builders: `resume-round.ts`, `technical-projects-round.ts`, `dsa-design-round.ts`,
+  `dsa-session-selection.ts`, `hiring-manager-round.ts` in `src/features/interviews/server/`
+- Live service and state machine: `interview.service.ts`, `state-machine.ts`, `session-store.ts`
+- Grading: `technical-answer-evaluator.ts`, `evaluation-recovery.ts`
+- Reports: `report.ts`, `src/features/interviews/domain/report-coverage.ts`,
+  `src/features/reports/application/reports-overview.ts`
+- Live voice: `src/app/api/interview/gemini-live/token/route.ts`,
+  `src/features/interviews/ui/voice/gemini-live-interviewer.tsx`
 
 ## Verification
 
 ```bash
-pnpm exec prisma validate
-pnpm exec tsc --noEmit
+npx tsc --noEmit -p .
 pnpm lint
 pnpm test
 pnpm build
+pnpm interview:quality   # live models; costs quota
 ```
 
 ## Current limitations
 
+- Frontend and Data have no System Design scenarios yet; the fundamentals bank has no
+  data-engineering MCQs.
 - There is no job-description upload flow.
-- DSA uses authored cases rather than a hidden-test suite.
-- Personalized code tasks do not yet have generated test contracts.
-- Existing resumes need re-uploading for deterministic technology recovery because raw text is not
-  retained.
-- Performance refresh occurs when the personalized plan is next requested.
-- Scores guide practice and must not be used as automated hiring decisions.
+- DSA uses authored examples as tests; there is no hidden-test suite.
+- Personalized code tasks in round 2 have no generated tests; they are graded on the code alone.
+- Microphone capture uses `ScriptProcessorNode`; moving to an `AudioWorklet` needs a live audio test.
+- Transcription languages are fixed to `en-IN` and `hi-IN`.

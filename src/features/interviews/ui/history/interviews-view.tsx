@@ -19,9 +19,12 @@ import {
   type InterviewRoadmapSession
 } from "@/features/interviews/domain/interview-roadmap-sessions";
 import type { InterviewHistoryItem } from "@/lib/shared/types";
+import { NextRoundTime } from "./next-round-time";
 
 interface InterviewsViewProps {
   quota: { used: number; limit: number };
+  /** When today's limit is used, the moment the next round can start. */
+  nextSessionAt?: number | null;
   sessions: InterviewHistoryItem[];
   firstName: string;
   roadmapSessions: InterviewRoadmapSession[];
@@ -49,6 +52,7 @@ const sessionIcons: Record<string, LucideIcon> = {
 
 export function InterviewsView({
   quota,
+  nextSessionAt = null,
   sessions,
   firstName,
   roadmapSessions
@@ -96,6 +100,19 @@ export function InterviewsView({
             </span>
           ))}
         </p>
+        {exhausted ? (
+          <p className="mt-5 text-sm leading-6 text-cream/60">
+            You&apos;ve used today&apos;s {quota.limit} interview rounds.{" "}
+            {nextSessionAt ? (
+              <>
+                The next one opens <NextRoundTime at={nextSessionAt} />.
+              </>
+            ) : (
+              "The next one opens within a day."
+            )}{" "}
+            Rounds already in progress can still be resumed.
+          </p>
+        ) : null}
         {active && activeHref ? (
           <Link
             href={activeHref}
@@ -131,6 +148,7 @@ export function InterviewsView({
               <RoadmapSessionCard
                 key={session.id}
                 session={session}
+                limitReached={exhausted && !session.resumeSessionId}
                 disabled={
                   (exhausted && !session.resumeSessionId) || session.id === "technical-project"
                 }
@@ -161,10 +179,12 @@ function supportsResume(session: InterviewHistoryItem): boolean {
 
 function RoadmapSessionCard({
   session,
+  limitReached,
   disabled,
   delay
 }: {
   session: InterviewRoadmapSession;
+  limitReached: boolean;
   disabled: boolean;
   delay: number;
 }) {
@@ -181,19 +201,21 @@ function RoadmapSessionCard({
           : session.attemptStatus === "expired"
             ? "Previous attempt saved"
             : null;
-  const actionLabel = unavailable
-    ? "Coming soon"
-    : session.resumeSessionId
-      ? "Resume session"
-      : session.updatedPracticeAvailable
-        ? "Try updated session"
-        : session.attemptStatus === "completed"
-          ? "Practice again"
-          : session.attemptStatus === "expired"
-            ? "Start again"
-            : session.id === "technical-project"
-              ? "Coming soon"
-              : "Start session";
+  const actionLabel = limitReached
+    ? "Daily limit reached"
+    : unavailable
+      ? "Coming soon"
+      : session.resumeSessionId
+        ? "Resume session"
+        : session.updatedPracticeAvailable
+          ? "Try updated session"
+          : session.attemptStatus === "completed"
+            ? "Practice again"
+            : session.attemptStatus === "expired"
+              ? "Start again"
+              : session.id === "technical-project"
+                ? "Coming soon"
+                : "Start session";
 
   return (
     <SharedRoadmapSessionCard

@@ -4,7 +4,8 @@ import type {
   SessionBlueprint
 } from "@/features/interviews/domain/personalized-plan";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
-import type { InterviewHistoryItem } from "@/lib/shared/types";
+import type { InterviewHistoryItem, Role } from "@/lib/shared/types";
+import { systemDesignSupportsRole } from "@/features/interviews/domain/dsa-design-round";
 import {
   TECHNICAL_DEEP_DIVE_ID,
   TECHNICAL_DEEP_DIVE_PREP_SESSION,
@@ -46,8 +47,17 @@ export function interviewRoadmapSessions(input: {
   personalizedPlan: PersonalizedInterviewPlan | null;
   roadmap: FrontendRoadmapHome | null;
   history: InterviewHistoryItem[];
+  /** The declared target role. Omitted by callers that only project the plan. */
+  targetRole?: Role | null;
 }): InterviewRoadmapSession[] {
-  return permanentInterviewRounds(input.personalizedPlan, input.history);
+  const rounds = permanentInterviewRounds(input.personalizedPlan, input.history);
+  if (input.targetRole === undefined || systemDesignSupportsRole(input.targetRole)) return rounds;
+  // Roles without System Design scenarios (Frontend, Data) do not see the
+  // round until they exist; see "System Design for Frontend and Data" in
+  // docs/09_FUTURE_SCOPE.md.
+  return rounds
+    .filter((round) => round.id !== "system-design" || round.resumeSessionId)
+    .map((round, index) => ({ ...round, order: index + 1 }));
 }
 
 export function roadmapSessionHref(session: InterviewRoadmapSession): string | null {
@@ -131,20 +141,14 @@ function permanentInterviewRounds(
       title: "DSA Interview",
       purpose: "Solve coding problems and defend correctness, complexity, and edge cases.",
       covers: [
-        "Two DSA coding problems",
+        "One solved problem and one new one",
         "Approach and correctness",
         "Complexity, edge cases, and optimization"
       ],
       durationMinutes: 35
     },
     { ...systemDesign, id: "system-design", order: 4, title: "System Design" },
-    upcomingRound({
-      id: "hiring-manager-final",
-      order: 5,
-      title: "Hiring Manager & Final Behavioural",
-      purpose: "A final conversation round for communication, motivation, judgement, and fit.",
-      covers: ["Career motivation", "Leadership and judgement", "Candidate questions"]
-    })
+    { ...hiringManagerRoadmapSession(history), order: 5 }
   ];
 
   if (!isAiMl) return rounds;
@@ -295,14 +299,35 @@ function dsaRoadmapSession(
     order: 1,
     title: titleSuffix ? `DSA · ${titleSuffix}` : "DSA Interview",
     purpose:
-      "A focused coding interview on DSA problems you have practiced, including approach, correctness, complexity, and edge cases.",
+      "A focused coding interview: one problem you have solved and one new problem from a pattern you have practised.",
     covers: [
-      "Two function-based DSA problems",
+      "One solved problem and one new one",
       "Approach and time-space complexity",
       "Correctness, edge cases, and follow-ups"
     ],
     ...progress,
     durationMinutes: 35,
+    difficulty: "adaptive"
+  };
+}
+
+function hiringManagerRoadmapSession(history: InterviewHistoryItem[]): InterviewRoadmapSession {
+  const latest = findLatestSession(
+    history,
+    (session) => session.setup.templateId === "hiring-manager-final"
+  );
+  const progress = sessionProgress(latest, latest?.questionCount ?? 8);
+
+  return {
+    id: "hiring-manager-final",
+    planId: null,
+    kind: null,
+    order: 5,
+    title: "Hiring Manager & Final Behavioural",
+    purpose: "A final conversation round for communication, motivation, judgement, and fit.",
+    covers: ["Career motivation", "Leadership and judgement", "Candidate questions"],
+    ...progress,
+    durationMinutes: 30,
     difficulty: "adaptive"
   };
 }
@@ -328,7 +353,8 @@ function resumeRoadmapSession(history: InterviewHistoryItem[]): InterviewRoadmap
       "Behavioral stories and resume claims"
     ],
     ...progress,
-    durationMinutes: 30,
+    // Matches RESUME_HARD_CAP_MS, the round's actual limit.
+    durationMinutes: 24,
     difficulty: "adaptive"
   };
 }

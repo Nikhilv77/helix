@@ -1,6 +1,7 @@
 import type { CandidatePerformanceProfile } from "@/features/interviews/domain/performance-profile";
 import {
   dsaDifficultyBand,
+  selectDsaInterviewPair,
   selectDsaInterviewQuestions,
   type DsaSelectionCandidate
 } from "./dsa-session-selection";
@@ -72,5 +73,65 @@ describe("adaptive DSA session selection", () => {
     });
 
     expect(selected.map((item) => item.difficulty)).toEqual(["hard", "hard", "medium"]);
+  });
+});
+
+describe("DSA interview pair", () => {
+  const item = (slug: string, primaryPattern: string, difficulty = "medium") => ({
+    slug,
+    title: slug,
+    difficulty,
+    primaryPattern
+  });
+  const first = () => 0;
+
+  it("pairs one solved problem with an unseen one from the same pattern", () => {
+    const pair = selectDsaInterviewPair({
+      solved: [item("two-sum", "hashing"), item("merge-intervals", "intervals")],
+      unseen: [item("group-anagrams", "hashing"), item("insert-interval", "intervals")],
+      curated: [],
+      performance: null,
+      random: first
+    });
+
+    expect(pair).toHaveLength(2);
+    expect(["two-sum", "merge-intervals"]).toContain(pair[0]!.slug);
+    expect(pair[1]!.primaryPattern).toBe(pair[0]!.primaryPattern);
+    expect(["group-anagrams", "insert-interval"]).toContain(pair[1]!.slug);
+  });
+
+  it("never offers a solved problem as the new one", () => {
+    const pair = selectDsaInterviewPair({
+      solved: [item("two-sum", "hashing")],
+      unseen: [item("two-sum", "hashing"), item("valid-anagram", "hashing")],
+      curated: [],
+      performance: null,
+      random: first
+    });
+
+    expect(pair.map((question) => question.slug)).toEqual(["two-sum", "valid-anagram"]);
+  });
+
+  it("falls back to another practised pattern, then to a second solved problem", () => {
+    const otherPattern = selectDsaInterviewPair({
+      solved: [item("two-sum", "hashing"), item("merge-intervals", "intervals")],
+      unseen: [item("insert-interval", "intervals")],
+      curated: [],
+      performance: null,
+      random: first
+    });
+    expect(otherPattern.map((question) => question.slug)).toContain("insert-interval");
+
+    const nothingNew = selectDsaInterviewPair({
+      solved: [item("two-sum", "hashing"), item("merge-intervals", "intervals")],
+      unseen: [],
+      curated: [],
+      performance: null,
+      random: first
+    });
+    expect(nothingNew.map((question) => question.slug).sort()).toEqual([
+      "merge-intervals",
+      "two-sum"
+    ]);
   });
 });

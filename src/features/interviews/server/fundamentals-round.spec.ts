@@ -7,7 +7,7 @@ import {
 } from "./fundamentals-round";
 import { gradeMultipleChoice, multipleChoiceReply } from "./resume-round";
 
-const inOrder = <T,>(items: T[]) => items;
+const inOrder = <T>(items: T[]) => items;
 
 describe("fundamentals question bank", () => {
   const questions = fundamentalsQuestions();
@@ -127,5 +127,16 @@ describe("buildFundamentalsPlan", () => {
     expect(multipleChoiceReply(first, true)).toContain("That's right");
     // A spoken question has nothing to grade and must fall through to the decider.
     expect(gradeMultipleChoice(plan[5]!, "anything")).toBeNull();
+  });
+
+  it("does not ask a data engineer browser questions and leads backend with databases", () => {
+    const keep = <T>(items: T[]) => items;
+    const data = buildFundamentalsPlan("3-5", { role: "data", shuffle: keep });
+    const backend = buildFundamentalsPlan("3-5", { role: "backend", shuffle: keep });
+
+    const areaOf = (question: { sourceSlug?: string }) =>
+      fundamentalsQuestions().find((item) => item.slug === question.sourceSlug)?.area;
+    expect(data.filter((q) => q.stage === "rapid").map(areaOf)).not.toContain("browser-os");
+    expect(areaOf(backend[0]!)).toBe("databases");
   });
 });

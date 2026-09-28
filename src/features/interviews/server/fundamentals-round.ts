@@ -5,17 +5,30 @@ import {
   type FundamentalsFormat,
   type FundamentalsQuestion
 } from "@/lib/fundamentals/fundamentals";
-import type { Level } from "@/lib/shared/types";
+import type { Level, Role } from "@/lib/shared/types";
 import type { InterviewSetup, PlannedQuestion } from "./types";
 
 export const RAPID_QUESTIONS = 5;
 export const EXPLAIN_QUESTIONS = 3;
 export const SCENARIO_QUESTIONS = 1;
-export const FUNDAMENTALS_QUESTION_COUNT =
-  RAPID_QUESTIONS + EXPLAIN_QUESTIONS + SCENARIO_QUESTIONS;
+export const FUNDAMENTALS_QUESTION_COUNT = RAPID_QUESTIONS + EXPLAIN_QUESTIONS + SCENARIO_QUESTIONS;
 
-/** Weighted for a frontend candidate: the network is where their bugs live. */
-const AREA_PRIORITY: FundamentalsArea[] = ["networking", "browser-os", "databases", "systems"];
+/**
+ * Which areas a stage draws from first, by role. Frontend bugs live in the
+ * network and the browser; backend and data work lives in storage and the
+ * system underneath. Data engineers are not asked browser questions.
+ */
+const AREA_PRIORITY_BY_ROLE: Partial<Record<Role, FundamentalsArea[]>> = {
+  backend: ["databases", "networking", "systems", "browser-os"],
+  fullstack: ["networking", "databases", "browser-os", "systems"],
+  data: ["databases", "systems", "networking"]
+};
+const DEFAULT_AREA_PRIORITY: FundamentalsArea[] = [
+  "networking",
+  "browser-os",
+  "databases",
+  "systems"
+];
 
 /**
  * Assembles a fundamentals round from the authored bank.
@@ -26,9 +39,10 @@ const AREA_PRIORITY: FundamentalsArea[] = ["networking", "browser-os", "database
  */
 export function buildFundamentalsPlan(
   level: Level | null,
-  options: { shuffle?: <T>(items: T[]) => T[] } = {}
+  options: { shuffle?: <T>(items: T[]) => T[]; role?: Role | null } = {}
 ): PlannedQuestion[] {
   const shuffle = options.shuffle ?? shuffleInPlace;
+  const areas = (options.role && AREA_PRIORITY_BY_ROLE[options.role]) || DEFAULT_AREA_PRIORITY;
   const levelPool = questionsForLevel(level);
   const fullPool = fundamentalsQuestions();
   const used = new Set<string>();
@@ -45,8 +59,8 @@ export function buildFundamentalsPlan(
     return [...shuffle(preferred), ...shuffle(rest)];
   };
 
-  const rapid = spreadAcrossAreas(stagePool("mcq"), RAPID_QUESTIONS, used);
-  const explain = spreadAcrossAreas(stagePool("explain"), EXPLAIN_QUESTIONS, used);
+  const rapid = spreadAcrossAreas(stagePool("mcq"), RAPID_QUESTIONS, used, areas);
+  const explain = spreadAcrossAreas(stagePool("explain"), EXPLAIN_QUESTIONS, used, areas);
   const scenario = stagePool("scenario")
     .filter((question) => !used.has(question.slug))
     .slice(0, SCENARIO_QUESTIONS);
@@ -65,13 +79,14 @@ export function buildFundamentalsPlan(
 function spreadAcrossAreas(
   candidates: FundamentalsQuestion[],
   take: number,
-  used: Set<string>
+  used: Set<string>,
+  areas: FundamentalsArea[] = DEFAULT_AREA_PRIORITY
 ): FundamentalsQuestion[] {
   const picked: FundamentalsQuestion[] = [];
   const perArea = new Map<FundamentalsArea, number>();
 
   for (let round = 0; picked.length < take && round < 4; round += 1) {
-    for (const area of AREA_PRIORITY) {
+    for (const area of areas) {
       if (picked.length >= take) break;
       if ((perArea.get(area) ?? 0) > round) continue;
 

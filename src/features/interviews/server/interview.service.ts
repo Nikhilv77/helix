@@ -135,6 +135,14 @@ export interface BlockAssessmentMcqGrader {
   ): Promise<{ correct: boolean; explanation: string; correctAnswer?: string } | null>;
 }
 
+/**
+ * An answer to a question that is still open is graded after this delay, in
+ * case the room is abandoned. A follow-up or the closing turn replaces it
+ * sooner, so each question is normally graded once, when it closes.
+ */
+const OPEN_QUESTION_GRADING_DELAY_MS = 10 * 60_000;
+/** Retries after a write that changed the session without adding a turn. */
+const NON_TURN_CONFLICT_RETRIES = 2;
 const ANSWER_REPLAY_WAIT_MS = 5_000;
 const ANSWER_REPLAY_POLL_MS = 100;
 
@@ -257,14 +265,7 @@ export class InterviewService {
     templateId: string,
     now = Date.now()
   ): Promise<InterviewState | null> {
-    const sessions = await this.store.listByOwner(ownerId, 50);
-    const active = sessions.find(
-      (session) =>
-        session.state.phase !== "done" &&
-        session.state.setup.templateId === templateId &&
-        now - session.touchedAt <= SESSION_TTL_MS
-    );
-    return active?.state ?? null;
+    return this.store.findActiveByTemplate(ownerId, templateId, now - SESSION_TTL_MS);
   }
 
   /** Claims sessions created by the same browser before Clerk auth was resolved. */
@@ -568,18 +569,37 @@ export class InterviewService {
       if (replay) return replay;
     }
 
+    let current = session;
     try {
-      return await this.processAnswer(
-        session,
-        sessionId,
-        answer,
-        now,
-        ownerId,
-        turnId,
-        mode,
-        liveProposal,
-        submissionSource
-      );
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          return await this.processAnswer(
+            current,
+            sessionId,
+            answer,
+            now,
+            ownerId,
+            turnId,
+            mode,
+            liveProposal,
+            submissionSource
+          );
+        } catch (error) {
+          // Graded answers and code runs are saved into the same session row
+          // while the conversation continues. When one of them, not another
+          // answer, moved the version, replay this turn on the fresh state
+          // instead of failing the candidate mid-interview.
+          if (
+            !(error instanceof SessionVersionConflictError) ||
+            attempt >= NON_TURN_CONFLICT_RETRIES
+          ) {
+            throw error;
+          }
+          const fresh = await this.versionedSession(sessionId, ownerId);
+          if (!sameConversation(current.state, fresh.state)) throw error;
+          current = fresh;
+        }
+      }
     } catch (error) {
       if (turnId) {
         if (error instanceof SessionVersionConflictError) {
@@ -885,6 +905,12 @@ export class InterviewService {
     const requestedAction =
       question.acceptsCandidateQuestions && raw.action === "respond" ? "move_on" : raw.action;
     const result = advance(withAnswer, requestedAction, now);
+    const questionClosed =
+      result.state.phase === "done" || result.state.questionIndex !== withAnswer.questionIndex;
+    const recovery =
+      evaluationResult.recovery?.action === "enqueue" && !questionClosed
+        ? { ...evaluationResult.recovery, availableAt: now + OPEN_QUESTION_GRADING_DELAY_MS }
+        : evaluationResult.recovery;
     const decisionRuntime = raw.runtime ?? {
       engineVersion: INTERVIEW_ENGINE_VERSION,
       promptVersion: INTERVIEW_DECIDER_PROMPT_VERSION,
@@ -989,13 +1015,7 @@ export class InterviewService {
       forcedBy: result.forcedBy
     };
     const response = answerResponse(finalState, decision, now);
-    await this.persistAnswer(
-      finalState,
-      session.version,
-      turnId,
-      response,
-      evaluationResult.recovery
-    );
+    await this.persistAnswer(finalState, session.version, turnId, response, recovery);
 
     this.logger.log(
       JSON.stringify({
@@ -2363,6 +2383,16 @@ function concurrentTurnError(sessionId: string): ConflictErrorException {
 
 function sessionMutationError(error: unknown, sessionId: string): unknown {
   return error instanceof SessionVersionConflictError ? concurrentTurnError(sessionId) : error;
+}
+
+/** True when only non-conversation data (grades, code runs) changed between reads. */
+function sameConversation(before: InterviewState, after: InterviewState): boolean {
+  return (
+    after.phase === before.phase &&
+    after.questionIndex === before.questionIndex &&
+    after.followUpCount === before.followUpCount &&
+    after.turns.length === before.turns.length
+  );
 }
 
 function isIncompleteBlockAssessment(state: InterviewState): boolean {

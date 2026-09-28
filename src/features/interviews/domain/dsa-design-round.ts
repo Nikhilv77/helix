@@ -60,3 +60,14 @@ export function isCombinedDsaDesignRound(
     setup.templateTitle?.trim().toLowerCase() === "dsa & design interview"
   );
 }
+
+/**
+ * Roles with authored System Design scenarios. Frontend and Data scenarios
+ * are not written yet, so those roles see the round as coming soon instead
+ * of a start that always fails.
+ */
+const SYSTEM_DESIGN_ROLES = new Set(["backend", "fullstack", "ai-ml"]);
+
+export function systemDesignSupportsRole(role: string | null | undefined): boolean {
+  return Boolean(role && SYSTEM_DESIGN_ROLES.has(role));
+}
