@@ -37,6 +37,7 @@ describe("validateEnvironment", () => {
       geminiApiKey: "test-gemini-key",
       geminiFastModel: "gemini-fast-test",
       geminiReasoningModel: "gemini-reasoning-test",
+      geminiBackupModel: null,
       geminiEmbeddingModel: "gemini-embedding-test",
       geminiEmbeddingModelVersion: "test-version",
       geminiLiveInterviewsEnabled: true,

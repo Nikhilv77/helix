@@ -160,7 +160,7 @@ describe("personalized interview roadmap sessions", () => {
   });
 
   it("leaves System Design out for roles without scenarios", () => {
-    for (const targetRole of ["frontend", "data", null] as const) {
+    for (const targetRole of ["pm", null] as const) {
       const sessions = interviewRoadmapSessions({
         personalizedPlan: plan(),
         roadmap: null,
@@ -171,13 +171,15 @@ describe("personalized interview roadmap sessions", () => {
       expect(sessions.map((session) => session.id)).not.toContain("system-design");
       expect(sessions.map((session) => session.order)).toEqual([1, 2, 3, 4]);
     }
-    const backend = interviewRoadmapSessions({
-      personalizedPlan: plan(),
-      roadmap: null,
-      history: [],
-      targetRole: "backend"
-    }).find((session) => session.id === "system-design")!;
-    expect(roadmapSessionHref(backend)).toBe("/interview/design");
+    for (const targetRole of ["backend", "frontend", "data"] as const) {
+      const design = interviewRoadmapSessions({
+        personalizedPlan: plan(),
+        roadmap: null,
+        history: [],
+        targetRole
+      }).find((session) => session.id === "system-design")!;
+      expect(roadmapSessionHref(design)).toBe("/interview/design");
+    }
   });
 
   it("tracks Hiring Manager progress like the other rounds", () => {
@@ -286,6 +288,53 @@ describe("personalized interview roadmap sessions", () => {
       updatedPracticeAvailable: true
     });
     expect(roadmapSessionHref(technical!)).toBe("/interview/technical-projects");
+  });
+
+  it("does not resume an Architecture Practice checkpoint as the System Design interview", () => {
+    const checkpoint = historyItem("system-design", {
+      sessionId: "practice-checkpoint",
+      updatedAt: 200,
+      setup: {
+        role: "frontend",
+        level: "3-5",
+        roundType: "technical",
+        intensity: "realistic",
+        context: "",
+        templateId: "system-design",
+        storyPracticeAssessment: {
+          kind: "story-practice-assessment",
+          practice: "architecture-design",
+          blockId: "block",
+          assessmentId: "assessment",
+          snapshotVersion: 1,
+          evaluatorVersion: "v1"
+        }
+      }
+    });
+    const interview = historyItem("system-design", {
+      sessionId: "design-interview",
+      updatedAt: 100
+    });
+
+    const withCheckpointOnly = interviewRoadmapSessions({
+      personalizedPlan: plan(),
+      roadmap: null,
+      history: [checkpoint],
+      targetRole: "frontend"
+    }).find((session) => session.id === "system-design")!;
+    expect(withCheckpointOnly).toMatchObject({
+      attemptStatus: "not_started",
+      resumeSessionId: null
+    });
+    expect(roadmapSessionHref(withCheckpointOnly)).toBe("/interview/design");
+
+    const withBoth = interviewRoadmapSessions({
+      personalizedPlan: plan(),
+      roadmap: null,
+      history: [checkpoint, interview],
+      targetRole: "frontend"
+    }).find((session) => session.id === "system-design")!;
+    expect(withBoth.resumeSessionId).toBe("design-interview");
   });
 
   it("resumes only an actual combined Core Technical & Projects interview", () => {

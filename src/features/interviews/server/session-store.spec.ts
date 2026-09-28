@@ -39,6 +39,35 @@ describe("MemorySessionStore", () => {
     await expect(store.countStartedSince("user-1", Date.now() - HOUR_MS)).resolves.toBe(1);
   });
 
+  it("never returns an Architecture Practice checkpoint as an active System Design round", async () => {
+    const store = new MemorySessionStore();
+    const now = Date.now();
+    const checkpoint = state("66666666-6666-4666-8666-666666666666", now);
+    checkpoint.setup = {
+      ...checkpoint.setup,
+      templateId: "system-design",
+      storyPracticeAssessment: {
+        kind: "story-practice-assessment",
+        practice: "architecture-design",
+        blockId: "block",
+        assessmentId: "assessment",
+        snapshotVersion: 1,
+        evaluatorVersion: "v1"
+      }
+    };
+    await store.create(checkpoint, "user-1");
+
+    await expect(store.findActiveByTemplate("user-1", "system-design", 0)).resolves.toBeNull();
+
+    const round = state("77777777-7777-4777-8777-777777777777", now - 1_000);
+    round.setup = { ...round.setup, templateId: "system-design" };
+    await store.create(round, "user-1");
+
+    await expect(store.findActiveByTemplate("user-1", "system-design", 0)).resolves.toMatchObject({
+      id: round.id
+    });
+  });
+
   it("rejects a stale session version instead of overwriting newer state", async () => {
     const store = new MemorySessionStore();
     const created = state("55555555-5555-4555-8555-555555555555", Date.now());

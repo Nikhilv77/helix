@@ -34,7 +34,7 @@ export type ArchitectureDesignScenarioSeed = {
   title: string;
   premise: string;
   candidateRole: string;
-  roles?: Array<"backend" | "fullstack" | "ai-ml">;
+  roles?: Array<"backend" | "fullstack" | "ai-ml" | "frontend" | "data">;
   reviewStatus?: "candidate" | "approved";
   reviewerId?: string;
   functionalRequirements: string[];
@@ -50,6 +50,8 @@ export type ArchitectureDesignScenarioSeed = {
   coverageExplanation: string;
   authoredAt?: string;
   reviewedAt?: string;
+  /** Who drafted the content; defaults to the original authoring pipeline. */
+  authoring?: { provider: string; model: string; promptVersion: string };
   questions: [QuestionSeed, QuestionSeed, QuestionSeed, QuestionSeed];
 };
 
@@ -73,9 +75,9 @@ export function reviewedArchitectureDesignArtifact(
     authoredAt: seed.authoredAt ?? "2026-09-08T06:30:00.000Z",
     authoring: {
       mode: "ai-assisted",
-      provider: "openai",
-      model: "codex",
-      promptVersion: "architecture-design-reviewed-content-v1"
+      provider: seed.authoring?.provider ?? "openai",
+      model: seed.authoring?.model ?? "codex",
+      promptVersion: seed.authoring?.promptVersion ?? "architecture-design-reviewed-content-v1"
     },
     scenario: {
       schemaVersion: 1,

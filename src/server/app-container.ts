@@ -112,7 +112,10 @@ import { ArchitectureDesignRepositoryAdapter } from "@/features/practice/archite
 import { ArchitectureDesignScenarioRankingService } from "@/features/practice/architecture-design/server/scenario-ranking.service";
 import { ArchitectureDesignWorkspaceAnalyticsService } from "@/features/practice/architecture-design/server/workspace-analytics.service";
 import { NODEJS_APPLIED_ENGINEERING_INCIDENT_RANKING_CATALOGUE } from "@/features/practice/applied-engineering/domain/incident-ranking-catalogue";
-import { ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE } from "@/features/practice/architecture-design/domain/scenario-ranking-catalogue";
+import {
+  ARCHITECTURE_DESIGN_PRACTICE_RANKING_CATALOGUE,
+  ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE
+} from "@/features/practice/architecture-design/domain/scenario-ranking-catalogue";
 import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "@/features/practice/core-technical/domain/story-ranking-catalogue";
 import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "@/features/practice/core-technical/domain/domain-map";
 import { AiMlPracticeService } from "@/features/practice/ai-ml/server/ai-ml-practice.service";
@@ -215,6 +218,8 @@ export interface AppContainer {
     canvas: ArchitecturePracticeCanvasService;
     focus: ArchitectureDesignFocusService;
     ranking: ArchitectureDesignScenarioRankingService;
+    /** Ranks every reviewed scenario, including interview-only ones. */
+    interviewRanking: ArchitectureDesignScenarioRankingService;
     repository: ArchitectureDesignRepositoryAdapter;
     attemptEvaluator: ArchitectureDesignAttemptEvaluator;
     practice: ArchitectureDesignPracticeService;
@@ -506,7 +511,12 @@ export function getAppContainer(): AppContainer {
     database: prisma,
     baselineEvidence: architectureDesignBaselineEvidenceService
   });
+  // Practice never ranks interview-only scenarios; the System Design interview
+  // ranks every reviewed scenario.
   const architectureDesignScenarioRankingService = new ArchitectureDesignScenarioRankingService(
+    ARCHITECTURE_DESIGN_PRACTICE_RANKING_CATALOGUE
+  );
+  const architectureDesignInterviewRankingService = new ArchitectureDesignScenarioRankingService(
     ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE
   );
   const architectureDesignRepositoryAdapter = new ArchitectureDesignRepositoryAdapter(prisma);
@@ -546,7 +556,7 @@ export function getAppContainer(): AppContainer {
   );
   const architectureDesignEligibilityService = new ArchitectureDesignEligibilityService({
     publications: architectureDesignRepositoryAdapter,
-    catalogue: ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE
+    catalogue: ARCHITECTURE_DESIGN_PRACTICE_RANKING_CATALOGUE
   });
   const architectureDesignWorkspaceAnalyticsService =
     new ArchitectureDesignWorkspaceAnalyticsService(prisma);
@@ -600,6 +610,7 @@ export function getAppContainer(): AppContainer {
       canvas: new ArchitecturePracticeCanvasService(prisma),
       focus: architectureDesignFocusService,
       ranking: architectureDesignScenarioRankingService,
+      interviewRanking: architectureDesignInterviewRankingService,
       repository: architectureDesignRepositoryAdapter,
       attemptEvaluator: architectureDesignAttemptEvaluator,
       practice: architectureDesignPracticeService,
@@ -679,7 +690,18 @@ export function getAppContainer(): AppContainer {
     // Resume classification benefits from the document-oriented model path;
     // keep the low-latency interview model reserved for live conversation.
     // First uploads fall back from Gemini's fast model to its reasoning model.
-    resumeService: new ResumeService(geminiAi, { ai: geminiAi, modelClass: "reasoning" }),
+    resumeService: new ResumeService(geminiAi, [
+      { ai: geminiAi, modelClass: "reasoning" },
+      // Last resort when both regular models are saturated; unset means no third try.
+      ...(config.geminiBackupModel
+        ? [
+            {
+              ai: new AiService(new GeminiProvider(config, geminiClient, config.geminiBackupModel)),
+              modelClass: "reasoning" as const
+            }
+          ]
+        : [])
+    ]),
     // Written once per resume and read by every later resume round, so the
     // round itself never spends a model call on planning.
     resumeInterviewKitService: new ResumeInterviewKitService(geminiAi, profileService),

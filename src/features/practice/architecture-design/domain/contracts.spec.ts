@@ -56,8 +56,14 @@ describe("Architecture & Design foundation contracts", () => {
     expect(architectureDesignWorkKind("production-decision")).toBe("text");
   });
 
-  it("limits the MVP to two reviewed four-question backend, full-stack, and AI/ML scenarios", () => {
-    expect(ARCHITECTURE_DESIGN_V1_SCOPE.roles).toEqual(["backend", "fullstack", "ai-ml"]);
+  it("limits the MVP to two reviewed four-question scenarios for each supported role", () => {
+    expect(ARCHITECTURE_DESIGN_V1_SCOPE.roles).toEqual([
+      "backend",
+      "fullstack",
+      "ai-ml",
+      "frontend",
+      "data"
+    ]);
     expect(ARCHITECTURE_DESIGN_V1_SCOPE.scenarioCount).toBe(2);
     expect(ARCHITECTURE_DESIGN_V1_SCOPE.questionsPerScenario).toBe(4);
     expect(ARCHITECTURE_DESIGN_V1_SCOPE.assessmentPromptCount).toBe(5);

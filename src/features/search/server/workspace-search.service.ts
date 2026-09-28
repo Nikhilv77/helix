@@ -211,6 +211,13 @@ export class WorkspaceSearchService {
           ),
           CASE
             WHEN session."state" ->> 'phase' = 'done' THEN '/reports'
+            -- Practice checkpoints resume in their own typed rooms, not the voice room.
+            WHEN session."state" #>> '{setup,storyPracticeAssessment,practice}' IN
+              ('architecture-design', 'applied-engineering', 'core-technical')
+              THEN '/practice/' || (session."state" #>> '{setup,storyPracticeAssessment,practice}')
+                || '/assessment?session=' || session."id"::text
+            WHEN session."state" #>> '{setup,dsaBlockAssessment,kind}' = 'dsa-block-assessment'
+              THEN '/practice/dsa/assessment?session=' || session."id"::text
             ELSE '/interview/voice?session=' || session."id"::text
           END,
           CASE WHEN session."state" ->> 'phase' = 'done' THEN 'Completed' ELSE 'In progress' END,

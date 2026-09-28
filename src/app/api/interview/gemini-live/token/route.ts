@@ -33,6 +33,10 @@ import {
   isSystemDesignRound
 } from "@/features/interviews/domain/dsa-design-round";
 import { isTechnicalProjectsRound } from "@/features/interviews/domain/technical-deep-dive";
+import {
+  architectureDesignTrackForRole,
+  type ArchitectureDesignTrack
+} from "@/features/practice/architecture-design/domain/contracts";
 
 export const dynamic = "force-dynamic";
 
@@ -222,6 +226,8 @@ export async function POST(request: NextRequest) {
       isResumeBehaviouralRound,
       isDsaDesignRound: isDsaOrDesignInterview,
       dsaDesignMode,
+      designTrack:
+        dsaDesignMode === "design" ? architectureDesignTrackForRole(state.setup.role) : "server",
       isTechnicalProjectsRound: isTechnicalProjectsInterview,
       question: question?.text ?? "Ask the current interview question.",
       questionNumber: state.questionIndex + 1,
@@ -422,6 +428,27 @@ function openingInstruction(openingUtterance: string): string {
     : "This connection replaced an earlier one in the middle of the conversation. Say nothing at the start: wait for the candidate to speak or for the next approved response.";
 }
 
+/** Focus and probe wording for each kind of System Design round. */
+const DESIGN_TRACK_RULES: Record<ArchitectureDesignTrack, { focus: string; probes: string }> = {
+  server: {
+    focus: "",
+    probes:
+      "Probe requirements, data flow, consistency, scale, reliability, security, operations, and evolution"
+  },
+  frontend: {
+    focus:
+      "- This is a frontend system design interview: the browser client is the system under design. Focus on the component tree and state ownership, data fetching and caching, the API contract the client needs, rendering on the server versus in the browser, performance on real devices and networks, accessibility, client security, and rollout. Do not steer the candidate into designing databases, queues, or server infrastructure beyond the contract the client depends on.\n",
+    probes:
+      "Probe users, devices, and networks; component and state boundaries; data fetching, caching, and races; rendering and performance budgets; loading, error, and offline states; accessibility; security; and rollout"
+  },
+  data: {
+    focus:
+      "- This is a data system design interview: the pipeline and its tables are the system under design. Focus on consumers and freshness goals, data contracts and schema changes, ingestion, stream and batch processing, table modelling and partitioning, duplicates and late data, idempotent writes and replays, skew, data quality checks, privacy and deletion, cost, and backfills. Do not steer the candidate into designing application servers or user interfaces beyond the sources and consumers the pipeline depends on.\n",
+    probes:
+      "Probe consumers, volume, and freshness; data contracts and schema evolution; table models and partitioning; duplicates, late data, and idempotency; skew and backpressure; data quality and lineage; privacy; cost; and backfills"
+  }
+};
+
 export function buildSystemInstruction(input: {
   roundTitle: string;
   interviewerName?: "Claire" | "James";
@@ -429,6 +456,8 @@ export function buildSystemInstruction(input: {
   isResumeBehaviouralRound?: boolean;
   isDsaDesignRound?: boolean;
   dsaDesignMode?: "dsa" | "design" | "combined";
+  /** What a System Design round designs: servers (default), the browser client, or a data pipeline. */
+  designTrack?: ArchitectureDesignTrack;
   isTechnicalProjectsRound?: boolean;
   question: string;
   questionNumber: number;
@@ -611,7 +640,7 @@ Coding focus rules:
 - A trusted client message beginning "The coding workspace—not the candidate—reported an execution event" is a workspace status, not a candidate turn. Do not call complete_interview_turn, do not advance the question, and speak only its exact approved line.
 
 Design rules:
-- Keep all five design acts on the same scenario.
+${DESIGN_TRACK_RULES[input.designTrack ?? "server"].focus}- Keep all five design acts on the same scenario.
 - This is a candidate-led system-design interview. Do not recite a prepared architecture, API, data model, rubric, incident timeline, or solution.
 - During Frame, the candidate's questions are requirement discovery—not requests for hints and not completed answers. Answer the exact question naturally as a product stakeholder using the private interviewer guide, classify it question-or-clarification, choose respond, and leave line empty so they can continue discovering. If a detail is genuinely unspecified, state one reasonable assumption explicitly instead of pretending it was given.
 - Do not advance from Frame merely because the candidate asked several questions. Move on after they synthesize scope, important non-goals, quantified scale, and measurable goals well enough to design.
@@ -619,7 +648,7 @@ Design rules:
 - During Deep dive, investigate the selected component's contracts, state, consistency, idempotency, and recovery rather than asking for another high-level architecture tour.
 - During Pressure test, apply the supplied changing conditions to the candidate's architecture. Ask what fails first and how their design changes; do not reveal the reference solution.
 - During Defend, ask for trade-offs, risks, and improvements grounded in their own design.
-- Probe requirements, data flow, consistency, scale, reliability, security, operations, and evolution only as directed by the current act.
+- ${DESIGN_TRACK_RULES[input.designTrack ?? "server"].probes} only as directed by the current act.
 - Accept a coherent alternative architecture when the candidate states assumptions and defends trade-offs.
 - Challenge only a concrete contradiction or unsupported guarantee, never speaking style.
 

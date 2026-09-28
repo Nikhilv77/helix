@@ -13,6 +13,74 @@ export type StoryPracticeArtifactData = {
   table?: { columns: string[]; rows: string[][] };
 };
 
+/**
+ * An artifact's text split into prose and fenced code. Authors put real code,
+ * JSON, SQL, or YAML inside ```language fences so it renders in the read-only
+ * editor instead of as a sentence describing the code.
+ */
+export type StoryPracticeArtifactBlock =
+  | { kind: "text"; text: string }
+  | { kind: "code"; language: string; code: string };
+
+export function storyPracticeArtifactBlocks(content: string): StoryPracticeArtifactBlock[] {
+  const blocks: StoryPracticeArtifactBlock[] = [];
+  const fence = /```[ \t]*([\w+#-]*)[ \t]*\n([\s\S]*?)\n?```/g;
+  let cursor = 0;
+  for (const match of content.matchAll(fence)) {
+    const index = match.index ?? 0;
+    const text = content.slice(cursor, index).trim();
+    if (text) blocks.push({ kind: "text", text });
+    blocks.push({
+      kind: "code",
+      language: match[1]?.trim() || "plaintext",
+      code: (match[2] ?? "").replace(/^\n+|\s+$/g, "")
+    });
+    cursor = index + match[0].length;
+  }
+  const rest = content.slice(cursor).trim();
+  if (rest) blocks.push({ kind: "text", text: rest });
+  return blocks;
+}
+
+/** Prose and fenced code blocks, with each code block in the read-only editor. */
+export function StoryPracticeArtifactBlocks({
+  blocks,
+  label,
+  comfortable = false
+}: {
+  blocks: StoryPracticeArtifactBlock[];
+  label: string;
+  comfortable?: boolean;
+}) {
+  return (
+    <div className="divide-y divide-white/[0.06]">
+      {blocks.map((block, index) =>
+        block.kind === "code" ? (
+          <div key={index} className="relative">
+            <span className="pointer-events-none absolute right-3 top-2 z-10 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/28">
+              {block.language === "plaintext" ? "text" : block.language}
+            </span>
+            <PracticeCodeViewer
+              code={block.code}
+              language={block.language}
+              maxLines={24}
+              ariaLabel={`${label}, ${block.language} excerpt, read only`}
+              embedded
+            />
+          </div>
+        ) : (
+          <p
+            key={index}
+            className={`${comfortable ? "text-sm leading-7" : "text-[13px] leading-6"} whitespace-pre-wrap px-4 py-3 text-cream/62`}
+          >
+            {block.text}
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
 /** Typed renderer shared by the story-driven Practice tracks. */
 export function StoryPracticeArtifact({
   artifact,
@@ -21,7 +89,12 @@ export function StoryPracticeArtifact({
   artifact: StoryPracticeArtifactData;
   comfortable?: boolean;
 }) {
-  const presentation = artifactPresentation(artifact);
+  const blocks = storyPracticeArtifactBlocks(artifact.content);
+  const firstCode = blocks.find((block) => block.kind === "code");
+  const presentation = firstCode
+    ? { editor: true, extension: languageExtension(firstCode.language) }
+    : artifactPresentation(artifact);
+  const editorLanguage = firstCode?.language ?? artifact.language;
   const lines = artifactDisplayLines(artifact);
 
   return (
@@ -64,8 +137,8 @@ export function StoryPracticeArtifact({
             {artifactFileName(artifact.title, presentation.extension)}
           </span>
           <span className="ml-auto text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/28">
-            {presentation.editor && artifact.language
-              ? `${humanize(artifact.language)} · read only`
+            {presentation.editor && editorLanguage && editorLanguage !== "plaintext"
+              ? `${humanize(editorLanguage)} · read only`
               : "Read only"}
           </span>
         </div>
@@ -112,6 +185,12 @@ export function StoryPracticeArtifact({
               </tbody>
             </table>
           </div>
+        ) : firstCode ? (
+          <StoryPracticeArtifactBlocks
+            blocks={blocks}
+            label={artifact.title}
+            comfortable={comfortable}
+          />
         ) : presentation.editor ? (
           <PracticeCodeViewer
             code={artifact.content}
@@ -224,6 +303,15 @@ function languageExtension(language: string | undefined): string {
       return "cs";
     case "sql":
       return "sql";
+    case "json":
+      return "json";
+    case "yaml":
+    case "yml":
+      return "yaml";
+    case "plaintext":
+    case "text":
+    case "log":
+      return "log";
     case "css":
       return "css";
     case "tsx":

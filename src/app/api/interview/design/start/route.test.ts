@@ -35,7 +35,8 @@ vi.mock("@/server/app-container", () => ({
     architectureDesign: {
       eligibility: { forProfile: mocks.designEligibility },
       focus: { confirm: mocks.confirmFocus },
-      ranking: { rankFirstScenario: mocks.rankFirstScenario }
+      ranking: { rankFirstScenario: vi.fn() },
+      interviewRanking: { rankFirstScenario: mocks.rankFirstScenario }
     }
   })
 }));
@@ -163,5 +164,101 @@ describe("POST /api/interview/design/start", () => {
     expect(plan).toHaveLength(5);
     expect(plan[0]?.text).toContain("customer-support assistant");
     expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it("starts a frontend System Design interview about the client, preferring interview-only scenarios", async () => {
+    mocks.getProfile.mockResolvedValue({ targetRole: "frontend", level: "3-5" });
+    mocks.rankFirstScenario.mockReturnValue({
+      selectedScenario: {
+        scenarioKey: "realtime-chat-web-client",
+        scenarioVersion: 1,
+        difficulty: "standard"
+      }
+    });
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/interview/design/start", { method: "POST" })
+    );
+
+    expect(response.status).toBe(200);
+    // The first attempt excludes every Practice-path scenario, so an unseen
+    // interview-only scenario wins when one exists.
+    const [, firstContext] = mocks.rankFirstScenario.mock.calls[0]!;
+    expect(firstContext.recentScenarioKeys).toContain("infinite-social-feed-client");
+    expect(firstContext.recentScenarioKeys).not.toContain("realtime-chat-web-client");
+    const [setup, , , plan] = mocks.start.mock.calls[0]!;
+    expect(setup).toMatchObject({
+      role: "frontend",
+      agenda: expect.arrayContaining(["Sketch the client architecture"]),
+      dsaDesignRound: { designScenarioKey: "realtime-chat-web-client" }
+    });
+    expect(plan[1]?.text).toContain("client architecture");
+    expect(plan[1]?.mustHit).toContain("component boundaries and state ownership");
+    expect(plan[3]?.text).toContain("what the user sees");
+  });
+
+  it("starts a data System Design interview about the pipeline", async () => {
+    mocks.getProfile.mockResolvedValue({ targetRole: "data", level: "3-5" });
+    mocks.rankFirstScenario.mockReturnValue({
+      selectedScenario: {
+        scenarioKey: "realtime-fraud-feature-pipeline",
+        scenarioVersion: 1,
+        difficulty: "standard"
+      }
+    });
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/interview/design/start", { method: "POST" })
+    );
+
+    expect(response.status).toBe(200);
+    const [, firstContext] = mocks.rankFirstScenario.mock.calls[0]!;
+    expect(firstContext.recentScenarioKeys).toContain("clickstream-analytics-pipeline");
+    expect(firstContext.recentScenarioKeys).not.toContain("realtime-fraud-feature-pipeline");
+    const [setup, , , plan] = mocks.start.mock.calls[0]!;
+    expect(setup).toMatchObject({
+      role: "data",
+      agenda: expect.arrayContaining(["Sketch the pipeline and table design"]),
+      dsaDesignRound: { designScenarioKey: "realtime-fraud-feature-pipeline" }
+    });
+    expect(setup.context).toContain("the pipeline and its tables are the system under design");
+    expect(plan[0]?.text).toContain("fraud");
+    expect(plan[1]?.mustHit).toContain("data contracts and stable record identity");
+    expect(plan[3]?.text).toContain("how the data is corrected afterwards");
+  });
+
+  it("refuses a scenario from another role's path", async () => {
+    mocks.getProfile.mockResolvedValue({ targetRole: "data", level: "3-5" });
+    mocks.rankFirstScenario.mockReturnValue({
+      selectedScenario: {
+        scenarioKey: "infinite-social-feed-client",
+        scenarioVersion: 1,
+        difficulty: "standard"
+      }
+    });
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/interview/design/start", { method: "POST" })
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "DESIGN_SCENARIO_ROLE_MISMATCH" }
+    });
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("refuses System Design for a role without scenarios", async () => {
+    mocks.getProfile.mockResolvedValue({ targetRole: "pm", level: "3-5" });
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/interview/design/start", { method: "POST" })
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "SYSTEM_DESIGN_ROLE_UNSUPPORTED" }
+    });
+    expect(mocks.start).not.toHaveBeenCalled();
   });
 });

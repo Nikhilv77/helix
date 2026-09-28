@@ -108,7 +108,7 @@ export async function buildCandidateAnalytics(
   const nodeTracks = storyDiscipline === null;
   const architectureTrack =
     nodeTracks ||
-    (storyDiscipline !== null && storyDisciplineDefinition(storyDiscipline).includesArchitecture);
+    (storyDiscipline !== null && storyDisciplineDefinition(storyDiscipline).architecture !== null);
   const [corePractice, appliedPractice, architecturePractice, storyPractice, insights] =
     await Promise.all([
       recover(

@@ -50,7 +50,7 @@ describe("Architecture & Design content release", () => {
   });
 
   it("keeps approved artifacts published and incomplete briefs draft-only", () => {
-    expect(ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE).toHaveLength(8);
+    expect(ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE).toHaveLength(20);
     expect(
       ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(
         ({ publicationStatus }) => publicationStatus === "published"
@@ -63,7 +63,19 @@ describe("Architecture & Design content release", () => {
       "global-media-processing",
       "search-autocomplete-platform",
       "retrieval-augmented-support-assistant",
-      "real-time-fraud-model-platform"
+      "real-time-fraud-model-platform",
+      "infinite-social-feed-client",
+      "typeahead-search-client",
+      "offline-field-inspection-app",
+      "design-system-rollout",
+      "realtime-chat-web-client",
+      "product-page-web-performance",
+      "clickstream-analytics-pipeline",
+      "cdc-lakehouse-replication",
+      "daily-revenue-reporting",
+      "data-quality-lineage-platform",
+      "realtime-fraud-feature-pipeline",
+      "experiment-metrics-pipeline"
     ]);
     expect(
       ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(

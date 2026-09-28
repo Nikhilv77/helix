@@ -23,8 +23,11 @@ Scores guide practice. They are not hiring decisions.
 | 5 | Hiring Manager & Final Behavioural | James | 30 min | Fixed agenda: direction, fit, learning, uncertainty, conflict, mistakes, feedback, close |
 
 - AI/ML learners have no DSA round (coding is assessed inside the technical rounds).
-- Frontend and Data learners do not see System Design until their scenarios exist (see
-  "System Design for Frontend and Data" in docs/09_FUTURE_SCOPE.md).
+- System Design has three tracks: server (Backend, Full-stack, AI/ML), frontend (the browser
+  client is the system), and data (the pipeline and its tables are the system). Each has its own
+  act prompts, Live rules, agenda, and report labels, with the same parameter keys. Two of the
+  six Frontend and six Data scenarios are interview-only, so the round has cases the learner has
+  not practised. Only a PM or an undeclared role does not see the round.
 - Freshers get college, internship, and first-role versions of the behavioural questions.
 - Each round has its own start route under `src/app/api/interview/<round>/start`, which builds the
   questions from stored content. No model plans questions at start.
@@ -141,8 +144,7 @@ pnpm interview:quality   # live models; costs quota
 
 ## Current limitations
 
-- Frontend and Data have no System Design scenarios yet; the fundamentals bank has no
-  data-engineering MCQs.
+- The fundamentals bank has no data-engineering MCQs.
 - There is no job-description upload flow.
 - DSA uses authored examples as tests; there is no hidden-test suite.
 - Personalized code tasks in round 2 have no generated tests; they are graded on the code alone.

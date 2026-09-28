@@ -16,8 +16,9 @@ export interface BuiltWorkspacePage<T> {
 // resume-roast 4: in-progress generation, rubric scorecards, and the profile
 // target the in-page resume upload needs.
 // trailmate 3: overview carries the online-mates count and leaderboard size.
+// interviews 7: System Design no longer resumes an Architecture Practice checkpoint.
 export const WORKSPACE_PAGE_SCHEMA_VERSION: Record<WorkspacePage, number> = {
-  interviews: 4,
+  interviews: 7,
   "resume-roast": 4,
   trailmate: 3,
   reports: 3

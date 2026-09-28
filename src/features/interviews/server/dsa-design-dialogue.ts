@@ -40,12 +40,12 @@ export function dsaDesignMoveOnUtterance(state: DialogueState, acknowledgement: 
   const previous = state.plan[state.questionIndex - 1];
   let bridge = "";
   if (previous?.interviewSection === "dsa" && next.interviewSection === "dsa") {
-    bridge = "Good. Let’s switch to a second coding problem and test a different angle.";
+    bridge = "Let’s switch to a second coding problem and test a different angle.";
   } else if (previous?.interviewSection === "dsa" && next.interviewSection === "design") {
     bridge =
       "That closes the coding portion. Now let’s move into system design: start by framing the problem before choosing components.";
   } else if (previous?.stage === "design-frame" && next.stage === "design-canvas") {
-    bridge = "Good. Let’s carry the requirements you established into the architecture.";
+    bridge = "Let’s carry the requirements you established into the architecture.";
   } else if (previous?.stage === "design-canvas" && next.stage === "design-deep-dive") {
     bridge = `I want to go deeper on ${designComponentFromLatestAnswer(state)}.`;
   } else if (previous?.stage === "design-deep-dive" && next.stage === "design-pressure") {

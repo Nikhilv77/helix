@@ -12,7 +12,8 @@ type BuiltPracticeHome = {
   cacheable: boolean;
 };
 // 2: story entries cover frontend and data alongside AI/ML.
-export const PRACTICE_HOME_SCHEMA_VERSION = 3;
+// 5: Frontend and Data learners get Architecture & Design practice.
+export const PRACTICE_HOME_SCHEMA_VERSION = 5;
 const SNAPSHOT_SCHEMA_VERSION = PRACTICE_HOME_SCHEMA_VERSION;
 const logger = new Logger("PracticeHomeSnapshot");
 

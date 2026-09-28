@@ -3,6 +3,12 @@
 import { useEffect, useRef } from "react";
 
 const BAR_COUNT = 14;
+// Voice, not room hiss: automatic gain lifts an idle microphone's noise floor
+// to about a third of one bar, so "hearing" needs about two bars held briefly.
+const VOICE_LEVEL = 0.12;
+const QUIET_LEVEL = 0.06;
+const VOICE_HOLD_MS = 300;
+const QUIET_HOLD_MS = 700;
 const BAR_HEIGHTS = Array.from(
   { length: BAR_COUNT },
   (_, index) => `${30 + (index / BAR_COUNT) * 70}%`
@@ -65,6 +71,8 @@ export function MicMeter({
     let lastHearing = false;
     let lastActive = -1;
     let lastSampleAt = 0;
+    let aboveSince = 0;
+    let belowSince = 0;
     const sampleInterval = coarsePointer ? 50 : 1000 / 30;
 
     function tick(now: number) {
@@ -82,12 +90,15 @@ export function MicMeter({
       const raw = Math.min(1, Math.sqrt(sum / buffer.length) * 5);
       smoothed += (raw - smoothed) * 0.3;
       const active = Math.round(smoothed * BAR_COUNT);
-      if (active !== lastActive) {
+      aboveSince = smoothed > VOICE_LEVEL ? aboveSince || now : 0;
+      belowSince = smoothed < QUIET_LEVEL ? belowSince || now : 0;
+      const hearing = lastHearing
+        ? !(belowSince && now - belowSince >= QUIET_HOLD_MS)
+        : Boolean(aboveSince && now - aboveSince >= VOICE_HOLD_MS);
+      if (active !== lastActive || hearing !== lastHearing) {
         lastActive = active;
-        paint(active, active > 1 ? "Hearing you" : "Say something");
+        paint(active, hearing ? "Hearing you" : "Say something");
       }
-
-      const hearing = smoothed > 0.025;
       if (hearing !== lastHearing) {
         lastHearing = hearing;
         onSignalChange?.(hearing);

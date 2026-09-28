@@ -7,6 +7,33 @@ import {
 import { architectureDesignScenarioSelectionSchema } from "@/features/practice/architecture-design/domain/focus-ranking-contracts";
 import { architectureDesignQuestionSchema } from "@/features/practice/architecture-design/domain/question-contracts";
 import { architectureDesignKnowledgeCheck } from "@/features/practice/architecture-design/domain/knowledge-check";
+import { architectureDesignTrackForScenario } from "@/features/practice/architecture-design/domain/content-candidates";
+import type { ArchitectureDesignTrack } from "@/features/practice/architecture-design/domain/contracts";
+
+/** The two written defence prompts for each kind of system being designed. */
+const DEFENCE_PROMPTS: Record<
+  ArchitectureDesignTrack,
+  { architecture: string; production: string }
+> = {
+  server: {
+    architecture:
+      "Build the design on the canvas, then explain one request end to end. Show ownership boundaries, data stores, synchronous and asynchronous edges, partitioning, backpressure, and the dominant failure-isolation boundary. Defend the two trade-offs that matter most.",
+    production:
+      "Pressure-test the design for overload, regional failure, abuse, and unsafe migration. Define the SLOs and observability signals, security and privacy boundaries, recovery authority, cost controls, and a reversible evolution path with explicit rollback criteria."
+  },
+  frontend: {
+    architecture:
+      "Sketch the client on the canvas, then walk one user action end to end. Show the component tree and state ownership, the requests and caches involved, what renders on the server versus in the browser, how long lists and heavy work stay off the main thread, and the error boundary that contains the dominant failure. Defend the two trade-offs that matter most.",
+    production:
+      "Pressure-test the client for slow devices and networks, failed and racing requests, injected content, and an unsafe release. Define the real-user metrics you would watch, the security and privacy boundaries, the accessibility checks, cost controls such as bundle and data budgets, and a flagged rollout with explicit rollback criteria."
+  },
+  data: {
+    architecture:
+      "Sketch the pipeline on the canvas, then follow one record from its source to the table or feature that serves it. Show ingestion, stream and batch stages, table layout and partitioning, where duplicates and late data are handled, how a skewed key or join is spread, and how a restart or replay stays idempotent. Defend the two trade-offs that matter most.",
+    production:
+      "Pressure-test the pipeline for a traffic spike, late and duplicate data, an upstream schema change, and an unsafe backfill. Define the freshness and completeness SLOs and data quality checks you would alert on, how personal data is minimised and deleted, cost controls for compute and storage, and a migration or backfill plan with parallel runs and explicit rollback criteria."
+  }
+};
 
 type BlueprintQuestion = {
   id: string;
@@ -34,6 +61,8 @@ export function buildArchitectureDesignAssessmentSnapshot(input: {
   const contractCheck = architectureDesignKnowledgeCheck(contracts!.question);
   const architectureCheck = architectureDesignKnowledgeCheck(architecture!.question);
   const productionCheck = architectureDesignKnowledgeCheck(quality!.question);
+  const defence =
+    DEFENCE_PROMPTS[architectureDesignTrackForScenario(requirements!.question.scenarioKey)];
   const prompts: ArchitectureDesignAssessmentSnapshot["prompts"] = [
     prompt(
       "requirements-scope-defence",
@@ -58,7 +87,7 @@ export function buildArchitectureDesignAssessmentSnapshot(input: {
       "architecture-tradeoff-defence",
       3,
       "architecture-tradeoffs",
-      "Build the design on the canvas, then explain one request end to end. Show ownership boundaries, data stores, synchronous and asynchronous edges, partitioning, backpressure, and the dominant failure-isolation boundary. Defend the two trade-offs that matter most.",
+      defence.architecture,
       architecture!,
       {
         responseMode: "composite",
@@ -71,7 +100,7 @@ export function buildArchitectureDesignAssessmentSnapshot(input: {
       "reliability-security-operability-defence",
       4,
       "reliability-security-operability",
-      "Pressure-test the design for overload, regional failure, abuse, and unsafe migration. Define the SLOs and observability signals, security and privacy boundaries, recovery authority, cost controls, and a reversible evolution path with explicit rollback criteria.",
+      defence.production,
       quality!,
       {
         responseMode: "composite",

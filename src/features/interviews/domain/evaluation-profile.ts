@@ -1,3 +1,7 @@
+import {
+  architectureDesignTrackForRole,
+  type ArchitectureDesignTrack
+} from "@/features/practice/architecture-design/domain/contracts";
 import type { InterviewSetup } from "@/lib/shared/types";
 
 export const INTERVIEW_REPORT_FAMILIES = [
@@ -277,11 +281,114 @@ export function interviewFamilyForSetup(
   return "core-technical-projects";
 }
 
+/**
+ * Frontend System Design keeps the same parameter keys, so scores and reports
+ * stay comparable, but describes each one the way a frontend interviewer
+ * would judge a client design.
+ */
+const FRONTEND_SYSTEM_DESIGN_PROFILE: InterviewEvaluationProfile = profile(
+  "system-design",
+  "System Design",
+  "System Design",
+  [
+    parameter(
+      "requirements-framing",
+      "Requirements framing",
+      "Discovers users, devices, networks, data sizes, and measurable performance and accessibility goals before designing components.",
+      "Ask which devices and networks matter, and turn 'fast' into Core Web Vitals targets."
+    ),
+    parameter(
+      "architecture-reasoning",
+      "Client architecture",
+      "Builds a coherent component tree with clear state ownership and explains how data flows from the user's action to the updated screen.",
+      "Trace one user action through the components, the state it changes, and the request it makes."
+    ),
+    parameter(
+      "data-consistency",
+      "Data & state",
+      "Defines the API contract, a normalized client store, caching and freshness, and how optimistic updates and racing requests stay consistent with the server.",
+      "Name the source of truth for each piece of state and how a stale or out-of-order response is ignored."
+    ),
+    parameter(
+      "scalability",
+      "Performance & scale",
+      "Uses payload, DOM, and device budgets to choose rendering, virtualization, code splitting, and network strategies.",
+      "Connect each performance technique to a measured budget on a real device."
+    ),
+    parameter(
+      "reliability-tradeoffs",
+      "Resilience & trade-offs",
+      "Defines loading, error, offline, and degraded states, keeps the interface usable and accessible, and defends explicit trade-offs.",
+      "Describe what the user sees when the network fails and how the interface recovers."
+    ),
+    parameter(
+      "communication",
+      "Communication",
+      "Makes the evolving client design and its decisions easy to follow.",
+      "Signpost assumptions, the chosen design, and the main trade-off."
+    )
+  ]
+);
+
+/** Data System Design: the same keys, judged the way a data engineering interviewer would. */
+const DATA_SYSTEM_DESIGN_PROFILE: InterviewEvaluationProfile = profile(
+  "system-design",
+  "System Design",
+  "System Design",
+  [
+    parameter(
+      "requirements-framing",
+      "Requirements framing",
+      "Discovers consumers, data volume, late-arrival patterns, and measurable freshness, completeness, and correctness goals before designing the pipeline.",
+      "Ask who reads the data and how fresh and complete it must be, then turn that into targets."
+    ),
+    parameter(
+      "architecture-reasoning",
+      "Pipeline architecture",
+      "Builds a coherent pipeline from sources through ingestion, stream or batch processing, and serving tables, and explains how one record flows end to end.",
+      "Follow one record from its source to the table that serves it, naming each stage."
+    ),
+    parameter(
+      "data-consistency",
+      "Data modelling & correctness",
+      "Defines data contracts, table models, and partitioning, and keeps results correct under duplicates, late data, retries, and replays with idempotent writes.",
+      "Say where duplicates are removed and why a rerun of the same day cannot count twice."
+    ),
+    parameter(
+      "scalability",
+      "Scale & performance",
+      "Uses volume, peak rate, and data size to choose partitioning, parallelism, skew handling, and incremental processing.",
+      "Connect each scaling choice to a volume estimate and name the hot key or skewed join."
+    ),
+    parameter(
+      "reliability-tradeoffs",
+      "Quality, reliability & trade-offs",
+      "Defines data quality checks, freshness and completeness monitoring, failure isolation, safe backfills, privacy, and cost, and defends explicit trade-offs.",
+      "Describe what readers see when a load is late or wrong, and how the data is restated."
+    ),
+    parameter(
+      "communication",
+      "Communication",
+      "Makes the evolving pipeline design and its decisions easy to follow.",
+      "Signpost assumptions, the chosen design, and the main trade-off."
+    )
+  ]
+);
+
+const SYSTEM_DESIGN_PROFILE_BY_TRACK: Partial<
+  Record<ArchitectureDesignTrack, InterviewEvaluationProfile>
+> = { frontend: FRONTEND_SYSTEM_DESIGN_PROFILE, data: DATA_SYSTEM_DESIGN_PROFILE };
+
 export function evaluationProfileForSetup(
-  setup: Parameters<typeof interviewFamilyForSetup>[0]
+  setup: Parameters<typeof interviewFamilyForSetup>[0] & { role?: string | null }
 ): InterviewEvaluationProfile {
-  const selected = profiles[interviewFamilyForSetup(setup)];
-  return selected;
+  const family = interviewFamilyForSetup(setup);
+  if (family === "system-design") {
+    return (
+      SYSTEM_DESIGN_PROFILE_BY_TRACK[architectureDesignTrackForRole(setup.role)] ?? profiles[family]
+    );
+  }
+  return profiles[family];
 }
 
 export function evaluationProfileForFamily(

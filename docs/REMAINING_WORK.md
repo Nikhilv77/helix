@@ -46,9 +46,9 @@ Each is under an hour unless noted.
       to check shallow answers now land around 30 rather than 15.
 - [x] **Interview phase 5** (cleanup). Done, uncommitted.
 - [ ] **Test all five interview phases together**, then commit and deploy.
-- [ ] **Later: System Design (Practice and Interview) for Frontend and Data** (about 4–5 days).
-      Decided September 28, deferred for now. Plan in
-      [Future scope](09_FUTURE_SCOPE.md#system-design-for-frontend-and-data).
+- [x] **System Design (Practice and Interview) for Frontend and Data.** Done September 28,
+      uncommitted. Six scenarios each, published to the dev database only. Read the scenarios,
+      test, then publish the eight Practice scenarios to production (see the changelog).
 - [ ] **Later: data-engineering MCQs** for the fundamentals bank (about 15, an afternoon).
 - [ ] **Pricing.** Principles in [Future scope](09_FUTURE_SCOPE.md#monetisation).
 

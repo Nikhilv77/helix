@@ -49,7 +49,7 @@ const MAX_FILE_SIZE = 6 * 1024 * 1024;
  * the client to read.
  */
 const ROUTE_BUDGET_MS = 52_000;
-const VISUAL_EXTRACT_BUDGET_MS = 20_000;
+const VISUAL_EXTRACT_BUDGET_MS = 24_000;
 const RESERVED_FOR_RESPONSE_MS = 3_000;
 
 const logger = new Logger("ResumeUpload");
@@ -59,6 +59,8 @@ const levelSchema = z.enum(LEVELS);
 export async function POST(request: NextRequest) {
   const startedAt = Date.now();
   const remainingMs = () => ROUTE_BUDGET_MS - (Date.now() - startedAt);
+  /** Set once this request has used an upload from the owner's allowance. */
+  let consumedUpload: { refund: () => Promise<void> } | null = null;
 
   try {
     const { userId } = await auth();
@@ -66,7 +68,11 @@ export async function POST(request: NextRequest) {
 
     const ownerId = authenticatedOwnerId(userId);
     const app = getAppContainer();
-    await getSharedGuard(app.config).enforce(RATE_LIMIT_POLICIES.resumeUpload, ownerId);
+    const guard = getSharedGuard(app.config);
+    await guard.enforce(RATE_LIMIT_POLICIES.resumeUpload, ownerId);
+    consumedUpload = {
+      refund: () => guard.refund(RATE_LIMIT_POLICIES.resumeUpload, ownerId)
+    };
 
     const form = await request.formData();
     const file = form.get("resume");
@@ -423,6 +429,11 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ event: "resume.unhandled", reason: describeError(error) }),
         error
       );
+    }
+    // A failure on our side (a model outage, a timeout) should not cost the
+    // learner one of their uploads; a rejected file still does.
+    if (consumedUpload && (!(error instanceof ApiRouteError) || error.statusCode >= 500)) {
+      await consumedUpload.refund();
     }
     return apiError(error, request.nextUrl.pathname);
   }

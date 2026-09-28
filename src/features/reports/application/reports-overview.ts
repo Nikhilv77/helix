@@ -1,3 +1,4 @@
+import { sessionRoomHref } from "@/features/interviews/ui/shared/interview-room-navigation";
 import { formatShortDate, roundShortLabel } from "@/lib/shared/labels";
 import { coverageAdjustedScore } from "@/features/interviews/domain/report-coverage";
 import {
@@ -288,7 +289,7 @@ function toRoundRow(report: InterviewReport): ReportRoundRow {
     interruptions: report.interaction.interruptions,
     codeSubmitted: report.codeExercise ? report.codeExercise.submitted : null,
     href:
-      report.status === "in_progress" ? `/interview/voice?session=${report.sessionId}` : "/reports"
+      report.status === "in_progress" ? sessionRoomHref(report.sessionId, report.setup) : "/reports"
   };
 }
 

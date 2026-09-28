@@ -16,6 +16,16 @@ end
 return { current, ttl }
 `;
 
+// Gives back use that the server, not the caller, wasted. Never goes below zero
+// and never recreates an expired window.
+const REFUND_SCRIPT = `
+local current = tonumber(redis.call("GET", KEYS[1]) or "0")
+if current <= 0 then
+  return 0
+end
+return redis.call("DECRBY", KEYS[1], math.min(current, tonumber(ARGV[1])))
+`;
+
 const RELEASE_LOCK_SCRIPT = `
 if redis.call("GET", KEYS[1]) == ARGV[1] then
   return redis.call("DEL", KEYS[1])
@@ -151,6 +161,7 @@ interface WindowResult {
 
 export interface SharedGuardBackend {
   consume(key: string, cost: number, windowMs: number): Promise<WindowResult>;
+  refund(key: string, cost: number): Promise<void>;
   acquire(key: string, token: string, ttlMs: number): Promise<boolean>;
   release(key: string, token: string): Promise<void>;
   get(key: string): Promise<string | null>;
@@ -193,6 +204,19 @@ export class SharedGuard {
         windowMs: policy.windowMs,
         retryAfterMs: Math.max(1_000, result.retryAfterMs)
       });
+    }
+  }
+
+  /**
+   * Returns use consumed by a request that failed on the server's side, such
+   * as an AI provider outage, so the caller's retry is not rate limited.
+   * Best effort: a failed refund only leaves the window as it was.
+   */
+  async refund(policy: RateLimitPolicy, identity: string, cost = 1): Promise<void> {
+    try {
+      await this.backend.refund(rateKey(policy.namespace, identity), cost);
+    } catch (error) {
+      console.error("[rate-limit] Failed to refund rate-limit use", error);
     }
   }
 
@@ -289,6 +313,10 @@ class UpstashBackend implements SharedGuardBackend {
     return { used: Number(result[0]), retryAfterMs: Math.max(0, Number(result[1])) };
   }
 
+  async refund(key: string, cost: number): Promise<void> {
+    await this.redis.eval(REFUND_SCRIPT, [key], [cost]);
+  }
+
   async acquire(key: string, token: string, ttlMs: number): Promise<boolean> {
     return (await this.redis.set(key, token, { nx: true, px: ttlMs })) === "OK";
   }
@@ -328,6 +356,12 @@ export class MemorySharedGuardBackend implements SharedGuardBackend {
     return { used: entry.used, retryAfterMs: Math.max(0, entry.expiresAt - now) };
   }
 
+  async refund(key: string, cost: number): Promise<void> {
+    const current = this.counters.get(key);
+    if (!current || current.expiresAt <= this.now()) return;
+    current.used = Math.max(0, current.used - cost);
+  }
+
   async acquire(key: string, token: string, ttlMs: number): Promise<boolean> {
     const now = this.now();
     const current = this.values.get(key);
@@ -360,6 +394,9 @@ class UnavailableBackend implements SharedGuardBackend {
     throw new Error("Shared Redis rate limiting is not configured");
   }
   consume(): Promise<WindowResult> {
+    return Promise.reject(this.fail());
+  }
+  refund(): Promise<void> {
     return Promise.reject(this.fail());
   }
   acquire(): Promise<boolean> {

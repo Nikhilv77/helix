@@ -124,4 +124,19 @@ describe("SharedGuard", () => {
     now += 2_001;
     await expect(guard.getCached("connection", "session-a")).resolves.toBeNull();
   });
+
+  it("refunds use wasted by a server-side failure, without going below zero", async () => {
+    await guard.enforce(ratePolicy, "owner");
+    await guard.enforce(ratePolicy, "owner");
+    await guard.refund(ratePolicy, "owner");
+    await expect(guard.enforce(ratePolicy, "owner")).resolves.toBeUndefined();
+    await expect(guard.enforce(ratePolicy, "owner")).rejects.toMatchObject({ statusCode: 429 });
+
+    await guard.refund(ratePolicy, "fresh-owner");
+    await guard.enforce(ratePolicy, "fresh-owner");
+    await guard.enforce(ratePolicy, "fresh-owner");
+    await expect(guard.enforce(ratePolicy, "fresh-owner")).rejects.toMatchObject({
+      statusCode: 429
+    });
+  });
 });

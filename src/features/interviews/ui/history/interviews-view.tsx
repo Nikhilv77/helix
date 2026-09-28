@@ -1,3 +1,4 @@
+import { sessionRoomHref } from "@/features/interviews/ui/shared/interview-room-navigation";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -69,7 +70,7 @@ export function InterviewsView({
       ? "/practice/core-technical"
       : active.sessionId.startsWith("applied-engineering:")
         ? "/practice/applied-engineering"
-        : `/interview/voice?session=${active.sessionId}`
+        : sessionRoomHref(active.sessionId, active.setup)
     : null;
   const introCopy = firstName
     ? `${firstName}, choose the interview session that feels most useful right now. Each round is shaped around your saved profile and a focused agenda, so you can practise with intent and leave knowing exactly what to sharpen next.`

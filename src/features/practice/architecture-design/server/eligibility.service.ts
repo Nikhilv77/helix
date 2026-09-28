@@ -1,5 +1,6 @@
+import { isArchitectureDesignRole } from "@/features/practice/architecture-design/domain/contracts";
 import {
-  ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE,
+  ARCHITECTURE_DESIGN_PRACTICE_RANKING_CATALOGUE,
   type ArchitectureDesignScenarioRankingCandidate
 } from "@/features/practice/architecture-design/domain";
 import { ARCHITECTURE_DESIGN_CONTENT_CANDIDATES } from "@/features/practice/architecture-design/domain/content-candidates";
@@ -47,18 +48,14 @@ export class ArchitectureDesignEligibilityService {
       catalogue?: readonly ArchitectureDesignScenarioRankingCandidate[];
     }
   ) {
-    this.catalogue = dependencies.catalogue ?? ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE;
+    this.catalogue = dependencies.catalogue ?? ARCHITECTURE_DESIGN_PRACTICE_RANKING_CATALOGUE;
   }
 
   async forProfile(profile: EligibilityProfile): Promise<ArchitectureDesignEligibility> {
-    if (
-      profile.targetRole !== "backend" &&
-      profile.targetRole !== "fullstack" &&
-      profile.targetRole !== "ai-ml"
-    ) {
+    if (!isArchitectureDesignRole(profile.targetRole)) {
       return unavailable(
         "UNSUPPORTED_ROLE",
-        "Architecture & Design is currently available for backend, full-stack, and AI/ML paths."
+        "Architecture & Design is currently available for backend, full-stack, frontend, data, and AI/ML paths."
       );
     }
     const role = profile.targetRole;

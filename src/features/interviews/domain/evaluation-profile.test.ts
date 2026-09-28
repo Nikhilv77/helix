@@ -61,4 +61,25 @@ describe("interview evaluation profiles", () => {
       evaluationProfileForSetup({ roundType: "technical", templateId: "system-design" }).label
     ).toBe("System Design");
   });
+
+  it("judges a frontend System Design round as a client design with the same keys", () => {
+    const setup = { roundType: "technical" as const, templateId: "system-design" };
+    const server = evaluationProfileForSetup({ ...setup, role: "backend" });
+    const frontend = evaluationProfileForSetup({ ...setup, role: "frontend" });
+
+    expect(frontend.family).toBe("system-design");
+    expect(frontend.parameters.map(({ key }) => key)).toEqual(
+      server.parameters.map(({ key }) => key)
+    );
+    expect(frontend.parameters.map(({ label }) => label)).toContain("Client architecture");
+    expect(server.parameters.map(({ label }) => label)).not.toContain("Client architecture");
+    expect(
+      evaluationProfileForSetup({ roundType: "technical", templateId: "dsa", role: "frontend" })
+        .family
+    ).toBe("dsa");
+
+    const data = evaluationProfileForSetup({ ...setup, role: "data" });
+    expect(data.parameters.map(({ key }) => key)).toEqual(server.parameters.map(({ key }) => key));
+    expect(data.parameters.map(({ label }) => label)).toContain("Pipeline architecture");
+  });
 });

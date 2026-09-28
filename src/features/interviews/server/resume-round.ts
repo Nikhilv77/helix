@@ -359,10 +359,19 @@ export function multipleChoiceReply(question: PlannedQuestion, correct: boolean)
     return explanation ? `That's right. ${explanation}` : "That's right.";
   }
 
-  const answer = question.options?.[question.answerIndex ?? 0];
+  const answer = question.options?.[question.answerIndex ?? 0]?.trim();
   if (!answer) return "Not quite, but let's keep going.";
 
-  return explanation ? `Not quite — it's ${answer}. ${explanation}` : `Not quite — it's ${answer}.`;
+  // A full-sentence answer is quoted as a sentence, not squeezed after "it's".
+  const sentence = /[.!?]$/.test(answer) && answer.split(/\s+/).length > 4;
+  const stated = sentence
+    ? `Not quite. The stronger answer: ${answer}`
+    : `Not quite — it's ${answer}.`;
+  // Explanations often restate the answer first; say it once.
+  const rest = explanation?.startsWith(answer)
+    ? explanation.slice(answer.length).trim()
+    : explanation;
+  return rest ? `${stated} ${rest}` : stated;
 }
 
 export function isResumeRoundSetup(setup: InterviewSetup): boolean {

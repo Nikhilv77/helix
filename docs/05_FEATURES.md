@@ -65,7 +65,7 @@ canvas. Teachers introduce blocks with pre-recorded lines.
 | DSA | `/practice/dsa`, `/dsa-questions` | Phases of problems, Monaco workspace, Judge0 runs, hints, Daniel's feedback after an accepted run, block assessments |
 | Core Technical | `/practice/core-technical` | Stories with questions and code runs (Vercel Sandbox, Node 22.22.2), assessments with reports |
 | Applied Engineering | `/practice/applied-engineering` | Incident-based stories: debug and fix real-world failures |
-| Architecture & Design | `/practice/architecture-design` | Scenarios with a canvas and design questions |
+| Architecture & Design | `/practice/architecture-design` | Scenarios with a canvas and design questions, for Backend, Full-stack, AI/ML, Frontend (client architecture), and Data (pipelines and tables) |
 | AI/ML, Frontend, Data | `/practice/ai-ml`, `/frontend`, `/data` | Story tracks with assessments (`features/practice/story-tracks`) |
 
 **How it works**

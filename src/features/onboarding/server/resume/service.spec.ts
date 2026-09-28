@@ -216,4 +216,161 @@ describe("ResumeService.analyze", () => {
     expect(analysis.skills).toEqual([]);
     expect(analysis.warnings).toEqual([]);
   });
+
+  it("reads a visual PDF with the fallback model when the fast model is overloaded", async () => {
+    let now = 0;
+    const overloaded = new AiProviderException({
+      code: "AI_PROVIDER_ERROR",
+      message: "AI provider request failed",
+      provider: "gemini",
+      operation: "resume_visual_text_extract",
+      retryable: true
+    });
+    const primary = {
+      generateStructured: vi.fn(async () => {
+        now += 10_500;
+        throw overloaded;
+      })
+    } as unknown as AiService;
+    const fallback = {
+      generateStructured: vi.fn(async () => ({ readable: true, text: "Nikhil Verma\nEngineer" }))
+    } as unknown as AiService;
+    const service = new ResumeService(
+      primary,
+      { ai: fallback, modelClass: "reasoning" },
+      () => now
+    );
+
+    const text = await service.readVisualPdf({
+      buffer: Buffer.from("%PDF"),
+      pageCount: 1,
+      timeoutMs: 24_000
+    });
+
+    expect(text).toBe("Nikhil Verma\nEngineer");
+    const [primaryRequest] = vi.mocked(primary.generateStructured).mock.calls[0]!;
+    const [fallbackRequest] = vi.mocked(fallback.generateStructured).mock.calls[0]!;
+    expect(primaryRequest).toMatchObject({ modelClass: "fast", timeoutMs: 13_200, maxAttempts: 1 });
+    expect(fallbackRequest).toMatchObject({ modelClass: "reasoning", timeoutMs: 13_500 });
+  });
+
+  it("does not start a visual fallback without enough time to read the PDF", async () => {
+    let now = 0;
+    const primary = {
+      generateStructured: vi.fn(async () => {
+        now += 20_000;
+        throw new Error("slow failure");
+      })
+    } as unknown as AiService;
+    const fallback = { generateStructured: vi.fn() } as unknown as AiService;
+    const service = new ResumeService(
+      primary,
+      { ai: fallback, modelClass: "reasoning" },
+      () => now
+    );
+
+    await expect(
+      service.readVisualPdf({ buffer: Buffer.from("%PDF"), pageCount: 1, timeoutMs: 24_000 })
+    ).rejects.toThrow("slow failure");
+    expect(fallback.generateStructured).not.toHaveBeenCalled();
+  });
+
+  it("starts the fallback read after 6 s while a saturated fast model is still silent", async () => {
+    vi.useFakeTimers();
+    try {
+      const primary = {
+        generateStructured: vi.fn(() => new Promise(() => undefined))
+      } as unknown as AiService;
+      const fallback = {
+        generateStructured: vi.fn(async () => ({ readable: true, text: "Resume text" }))
+      } as unknown as AiService;
+      const service = new ResumeService(primary, { ai: fallback, modelClass: "reasoning" });
+
+      const read = service.readVisualPdf({
+        buffer: Buffer.from("%PDF"),
+        pageCount: 1,
+        timeoutMs: 24_000
+      });
+      await vi.advanceTimersByTimeAsync(5_999);
+      expect(fallback.generateStructured).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(read).resolves.toBe("Resume text");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("skips a fast model that just failed for the rest of the upload and the next two minutes", async () => {
+    let now = 0;
+    const overloaded = new AiProviderException({
+      code: "AI_PROVIDER_ERROR",
+      message: "overloaded",
+      provider: "gemini",
+      operation: "resume_visual_text_extract",
+      retryable: true
+    });
+    const primary = {
+      generateStructured: vi.fn(async () => {
+        throw overloaded;
+      })
+    } as unknown as AiService;
+    const fallback = {
+      generateStructured: vi.fn(async () => ({ readable: true, text: "Resume text" }))
+    } as unknown as AiService;
+    const service = new ResumeService(
+      primary,
+      { ai: fallback, modelClass: "reasoning" },
+      () => now
+    );
+
+    await service.readVisualPdf({ buffer: Buffer.from("%PDF"), pageCount: 1, timeoutMs: 24_000 });
+    await service.readVisualPdf({ buffer: Buffer.from("%PDF"), pageCount: 1, timeoutMs: 24_000 });
+    expect(primary.generateStructured).toHaveBeenCalledTimes(1);
+
+    now += 2 * 60_000 + 1;
+    await service.readVisualPdf({ buffer: Buffer.from("%PDF"), pageCount: 1, timeoutMs: 24_000 });
+    expect(primary.generateStructured).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses a third model when the fast and reasoning models are both overloaded", async () => {
+    const overloaded = () =>
+      new AiProviderException({
+        code: "AI_PROVIDER_ERROR",
+        message: "overloaded",
+        provider: "gemini",
+        operation: "resume_visual_text_extract",
+        retryable: true
+      });
+    const failing = () =>
+      ({
+        generateStructured: vi.fn(async () => {
+          throw overloaded();
+        })
+      }) as unknown as AiService;
+    const fast = failing();
+    const reasoning = failing();
+    const backup = {
+      generateStructured: vi.fn(async () => ({ readable: true, text: "Resume text" }))
+    } as unknown as AiService;
+    let now = 0;
+    const service = new ResumeService(
+      fast,
+      [
+        { ai: reasoning, modelClass: "reasoning" },
+        { ai: backup, modelClass: "reasoning" }
+      ],
+      () => now
+    );
+
+    await expect(
+      service.readVisualPdf({ buffer: Buffer.from("%PDF"), pageCount: 1, timeoutMs: 24_000 })
+    ).resolves.toBe("Resume text");
+
+    // Both saturated models are skipped next time; the backup goes straight in.
+    now += 1_000;
+    await service.readVisualPdf({ buffer: Buffer.from("%PDF"), pageCount: 1, timeoutMs: 24_000 });
+    expect(fast.generateStructured).toHaveBeenCalledTimes(1);
+    expect(reasoning.generateStructured).toHaveBeenCalledTimes(1);
+    expect(backup.generateStructured).toHaveBeenCalledTimes(2);
+  });
 });

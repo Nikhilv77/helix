@@ -12,9 +12,13 @@ export function architectureDesignKnowledgeCheck(
   question: ArchitectureDesignQuestion
 ): ArchitectureDesignKnowledgeCheck {
   const correct = concise(question.referenceAnswer.summary, 460);
+  const ownMistakes = question.commonMistakes.map((mistake) => concise(mistake, 460));
+  // A question authored with its own three mistakes gets scenario-specific
+  // wrong answers; the generic fallbacks are written for server-side systems.
   const distractors = [
+    ...(ownMistakes.length >= 3 ? ownMistakes : []),
     ...fallbackDistractors(question.order),
-    ...question.commonMistakes.map((mistake) => concise(mistake, 460))
+    ...ownMistakes
   ]
     .filter((choice, index, choices) => choice !== correct && choices.indexOf(choice) === index)
     .slice(0, 3) as [string, string, string];

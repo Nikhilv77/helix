@@ -125,6 +125,25 @@ describe("GeminiProvider", () => {
     expect(JSON.stringify(onTrace.mock.calls)).not.toContain("Return structured data");
   });
 
+  it("pins every call to the override model when one is given", async () => {
+    const generateContent = vi
+      .fn()
+      .mockResolvedValue({ text: JSON.stringify({ ok: true, message: "done" }) });
+    const provider = new GeminiProvider(
+      createConfig(),
+      createClient(generateContent),
+      "gemini-backup-test"
+    );
+
+    await provider.generateStructured(createRequest({ modelClass: "fast" }));
+    await provider.generateStructured(createRequest({ modelClass: "reasoning" }));
+
+    expect(generateContent.mock.calls.map(([request]) => request.model)).toEqual([
+      "gemini-backup-test",
+      "gemini-backup-test"
+    ]);
+  });
+
   it("sends a response schema stripped of the bounds Gemini rejects", async () => {
     // A schema carrying these keywords is refused with 400 INVALID_ARGUMENT
     // before the model reads anything, which is what broke resume onboarding.

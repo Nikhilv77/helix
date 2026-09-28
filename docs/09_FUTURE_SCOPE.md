@@ -35,50 +35,17 @@ left needs real sessions:
 - Measure turn latency end to end: learner stops speaking, decision made, first audio back.
 - Cost per session by provider, and where to cut it (shorter instructions, fewer grading calls,
   pre-recorded hand-offs).
-- Write Frontend and Data System Design scenarios and data-engineering MCQs.
+- Write data-engineering MCQs for the fundamentals bank.
 - Decide the free allowance and the metered unit (see [Monetisation](#monetisation)).
 
-## System Design for Frontend and Data
+## Rounds for Frontend and Data
 
-Decided September 28, 2026; deferred. Today these learners do not see the System Design
-interview round (it is hidden, and `/interview/design` redirects) and have no Architecture Practice
-track.
-
-**Decisions already made**
-
-- Frontend and Data get the round in both Architecture Practice and the interview, like Backend,
-  Full-stack, and AI/ML. The same scenarios power both.
-- They reuse the existing architecture: round, canvas, five stages, interviewer, grading, report.
-- About 6 scenarios per role (12 total): about 4 on the Practice path and 2 marked interview-only,
-  because the interview skips scenarios the learner has practised.
-- Ship Frontend first, then Data, each as soon as its content is reviewed.
-- Consider hiding the round for freshers in these roles; real interviews rarely ask them.
-
-**Code (1–1.5 days)**
-
-1. Add `frontend` and `data` to `architectureDesignRoleSchema`
-   (`src/features/practice/architecture-design/domain/contracts.ts`), the families enum, and
-   `systemDesignSupportsRole` (`src/features/interviews/domain/dsa-design-round.ts`).
-2. Make the fixed stage prompts and "listen for" lists in `designQuestions`
-   (`src/features/interviews/server/dsa-design-round.ts`) and the design rules in the Live
-   instruction (`buildDsaDesignSystemInstruction` in the token route) role-specific. They assume
-   backend today (storage, async boundaries, partitioning, idempotency).
-3. Add an interview-only flag to scenarios and respect it in Practice ranking.
-4. Show the Architecture track in Practice home, the track list, and progress for these roles.
-5. Tests for both paths and both roles.
-
-**Content (2–3 days including review)**
-
-Each scenario: premise, realism anchors (the pressure tests), four questions with a reference
-answer and rubric points, roles, seniorities, and human review approval. Same shape as
-`src/features/practice/architecture-design/domain/ai-ml-scenarios.ts`.
-
-- Frontend ideas: news feed with infinite scroll and offline support; instant autocomplete search;
-  a collaborative editor's front end; image-heavy product page performance; a design system rollout;
-  a real-time dashboard.
-- Data ideas: clickstream pipeline into a warehouse; change data capture into a data lake; daily
-  revenue with late-arriving data; real-time fraud features; data quality and lineage; a metrics
-  layer with backfills.
+Frontend and Data System Design shipped on September 28, 2026 (see the changelog). To add another
+role or scenarios later: write scenarios in the shape of
+`src/features/practice/architecture-design/domain/data-scenarios.ts` (four questions, three
+common mistakes each), mark about a third interview-only, and add the role's wording to each
+`ArchitectureDesignTrack` table (interview acts, Live rules, report labels, checkpoint prompts).
+Consider hiding System Design for Data and Frontend freshers; real interviews rarely ask them.
 
 **Related, larger rounds**
 

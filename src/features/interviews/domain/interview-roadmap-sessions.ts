@@ -52,9 +52,8 @@ export function interviewRoadmapSessions(input: {
 }): InterviewRoadmapSession[] {
   const rounds = permanentInterviewRounds(input.personalizedPlan, input.history);
   if (input.targetRole === undefined || systemDesignSupportsRole(input.targetRole)) return rounds;
-  // Roles without System Design scenarios (Frontend, Data) do not see the
-  // round until they exist; see "System Design for Frontend and Data" in
-  // docs/09_FUTURE_SCOPE.md.
+  // Roles without System Design scenarios (a PM or an undeclared role) do not
+  // see the round.
   return rounds
     .filter((round) => round.id !== "system-design" || round.resumeSessionId)
     .map((round, index) => ({ ...round, order: index + 1 }));
@@ -165,9 +164,12 @@ function systemDesignRoadmapSession(
   blueprint: SessionBlueprint,
   history: InterviewHistoryItem[]
 ): InterviewRoadmapSession {
+  // Architecture Practice checkpoints share the "system-design" template so
+  // they are graded like the round, but they are not this interview.
   const latest = findLatestSession(
     history,
-    (session) => session.setup.templateId === "system-design"
+    (session) =>
+      session.setup.templateId === "system-design" && !session.setup.storyPracticeAssessment
   );
   const progress = sessionProgress(latest, latest?.questionCount ?? 5);
 

@@ -39,7 +39,9 @@ export class GeminiProvider implements SystemDesignerAIProvider {
 
   constructor(
     private readonly config: AppConfigService,
-    private readonly client: GeminiGenerateContentClient
+    private readonly client: GeminiGenerateContentClient,
+    /** Pins every call to one model, for a dedicated fallback service. */
+    private readonly modelOverride: string | null = null
   ) {}
 
   async generateStructured<T>(request: GenerateStructuredRequest<T>): Promise<T> {
@@ -158,6 +160,7 @@ export class GeminiProvider implements SystemDesignerAIProvider {
   }
 
   private selectModel(modelClass: GenerateStructuredRequest<unknown>["modelClass"]): string {
+    if (this.modelOverride) return this.modelOverride;
     return modelClass === "fast" ? this.config.geminiFastModel : this.config.geminiReasoningModel;
   }
 

@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  interviewRoomHref,
+  sessionRoomHref
+} from "@/features/interviews/ui/shared/interview-room-navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -69,6 +73,7 @@ import { MicrophonePicker } from "./components/microphone-picker";
 import { TypedAnswerPanel } from "./components/typed-answer-panel";
 import { ConversationTranscript } from "./components/conversation-transcript";
 import { CandidateCameraPreview } from "./components/candidate-camera-preview";
+import { MicrophoneCheckDialog } from "@/features/interviews/ui/voice/components/microphone-check-dialog";
 import { ConnectionRecoveryToast } from "./components/connection-recovery-toast";
 import { MediaPermissionGate, type MediaSetupResult } from "./components/media-permission-gate";
 import { useInterviewClock } from "./hooks/use-interview-clock";
@@ -97,6 +102,8 @@ const SESSION_CONNECTING_RECOVERY_MS = 10_000;
 const SESSION_LIVE_RECOVERY_MS = 30_000;
 const SESSION_READ_TIMEOUT_MS = 15_000;
 const MIC_SILENCE_WARNING_MS = 6_000;
+/** Silence after connecting, with nothing ever heard, before the centred mic check. */
+const MIC_CHECK_DELAY_MS = 10_000;
 const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
 const LEGACY_CORE_TECHNICAL_ASSESSMENT_STAGES = [
   { id: "rapid" as const, label: "Review", caption: "Your saved path evidence" },
@@ -196,6 +203,10 @@ export function VoiceInterviewClient({
   const [switchingMic, setSwitchingMic] = useState(false);
   const [micSignal, setMicSignal] = useState(false);
   const [micSilent, setMicSilent] = useState(false);
+  /** Whether the room has heard any sound on the current microphone. */
+  const [heardOnMic, setHeardOnMic] = useState(false);
+  const [micCheckOpen, setMicCheckOpen] = useState(false);
+  const [micCheckDismissed, setMicCheckDismissed] = useState(false);
   const [answerPanelOpen, setAnswerPanelOpen] = useState(false);
   const [typedDraft, setTypedDraft] = useState("");
   const [typedNotes, setTypedNotes] = useState("");
@@ -361,6 +372,13 @@ export function VoiceInterviewClient({
     const timeout = window.setTimeout(() => controller.abort(), SESSION_READ_TIMEOUT_MS);
     try {
       const session = await getSession(sessionId, controller.signal);
+      // A Practice checkpoint reached through an old link belongs in its own room.
+      const room = sessionRoomHref(sessionId, session.setup);
+      if (room !== interviewRoomHref(sessionId)) {
+        stopPollingRef.current = true;
+        window.location.replace(room);
+        return;
+      }
       if (queuedSessionRefreshRef.current) return;
       turnsRef.current = session.turns;
       setTurns(session.turns);
@@ -665,19 +683,42 @@ export function VoiceInterviewClient({
   }, [liveTranscript, setup?.dsaDesignRound?.kind, setup?.templateId, setup?.templateTitle, turns]);
 
   useEffect(() => {
-    if (status !== "live" || !micOn || agentSpeaking || micSignal || liveTranscript) {
+    // Silence after the candidate has been heard is thinking, not a dead microphone.
+    if (status !== "live" || !micOn || agentSpeaking || micSignal || liveTranscript || heardOnMic) {
       setMicSilent(false);
       return;
     }
 
     const timer = window.setTimeout(() => setMicSilent(true), MIC_SILENCE_WARNING_MS);
     return () => window.clearTimeout(timer);
-  }, [agentSpeaking, liveTranscript, micOn, micSignal, status]);
+  }, [agentSpeaking, heardOnMic, liveTranscript, micOn, micSignal, status]);
 
   const handleMicSignalChange = useCallback((hearing: boolean) => {
     setMicSignal(hearing);
-    if (hearing) setMicSilent(false);
+    if (hearing) {
+      setMicSilent(false);
+      setHeardOnMic(true);
+      setMicCheckOpen(false);
+    }
   }, []);
+
+  // A new microphone track starts unheard.
+  useEffect(() => {
+    setHeardOnMic(false);
+    setMicCheckDismissed(false);
+  }, [localTrack]);
+
+  // Only a microphone that has never produced sound opens the centred check;
+  // a thinking pause after the candidate has spoken never does.
+  useEffect(() => {
+    if (status !== "live" || !micOn || !localTrack || heardOnMic || micCheckDismissed) {
+      if (heardOnMic || status !== "live") setMicCheckOpen(false);
+      return;
+    }
+    if (agentSpeaking) return;
+    const timer = window.setTimeout(() => setMicCheckOpen(true), MIC_CHECK_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [agentSpeaking, heardOnMic, localTrack, micCheckDismissed, micOn, status]);
 
   const handleLiveTranscript = useCallback(
     (speaker: "user" | "agent", event: { text: string; finished: boolean }) => {
@@ -706,8 +747,15 @@ export function VoiceInterviewClient({
       setMicSignal(false);
       setSelectedInputId(deviceId);
       window.localStorage.setItem(MIC_DEVICE_STORAGE_KEY, deviceId);
-      setStatus("connecting");
-      setConnectionAttempt((attempt) => attempt + 1);
+      // Swap the capture device inside the live connection; reconnecting would
+      // cost a credential and a few silent seconds for the same result.
+      const switched = await geminiInterviewerRef.current
+        ?.switchMicrophone(deviceId)
+        .catch(() => false);
+      if (!switched) {
+        setStatus("connecting");
+        setConnectionAttempt((attempt) => attempt + 1);
+      }
       setSwitchingMic(false);
       return;
     }
@@ -976,7 +1024,8 @@ export function VoiceInterviewClient({
     setAgentTrack(null);
     setLocalTrack(null);
     setLiveTranscript("");
-    geminiInterviewerRef.current?.reconnect();
+    // Remounting the interviewer tears down the old connection and opens one
+    // new one; also closing it imperatively would spend a second credential.
     setConnectionAttempt((attempt) => attempt + 1);
   }
 
@@ -1221,6 +1270,20 @@ export function VoiceInterviewClient({
           microphoneDeviceId={selectedInputId}
         />
       ) : null}
+      {micCheckOpen && status === "live" ? (
+        <MicrophoneCheckDialog
+          interviewerName={persona.name}
+          devices={audioInputs}
+          selectedId={selectedInputId}
+          track={localTrack}
+          switching={switchingMic}
+          onChange={(deviceId) => void switchMicrophone(deviceId)}
+          onDismiss={() => {
+            setMicCheckDismissed(true);
+            setMicCheckOpen(false);
+          }}
+        />
+      ) : null}
       {status === "error" ? (
         <ConnectionRecoveryToast
           interviewerName={persona.name}
@@ -1267,6 +1330,15 @@ export function VoiceInterviewClient({
                   : statusLabel}
             </span>
           </button>
+
+          {/* The one signal detector for every layout; the meters elsewhere only display. */}
+          <div className="hidden" aria-hidden="true">
+            <MicMeter
+              track={localTrack}
+              muted={!micOn || !micAvailable}
+              onSignalChange={handleMicSignalChange}
+            />
+          </div>
 
           <div className="hidden w-40 xl:block">
             <MicrophonePicker
@@ -1663,11 +1735,7 @@ export function VoiceInterviewClient({
                       : statusLabel}
                   </p>
                   <div className="mt-1.5 max-w-52">
-                    <MicMeter
-                      track={localTrack}
-                      muted={!micOn || !micAvailable}
-                      onSignalChange={handleMicSignalChange}
-                    />
+                    <MicMeter track={localTrack} muted={!micOn || !micAvailable} />
                   </div>
                 </div>
               </div>

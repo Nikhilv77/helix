@@ -11,7 +11,15 @@ import {
   buildSystemDesignPlan,
   rankDsaDesignScenarioWithFallback
 } from "@/features/interviews/server/dsa-design-round";
-import { ARCHITECTURE_DESIGN_CONTENT_CANDIDATES } from "@/features/practice/architecture-design/domain/content-candidates";
+import {
+  ARCHITECTURE_DESIGN_CONTENT_CANDIDATES,
+  ARCHITECTURE_DESIGN_INTERVIEW_ONLY_SCENARIO_KEYS
+} from "@/features/practice/architecture-design/domain/content-candidates";
+import { systemDesignSupportsRole } from "@/features/interviews/domain/dsa-design-round";
+import {
+  architectureDesignTrackForRole,
+  type ArchitectureDesignTrack
+} from "@/features/practice/architecture-design/domain/contracts";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +53,12 @@ export async function POST(request: NextRequest) {
         app.interviewService.history(ownerId, 50).catch(() => []),
         practisedArchitectureScenarioKeys(ownerId)
       ]);
+      if (!systemDesignSupportsRole(profile.targetRole)) {
+        throw new ConflictErrorException(
+          "SYSTEM_DESIGN_ROLE_UNSUPPORTED",
+          "System Design is not available for your role yet."
+        );
+      }
       if (profile.targetRole === "ai-ml") {
         const eligibility = await app.architectureDesign.eligibility.forProfile(profile);
         if (!eligibility.available) {
@@ -54,21 +68,25 @@ export async function POST(request: NextRequest) {
           );
         }
       }
-      // Skip scenarios already met here or practised (with their reference
-      // answers) in Architecture & Design. Ranking falls back to the full
-      // catalogue once everything has been seen.
+      // Prefer, in order: an interview-only scenario the learner has not met;
+      // any scenario not practised (with its reference answers) and not met in
+      // an interview; any scenario not met in an interview; then anything.
       const interviewScenarioKeys = history
         .filter((item) => item.status === "completed")
         .map((item) => item.setup.dsaDesignRound?.designScenarioKey)
         .filter((key): key is string => Boolean(key));
-      const recentScenarioKeys = [...interviewScenarioKeys, ...practisedScenarioKeys];
+      const unseenScenarioKeys = [...interviewScenarioKeys, ...practisedScenarioKeys];
+      const practicePathKeys = ARCHITECTURE_DESIGN_CONTENT_CANDIDATES.map(
+        (candidate) => candidate.scenario.key
+      ).filter((key) => !ARCHITECTURE_DESIGN_INTERVIEW_ONLY_SCENARIO_KEYS.has(key));
       const focus = await app.architectureDesign.focus.confirm(ownerId, {
         path: "role-aligned"
       });
       const selection = rankDsaDesignScenarioWithFallback(
-        app.architectureDesign.ranking,
+        app.architectureDesign.interviewRanking,
         focus,
-        recentScenarioKeys,
+        [...unseenScenarioKeys, ...practicePathKeys],
+        unseenScenarioKeys,
         interviewScenarioKeys
       );
       const artifact = ARCHITECTURE_DESIGN_CONTENT_CANDIDATES.find(
@@ -77,28 +95,24 @@ export async function POST(request: NextRequest) {
       if (!artifact || artifact.humanReview.status !== "approved") {
         throw new Error("Selected System Design scenario is unavailable");
       }
-      if (profile.targetRole === "ai-ml" && !artifact.scenario.roles.includes("ai-ml")) {
+      const role = profile.targetRole ?? "";
+      if (!(artifact.scenario.roles as readonly string[]).includes(role)) {
         throw new ConflictErrorException(
-          "AI_ML_DESIGN_SCENARIO_MISMATCH",
-          "That design scenario does not belong to the AI/ML path."
+          "DESIGN_SCENARIO_ROLE_MISMATCH",
+          "That design scenario does not belong to your role's path."
         );
       }
 
-      const plan = buildSystemDesignPlan({ designArtifact: artifact });
+      const framing = DESIGN_FRAMING[architectureDesignTrackForRole(role)];
+      const plan = buildSystemDesignPlan({ designArtifact: artifact, role });
       const result = await app.interviewService.start(
         {
           role: profile.targetRole ?? "backend",
           level: profile.level ?? "0-2",
           roundType: "technical",
           intensity: "realistic",
-          context: `This is a dedicated candidate-led System Design interview. Scenario: ${artifact.scenario.title}.`,
-          agenda: [
-            "Discover requirements and scale",
-            "Build the architecture",
-            "Deep-dive one boundary",
-            "Pressure-test changing constraints",
-            "Defend trade-offs and risks"
-          ],
+          context: `${framing.context} Scenario: ${artifact.scenario.title}.`,
+          agenda: [...framing.agenda],
           templateId: "system-design",
           templateTitle: "System Design Interview",
           durationMinutes: 45,
@@ -154,3 +168,42 @@ function activeResponse(
     config
   );
 }
+
+/** How each kind of System Design round is introduced and paced. */
+const DESIGN_FRAMING: Record<
+  ArchitectureDesignTrack,
+  { context: string; agenda: readonly string[] }
+> = {
+  server: {
+    context: "This is a dedicated candidate-led System Design interview.",
+    agenda: [
+      "Discover requirements and scale",
+      "Build the architecture",
+      "Deep-dive one boundary",
+      "Pressure-test changing constraints",
+      "Defend trade-offs and risks"
+    ]
+  },
+  frontend: {
+    context:
+      "This is a dedicated candidate-led frontend System Design interview: the browser client is the system under design.",
+    agenda: [
+      "Discover users, devices, and performance goals",
+      "Sketch the client architecture",
+      "Deep-dive one component's state and data flow",
+      "Pressure-test changing conditions",
+      "Defend trade-offs, performance, and rollout"
+    ]
+  },
+  data: {
+    context:
+      "This is a dedicated candidate-led data System Design interview: the pipeline and its tables are the system under design.",
+    agenda: [
+      "Discover consumers, volume, and freshness goals",
+      "Sketch the pipeline and table design",
+      "Deep-dive one stage's state and idempotency",
+      "Pressure-test changing volume and data",
+      "Defend quality, cost, and migration"
+    ]
+  }
+};

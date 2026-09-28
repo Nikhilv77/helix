@@ -230,6 +230,8 @@ export function PracticeCodeViewer({
         options={{
           readOnly: true,
           domReadOnly: true,
+          // Excerpts are partial by design; undefined names are not errors.
+          renderValidationDecorations: "off",
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
           // Wrap rather than scroll sideways; prose evidence is often one long line.

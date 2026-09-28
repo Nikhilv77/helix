@@ -21,6 +21,10 @@ import {
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { RecallQuizItem } from "@/features/practice/shared/domain/recall-quiz";
 import { RecallQuizPanel } from "@/features/practice/shared/ui/recall-quiz-panel";
+import {
+  StoryPracticeArtifactBlocks,
+  storyPracticeArtifactBlocks
+} from "@/features/practice/shared/ui/story-practice-artifact";
 import { DsaCodeEditor } from "@/features/interviews/ui/dsa/dsa-code-editor";
 import type { DsaEditorLanguage } from "@/features/interviews/ui/dsa/dsa-code-editor";
 import {
@@ -900,6 +904,7 @@ function ArchitectureCheckpoint({
       ? Boolean(selected) && answer.trim().length >= 8
       : answer.trim().length >= 8;
   const evidence = splitAssessmentEvidence(question.evidenceAnchor ?? undefined);
+  const evidenceBlocks = storyPracticeArtifactBlocks(evidence.content);
 
   const addDefencePrompt = (label: string) => {
     const textarea = answerRef.current;
@@ -938,9 +943,13 @@ function ArchitectureCheckpoint({
             <p className="text-sm font-semibold text-cream/78">{evidence.title}</p>
             <p className="mt-1 text-sm text-cream/38">Read-only scenario artifact</p>
           </div>
-          <pre className="whitespace-pre-wrap break-words px-4 py-4 font-mono text-sm leading-7 text-cream/66">
-            {evidence.content}
-          </pre>
+          {evidenceBlocks.some((block) => block.kind === "code") ? (
+            <StoryPracticeArtifactBlocks blocks={evidenceBlocks} label={evidence.title} comfortable />
+          ) : (
+            <pre className="whitespace-pre-wrap break-words px-4 py-4 font-mono text-sm leading-7 text-cream/66">
+              {evidence.content}
+            </pre>
+          )}
         </section>
 
         <section className="mt-5 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-4">
@@ -1020,7 +1029,10 @@ function ArchitectureCheckpoint({
                   Map ownership, storage, sync and async edges, and the failure-isolation boundary.
                 </p>
               </div>
-              <SystemDesignCanvas storageKey={sessionId} sessionId={sessionId} embedded />
+              {/* Same inset as the Practice question page; the embedded canvas has no side padding. */}
+              <div className="px-4 pb-4">
+                <SystemDesignCanvas storageKey={sessionId} sessionId={sessionId} embedded />
+              </div>
             </section>
 
             <p className="mt-6 text-sm font-semibold text-cream/78">

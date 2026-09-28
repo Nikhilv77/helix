@@ -265,4 +265,21 @@ describe("multipleChoiceReply", () => {
   it("names the right option after a wrong answer", () => {
     expect(multipleChoiceReply(question!, false)).toContain("it's useRef");
   });
+
+  it("says a sentence-long answer once, without a double full stop", () => {
+    const answer = "Keep revenue owned by the orders database.";
+    const reply = multipleChoiceReply(
+      {
+        ...question!,
+        options: ["Chase an exact match.", answer],
+        answerIndex: 1,
+        explanation: `${answer} Naming a source of truth applies to every pipeline.`
+      },
+      false
+    );
+
+    expect(reply).toBe(
+      "Not quite. The stronger answer: Keep revenue owned by the orders database. Naming a source of truth applies to every pipeline."
+    );
+  });
 });

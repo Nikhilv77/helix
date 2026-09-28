@@ -21,14 +21,32 @@ export const architectureDesignPublicationStatusSchema = z.enum([
   "published",
   "retired"
 ]);
-export const architectureDesignRoleSchema = z.enum(["backend", "fullstack", "ai-ml"]);
+export const architectureDesignRoleSchema = z.enum([
+  "backend",
+  "fullstack",
+  "ai-ml",
+  "frontend",
+  "data"
+]);
 export const architectureDesignSenioritySchema = z.enum(["junior", "mid", "senior"]);
 export const architectureDesignFamilySchema = z.enum([
   "asynchronous-delivery",
   "transactional-workflow",
   "realtime-collaboration",
   "media-storage-delivery",
-  "search-indexing"
+  "search-indexing",
+  // Frontend system design: the client is the system under design.
+  "client-data-rendering",
+  "interactive-client-component",
+  "offline-first-client",
+  "realtime-client",
+  "frontend-platform",
+  // Data system design: pipelines and tables are the system under design.
+  "event-analytics-pipeline",
+  "change-data-capture",
+  "batch-analytics-pipeline",
+  "streaming-feature-pipeline",
+  "data-platform-governance"
 ]);
 
 /** Version 1 deliberately excludes executable and diagram-only presentation modes. */
@@ -72,6 +90,32 @@ export type ArchitectureDesignPublicationStatus = z.infer<
   typeof architectureDesignPublicationStatusSchema
 >;
 export type ArchitectureDesignRole = z.infer<typeof architectureDesignRoleSchema>;
+
+/**
+ * Roles with reviewed Architecture & Design content. Practice, eligibility,
+ * and the System Design interview all read this one list.
+ */
+export function isArchitectureDesignRole(
+  role: string | null | undefined
+): role is ArchitectureDesignRole {
+  return architectureDesignRoleSchema.safeParse(role).success;
+}
+
+/**
+ * Which kind of system a role designs. Server rounds design services and
+ * storage; frontend rounds design the browser client; data rounds design
+ * pipelines and tables. Interview acts, Live rules, report labels, and
+ * checkpoint prompts all branch on this one value.
+ */
+export type ArchitectureDesignTrack = "server" | "frontend" | "data";
+
+export function architectureDesignTrackForRole(
+  role: string | null | undefined
+): ArchitectureDesignTrack {
+  if (role === "frontend") return "frontend";
+  if (role === "data") return "data";
+  return "server";
+}
 export type ArchitectureDesignSeniority = z.infer<typeof architectureDesignSenioritySchema>;
 export type ArchitectureDesignFamily = z.infer<typeof architectureDesignFamilySchema>;
 export type ArchitectureDesignQuestionFormat = z.infer<

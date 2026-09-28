@@ -411,4 +411,53 @@ describe("Gemini Live interview transcription vocabulary", () => {
     expect(vocabulary).toContain("Aarav Verma");
     expect(vocabulary.length).toBeLessThanOrEqual(100);
   });
+
+  it("keeps a frontend System Design round on the browser client", () => {
+    const base = {
+      roundTitle: "System Design Interview",
+      interviewerName: "Claire" as const,
+      isHiringManagerRound: false,
+      isDsaDesignRound: true,
+      dsaDesignMode: "design" as const,
+      question: "Design the web client for an infinite social feed.",
+      questionNumber: 1,
+      questionCount: 5,
+      followUpCount: 0,
+      maxFollowUps: 2,
+      mustHit: ["devices", "performance goals"],
+      openingUtterance: "Let's design the web client for an infinite social feed.",
+      currentStage: "design-frame"
+    };
+    const frontend = buildSystemInstruction({ ...base, designTrack: "frontend" });
+    const server = buildSystemInstruction(base);
+
+    expect(frontend).toContain("the browser client is the system under design");
+    expect(frontend).toContain("Do not steer the candidate into designing databases");
+    expect(frontend).toContain("component and state boundaries");
+    expect(server).not.toContain("the browser client is the system under design");
+    expect(server).toContain("Probe requirements, data flow, consistency, scale");
+  });
+
+  it("keeps a data System Design round on the pipeline and its tables", () => {
+    const instruction = buildSystemInstruction({
+      roundTitle: "System Design Interview",
+      interviewerName: "Claire",
+      isHiringManagerRound: false,
+      isDsaDesignRound: true,
+      dsaDesignMode: "design",
+      designTrack: "data",
+      question: "Design the pipeline that lands clickstream events in the warehouse.",
+      questionNumber: 1,
+      questionCount: 5,
+      followUpCount: 0,
+      maxFollowUps: 2,
+      mustHit: ["consumers", "freshness"],
+      openingUtterance: "Let's design a clickstream pipeline.",
+      currentStage: "design-frame"
+    });
+
+    expect(instruction).toContain("the pipeline and its tables are the system under design");
+    expect(instruction).toContain("duplicates, late data, and idempotency");
+    expect(instruction).not.toContain("the browser client is the system under design");
+  });
 });

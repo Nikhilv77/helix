@@ -35,7 +35,7 @@ export async function loadPracticeHomeView(ownerId: string, profile: CandidatePr
   // Node.js Core Technical and Applied Engineering serve backend and full-stack paths.
   const nodeTracks = discipline === null;
   const architectureTrack =
-    nodeTracks || (discipline !== null && storyDiscipline(discipline).includesArchitecture);
+    nodeTracks || (discipline !== null && storyDiscipline(discipline).architecture !== null);
   const hasDsaPulse = !aiMlPractice && includesDsaPulse(profile.targetRole ?? "fullstack");
   let generationFailed = false;
   let storyProgressFailed = false;
@@ -249,7 +249,7 @@ export async function loadPracticeHomeView(ownerId: string, profile: CandidatePr
           : null
       }
       architectureDesignEntry={
-        practiceRoadmap && architectureTrack
+        practiceRoadmap && nodeTracks
           ? architectureDesignPracticeEntry(architectureDesignEligibility, architectureDesignBlock)
           : null
       }
@@ -268,7 +268,7 @@ export async function loadPracticeHomeView(ownerId: string, profile: CandidatePr
           ? storyPracticeEntries(
               discipline,
               storySummaries,
-              aiMlPractice
+              architectureTrack
                 ? architectureDesignPracticeEntry(
                     architectureDesignEligibility,
                     architectureDesignBlock
@@ -317,20 +317,15 @@ function storyPracticeEntries(
       };
     }
   );
-  if (!architecture) return entries;
+  if (!architecture || !definition.architecture) return entries;
   return [
     ...entries,
     {
       key: `${discipline}-architecture-design`,
       order: firstOrder + 2,
       title: `Architecture & Design · ${definition.label}`,
-      purpose:
-        "Design production AI systems across data, serving, retrieval, evaluation, and safety.",
-      covers: [
-        "Requirements and data flow",
-        "Model and retrieval architecture",
-        "Scale and reliability"
-      ],
+      purpose: definition.architecture.purpose,
+      covers: definition.architecture.covers,
       difficulty: architecture.difficulty ?? "adaptive",
       durationMinutes: architecture.durationMinutes ?? 45,
       availability: architecture.availability,

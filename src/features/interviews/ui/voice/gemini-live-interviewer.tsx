@@ -37,6 +37,10 @@ const LIVE_CONNECTION_ROTATE_MS = 8 * 60 * 1000;
 const LIVE_ROTATION_IDLE_WAIT_MS = 60_000;
 const LIVE_ROTATION_POLL_MS = 250;
 const LIVE_ROTATION_RETRY_DELAYS_MS = [0, 1_500, 4_000] as const;
+/** A connection that closes this soon after opening counts as a quick drop. */
+const QUICK_DROP_MS = 20_000;
+const MAX_QUICK_DROPS = 3;
+const MAX_TRANSCRIPTION_FAILURES = 4;
 
 type TranscriptionConnection = {
   token: string;
@@ -97,6 +101,11 @@ export interface GeminiLiveInterviewerHandle {
   /** Speaks a trusted workspace status without treating it as a candidate answer. */
   speakWorkspaceUpdate(text: string): boolean;
   reconnect(): void;
+  /**
+   * Moves capture to another microphone without replacing the Live
+   * connection. Resolves false when the room is not ready to switch in place.
+   */
+  switchMicrophone(deviceId: string): Promise<boolean>;
 }
 
 interface GeminiLiveInterviewerProps {
@@ -159,6 +168,7 @@ export const GeminiLiveInterviewer = forwardRef<
       () => false
     );
     const reconnectRef = useRef<() => void>(() => undefined);
+    const switchMicrophoneRef = useRef<(deviceId: string) => Promise<boolean>>(async () => false);
     const inputTranscriptRef = useRef("");
     const outputTranscriptRef = useRef("");
     callbacksRef.current = {
@@ -182,6 +192,7 @@ export const GeminiLiveInterviewer = forwardRef<
       let outputContext: AudioContext | null = null;
       let avatarDestination: MediaStreamAudioDestinationNode | null = null;
       let processor: ScriptProcessorNode | null = null;
+      let inputSource: MediaStreamAudioSourceNode | null = null;
       let session: LiveSession | null = null;
       /** Marks the current connection; a retired one's late events are ignored. */
       let sessionMarker: { retired: boolean } | null = null;
@@ -340,6 +351,8 @@ export const GeminiLiveInterviewer = forwardRef<
           pendingTypedSubmission.reject(new Error("The live interviewer disconnected."));
           pendingTypedSubmission = null;
         }
+        switchMicrophoneRef.current = async () => false;
+        inputSource?.disconnect();
         processor?.disconnect();
         inputContext?.close().catch(() => null);
         outputContext?.close().catch(() => null);
@@ -848,6 +861,26 @@ export const GeminiLiveInterviewer = forwardRef<
       };
 
       /**
+       * A connection that drops within seconds of opening will drop again on
+       * reconnect. After a few in a row, stop and say so instead of spending
+       * every credential the rate limit allows. Returns true when stopped.
+       */
+      let quickDrops = 0;
+      const recordConnectionDrop = (
+        openedAt: number,
+        event: { code?: number; reason?: string } | null
+      ): boolean => {
+        quickDrops = Date.now() - openedAt < QUICK_DROP_MS ? quickDrops + 1 : 0;
+        if (quickDrops < MAX_QUICK_DROPS) return false;
+        stopPlayback();
+        callbacksRef.current.onError(
+          `${interviewerName} keeps losing the connection${event?.code ? ` (code ${event.code}${event.reason ? `: ${event.reason}` : ""})` : ""}. Your saved answers are safe; reconnect in a moment.`
+        );
+        callbacksRef.current.onStatus("error");
+        return true;
+      };
+
+      /**
        * Replaces the Live connection with a new one primed from the saved
        * interview. The candidate hears nothing unless the old one dropped.
        */
@@ -875,7 +908,16 @@ export const GeminiLiveInterviewer = forwardRef<
               const payload = await tokenResponse.json();
               // A finished or timed-out interview cannot be continued.
               if (tokenResponse.status === 409) break;
-              if (!tokenResponse.ok || !payload?.success) continue;
+              if (!tokenResponse.ok || !payload?.success) {
+                console.warn(
+                  "[Live] rotation credential failed",
+                  tokenResponse.status,
+                  payload?.error?.code
+                );
+                // Retrying a rate limit only extends it.
+                if (tokenResponse.status === 429) break;
+                continue;
+              }
               const next = await openLiveSession(payload.data as LiveTokenResponse);
               if (closed) {
                 next.marker.retired = true;
@@ -1001,10 +1043,35 @@ export const GeminiLiveInterviewer = forwardRef<
             transcriptionRefreshTimer = window.setTimeout(requestTranscriptionRefresh, delayMs);
           };
 
+          // Each refresh spends a voice credential from the same allowance as
+          // the interview itself, so a failing channel backs off and then
+          // stops; the main connection's transcript covers the candidate.
+          let transcriptionFailures = 0;
+          const transcriptionFailed = () => {
+            transcriptionFailures += 1;
+            if (transcriptionFailures >= MAX_TRANSCRIPTION_FAILURES) {
+              console.warn("[Live] transcription channel stopped after repeated failures");
+              return;
+            }
+            scheduleTranscriptionRefresh(
+              Math.min(TRANSCRIPTION_RETRY_MS * 2 ** (transcriptionFailures - 1), 5 * 60_000)
+            );
+          };
+          const transcriptionDropped = (openedAt: number, event: unknown) => {
+            console.warn("[Live] transcription channel closed", event);
+            if (Date.now() - openedAt < QUICK_DROP_MS) {
+              transcriptionFailed();
+              return;
+            }
+            transcriptionFailures = 0;
+            requestTranscriptionRefresh();
+          };
+
           const createTranscriptionChannel = async (
             transcription: TranscriptionConnection
           ): Promise<TranscriptionChannel> => {
             let active = true;
+            const openedAt = Date.now();
             const transcriptionAi = new GoogleGenAI({
               apiKey: transcription.token,
               httpOptions: { apiVersion: "v1beta" }
@@ -1039,15 +1106,16 @@ export const GeminiLiveInterviewer = forwardRef<
                     handleCandidateTranscript(content.inputTranscription, true);
                   }
                 },
-                onerror: () => {
+                onerror: (event: unknown) => {
                   if (closed || !active) return;
                   dedicatedTranscriptionReady = false;
-                  requestTranscriptionRefresh();
+                  transcriptionDropped(openedAt, event);
                 },
-                onclose: () => {
+                onclose: (event?: { code?: number; reason?: string }) => {
                   if (closed || !active) return;
                   dedicatedTranscriptionReady = false;
-                  requestTranscriptionRefresh();
+                  // A retired channel has active = false, so only real drops land here.
+                  transcriptionDropped(openedAt, event);
                 }
               }
             })) as LiveSession;
@@ -1102,7 +1170,7 @@ export const GeminiLiveInterviewer = forwardRef<
               previous?.retire();
               scheduleTranscriptionRefresh(TRANSCRIPTION_ROTATION_MS);
             } catch {
-              scheduleTranscriptionRefresh(TRANSCRIPTION_RETRY_MS);
+              transcriptionFailed();
             } finally {
               transcriptionRefreshInFlight = false;
             }
@@ -1115,7 +1183,7 @@ export const GeminiLiveInterviewer = forwardRef<
             ? createTranscriptionChannel(connection.transcription).catch(() => null)
             : Promise.resolve(null);
           openLiveSession = async (liveConnection) => {
-            const marker = { retired: false };
+            const marker = { retired: false, openedAt: Date.now() };
             const liveAi = new GoogleGenAI({
               apiKey: liveConnection.token,
               httpOptions: { apiVersion: "v1beta" }
@@ -1365,18 +1433,21 @@ export const GeminiLiveInterviewer = forwardRef<
                     }
                   }
                 },
-                onerror: () => {
+                onerror: (event: unknown) => {
                   if (closed || marker.retired) return;
+                  console.warn("[Live] connection error", event);
                   connectionLost = true;
-                  void rotateConnection();
+                  if (!recordConnectionDrop(marker.openedAt, null)) void rotateConnection();
                 },
-                onclose: () => {
+                onclose: (event?: { code?: number; reason?: string }) => {
                   if (closed || marker.retired) return;
+                  console.warn("[Live] connection closed", event?.code, event?.reason ?? "");
                   // Gemini ends every connection after about ten minutes, not
                   // always with a goAway first. Replace it without asking the
                   // candidate to do anything.
                   connectionLost = true;
-                  void rotateConnection();
+                  if (!recordConnectionDrop(marker.openedAt, event ?? null))
+                    void rotateConnection();
                 }
               }
             })) as LiveSession;
@@ -1434,15 +1505,23 @@ export const GeminiLiveInterviewer = forwardRef<
           });
 
           const source = inputContext.createMediaStreamSource(stream);
+          inputSource = source;
           // At the requested 16 kHz sample rate this produces 32 ms packets,
           // inside Google's recommended 20–40 ms streaming window.
           processor = inputContext.createScriptProcessor(512, 1, 1);
+          const noiseGate = createNoiseGate();
           processor.onaudioprocess = (event) => {
             if (closed || !session || connectionLost) return;
-            const pcm = resampleToPcm16(
-              event.inputBuffer.getChannelData(0),
+            const samples = event.inputBuffer.getChannelData(0);
+            const resampled = resampleToPcm16(
+              samples,
               inputContext?.sampleRate ?? INPUT_SAMPLE_RATE
             );
+            // Room noise is sent as true silence so Gemini can tell the candidate
+            // has finished; a distant microphone otherwise never "stops talking".
+            const pcm = noiseGate(samples, event.timeStamp || performance.now())
+              ? resampled
+              : new Int16Array(resampled.length);
             const audio = {
               data: bytesToBase64(new Uint8Array(pcm.buffer)),
               mimeType: "audio/pcm;rate=16000"
@@ -1456,6 +1535,31 @@ export const GeminiLiveInterviewer = forwardRef<
           };
           source.connect(processor);
           processor.connect(inputContext.destination);
+          switchMicrophoneRef.current = async (deviceId) => {
+            if (closed || !inputContext || !processor || !deviceId) return false;
+            const next = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                deviceId: { exact: deviceId }
+              }
+            });
+            const track = next.getAudioTracks()[0];
+            if (closed || !inputContext || !processor || !track) {
+              next.getTracks().forEach((item) => item.stop());
+              return false;
+            }
+            const nextSource = inputContext.createMediaStreamSource(next);
+            inputSource?.disconnect();
+            nextSource.connect(processor);
+            stream?.getTracks().forEach((item) => item.stop());
+            stream = next;
+            inputSource = nextSource;
+            microphoneDeviceIdRef.current = deviceId;
+            callbacksRef.current.onLocalTrack(track);
+            return true;
+          };
           submitTypedAnswerRef.current = async (input) => {
             if (!geminiLedConversation) {
               await persistAnswer(input);
@@ -1565,7 +1669,8 @@ export const GeminiLiveInterviewer = forwardRef<
       () => ({
         submitTypedAnswer: (input) => submitTypedAnswerRef.current(input),
         speakWorkspaceUpdate: (text) => speakWorkspaceUpdateRef.current(text),
-        reconnect: () => reconnectRef.current()
+        reconnect: () => reconnectRef.current(),
+        switchMicrophone: (deviceId) => switchMicrophoneRef.current(deviceId)
       }),
       []
     );
@@ -1799,4 +1904,37 @@ export function goAwayTimeLeftMs(timeLeft: unknown): number {
   if (typeof timeLeft !== "string") return 0;
   const seconds = Number.parseFloat(timeLeft.replace(/s$/, ""));
   return Number.isFinite(seconds) && seconds > 0 ? seconds * 1_000 : 0;
+}
+
+/** Below this level a frame is always treated as silence. */
+const NOISE_GATE_MIN_LEVEL = 0.008;
+/** Speech must be this many times louder than the recent noise floor. */
+const NOISE_GATE_RATIO = 3;
+/** The quietest frame in this window is the noise floor. */
+const NOISE_FLOOR_WINDOW_MS = 3_000;
+/** Keeps soft word endings and short pauses inside a sentence. */
+const NOISE_GATE_HANGOVER_MS = 450;
+
+/**
+ * Decides, per audio frame, whether the candidate is speaking. The noise floor
+ * is the quietest recent frame, so it adapts to each microphone and room
+ * without calibration: the gaps between syllables keep it at the true floor
+ * even while someone talks.
+ */
+export function createNoiseGate() {
+  const recent: Array<{ at: number; level: number }> = [];
+  let lastSpeechAt = Number.NEGATIVE_INFINITY;
+  return (samples: Float32Array, now: number): boolean => {
+    let sum = 0;
+    for (let index = 0; index < samples.length; index += 1) {
+      const sample = samples[index] ?? 0;
+      sum += sample * sample;
+    }
+    const level = Math.sqrt(sum / Math.max(1, samples.length));
+    recent.push({ at: now, level });
+    while (recent.length > 1 && now - recent[0]!.at > NOISE_FLOOR_WINDOW_MS) recent.shift();
+    const floor = Math.min(...recent.map((frame) => frame.level));
+    if (level > Math.max(NOISE_GATE_MIN_LEVEL, floor * NOISE_GATE_RATIO)) lastSpeechAt = now;
+    return now - lastSpeechAt <= NOISE_GATE_HANGOVER_MS;
+  };
 }

@@ -3,6 +3,104 @@
 What changed, newest first. Each release lists what a deploy needs (migrations, files to commit,
 checks to run) under **Deploy notes**. Add an entry with every release.
 
+## Unreleased: Frontend and Data System Design and Architecture Practice
+
+- **Frontend and Data learners get Architecture & Design practice and the System Design
+  interview.** Each role has six reviewed scenarios, four on the Practice path and two kept for
+  the interview, so it has cases the learner has not practised.
+  - Frontend: infinite social feed, typeahead search, offline field inspection app, design system
+    rollout; interview-only: real-time chat client, product page performance.
+  - Data: clickstream events into a warehouse, change data capture into a lakehouse, daily revenue
+    with late data, data quality and lineage platform; interview-only: real-time fraud feature
+    pipeline, A/B test metrics pipeline.
+- **Each interview is run for its role.** The five acts, "listen for" lists, Live interviewer
+  rules, and agenda treat the browser client (Frontend) or the pipeline and its tables (Data) as
+  the system. Frontend rounds do not push the learner into databases or queues; Data rounds focus
+  on contracts, table layout, late and duplicate data, idempotency, skew, quality, privacy, cost,
+  and backfills.
+- **Reports use role labels** (Frontend: Client architecture, Data & state, Performance & scale,
+  Resilience & trade-offs; Data: Pipeline architecture, Data modelling & correctness, Scale &
+  performance, Quality, reliability & trade-offs). The parameter keys are unchanged, so trends and
+  averages still line up.
+- **Practice checkpoints ask role-specific defence questions**, and knowledge checks use each
+  question's own common mistakes as wrong answers.
+- The Practice card reads "Architecture & Design · Frontend" or "· Data" with role copy; the
+  AI/ML card keeps its own copy.
+- **Code in artifacts renders in the read-only editor.** Artifact text can hold fenced blocks
+  (```json, ```sql, ```ts, ```log); Practice questions and checkpoints show them in the Monaco
+  viewer with syntax highlighting and line numbers, and unfenced evidence looks as before. The
+  Frontend and Data contracts, schemas, and SQL are now real code, logs are one event per line,
+  and briefs are one fact per line. The viewer no longer shows error squiggles on excerpts.
+- **Practice checkpoints no longer reopen in the live voice room.** The Interviews resume banner,
+  Reports, and search sent any in-progress session to `/interview/voice`, where an Architecture,
+  Applied Engineering, Core Technical, or DSA checkpoint ran as a live round with one-click
+  answers. They now open the checkpoint's own room (`sessionRoomHref`), and the voice room
+  forwards any such session it is given.
+- **Voice rooms no longer burn their connection allowance in a loop.** A Live connection that
+  drops within 20 seconds of opening three times in a row now stops with a clear message (with
+  the close code) instead of reconnecting until the 12-per-5-minutes credential limit blocks
+  the room; rotation stops retrying on a rate limit; "Reconnect now" uses one credential instead
+  of two; close codes and reasons are logged to the browser console as `[Live]`. The separate
+  transcription channel (server-led rooms) now backs off (15 s, 30 s, 60 s) and stops after four
+  failures, falling back to the main connection's transcript, instead of refreshing every 15 s
+  forever. This covers every voice round and voice checkpoint in every domain; they share one
+  Live component.
+- **Microphone setup and signal.** The setup screen has a "Check your microphone" step with a
+  device picker and a live level meter, and remembers the choice. In the room, a centred check
+  opens when nothing has been heard on the current microphone for 10 seconds, with the picker
+  and meter. "No microphone signal" was a false alarm in workspace rounds (System Design, DSA,
+  Resume, Technical, Fundamentals): the only signal detector lived in the conversation layout,
+  so those rooms never registered the candidate's voice. One detector now runs in every layout,
+  and silence after the candidate has been heard is no longer reported as a dead microphone.
+  Switching microphones swaps the input inside the live connection instead of reconnecting.
+  "Hearing you" now needs a voice-level signal (about two bars for 300 ms); before, an idle
+  microphone's boosted room noise counted as speech.
+- **Claire answers promptly on distant or noisy microphones.** Room noise from a far-away mic
+  (for example a webcam) kept Gemini's voice detection from ever seeing the end of an answer:
+  one turn waited 111 seconds for a reply. An adaptive noise gate now sends true silence when
+  the level is near the microphone's own noise floor, with a 450 ms hold for soft word endings.
+- **Visual PDF resumes survive a busy Gemini.** A resume with no text layer is transcribed by
+  Gemini before analysis. That read had one attempt on the fast model and no fallback, so a 503
+  failed the upload. The fast model now gets part of a 24 s budget and the second Gemini model
+  (separate capacity, as analysis already uses) gets the rest. Uploads that fail on the server's
+  side (5xx, provider outages, timeouts) no longer count toward the 3-per-10-minutes upload limit,
+  so retrying after an outage is not blocked with a 429 (`SharedGuard.refund`).
+  When the fast model is saturated the upload no longer waits it out: the fallback starts reading
+  after 6 s and the first transcription wins, and a fast-model failure sends visual reads and
+  analysis straight to the fallback for the next 2 minutes.
+  An optional third model, `GEMINI_BACKUP_MODEL` (for example `gemini-3.8-flash`), is tried
+  last for visual reads and analysis when both regular models fail; each model has its own
+  2-minute cooldown.
+- **The System Design card no longer opens a Practice checkpoint.** Architecture Practice
+  checkpoints share the `system-design` template (so they are graded like the round), and the
+  card resumed the latest in-progress session with that template, sending learners into their
+  checkpoint instead of the interview. The card, and the "reuse the open room" lookup every round
+  start route uses (`findActiveByTemplate`), now ignore Practice checkpoints. Interviews page
+  snapshot version 7.
+- **Multiple-choice feedback says the answer once.** A sentence-long answer was repeated with a
+  double full stop ("...database.. Scope..."); the design round's bridge no longer says "Good."
+  after a wrong answer.
+- Server, frontend, and data wording now come from one lookup
+  (`architectureDesignTrackForRole` / `architectureDesignTrackForScenario`) instead of role
+  checks spread across files.
+
+**Deploy notes**
+
+- No migrations and no new route files. New optional env var `GEMINI_BACKUP_MODEL`: set it in
+  Vercel (for example `gemini-3.8-flash`) to give resume reading a third model; unset means two.
+- Snapshot versions bumped (Interviews page 7, Practice home 5); cached pages rebuild on the next
+  visit.
+- Publish the eight Practice scenarios to the production database before Frontend and Data
+  learners can start Architecture practice; until then the card shows as not published. The
+  interview does not need publishing. The dev database is already published with
+  `pnpm architecture-design:publish` and these `--scenario=` keys:
+  infinite-social-feed-client, typeahead-search-client, offline-field-inspection-app,
+  design-system-rollout, clickstream-analytics-pipeline, cdc-lakehouse-replication,
+  daily-revenue-reporting, data-quality-lineage-platform.
+- New files to commit: `src/features/practice/architecture-design/domain/frontend-scenarios.ts`,
+  `src/features/practice/architecture-design/domain/data-scenarios.ts`,
+  `src/features/practice/architecture-design/server/role-architecture.spec.ts`.
+
 ## Unreleased: Interview reliability, honest scores, better content (all five phases of the interview audit)
 
 - **Voice no longer drops mid-round.** The Live connection is replaced silently every 8 minutes,

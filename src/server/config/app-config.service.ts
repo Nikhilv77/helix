@@ -28,6 +28,7 @@ type AppConfigInput = Omit<
   | "interviewRetentionBatchSize"
   | "interviewMetricsSampleLimit"
   | "practiceEarlyAssessmentStart"
+  | "geminiBackupModel"
 > & {
   clerkSecretKey?: EnvironmentConfig["clerkSecretKey"];
   interviewAuthSecret?: EnvironmentConfig["interviewAuthSecret"];
@@ -55,6 +56,7 @@ type AppConfigInput = Omit<
   interviewRetentionBatchSize?: EnvironmentConfig["interviewRetentionBatchSize"];
   interviewMetricsSampleLimit?: EnvironmentConfig["interviewMetricsSampleLimit"];
   practiceEarlyAssessmentStart?: EnvironmentConfig["practiceEarlyAssessmentStart"];
+  geminiBackupModel?: EnvironmentConfig["geminiBackupModel"];
 };
 
 export class AppConfigService {
@@ -98,6 +100,10 @@ export class AppConfigService {
 
   get geminiReasoningModel(): EnvironmentConfig["geminiReasoningModel"] {
     return this.config.geminiReasoningModel;
+  }
+
+  get geminiBackupModel(): EnvironmentConfig["geminiBackupModel"] {
+    return this.config.geminiBackupModel ?? null;
   }
 
   get geminiEmbeddingModel(): EnvironmentConfig["geminiEmbeddingModel"] {

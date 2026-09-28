@@ -236,9 +236,29 @@ describe("PracticePage", () => {
       screen.getByRole("link", { name: new RegExp(`Applied Engineering · ${label}`) })
     ).toHaveAttribute("href", `/practice/${role}/applied-engineering`);
     expect(mocks.aiMlSummaries).toHaveBeenCalledWith("owner-1", role);
-    expect(screen.queryByRole("article", { name: /Architecture & Design/i })).toBeNull();
     expect(screen.queryByText(/Node\.js/)).toBeNull();
   });
+
+  it.each([
+    ["frontend", "Frontend", /Design web clients/],
+    ["data", "Data", /Design data pipelines/]
+  ] as const)(
+    "offers %s learners Architecture & Design once scenarios are published",
+    async (role, label, purpose) => {
+      mocks.profileGet.mockResolvedValue(onboardedProfile({ targetRole: role }));
+      mocks.home.mockResolvedValue(practiceRoadmap());
+      mocks.architectureDesignEligibility.mockResolvedValue({ available: true });
+
+      render(await PracticePage());
+
+      const card = screen.getByRole("link", {
+        name: new RegExp(`Architecture & Design · ${label}`)
+      });
+      expect(card).toHaveAttribute("href", "/practice/architecture-design");
+      expect(card).toHaveTextContent(purpose);
+      expect(screen.getAllByRole("link", { name: /Architecture & Design/i })).toHaveLength(1);
+    }
+  );
 
   it("warns rather than silently claiming zero AI/ML progress when the database read fails", async () => {
     mocks.profileGet.mockResolvedValue(onboardedProfile({ targetRole: "ai-ml" }));

@@ -1,3 +1,4 @@
+import { isArchitectureDesignRole } from "@/features/practice/architecture-design/domain/contracts";
 /**
  * Durable public identity for System Design sessions and legacy combined
  * DSA/Design sessions. The reviewed answer key and rubric stay in server-only
@@ -62,12 +63,9 @@ export function isCombinedDsaDesignRound(
 }
 
 /**
- * Roles with authored System Design scenarios. Frontend and Data scenarios
- * are not written yet, so those roles see the round as coming soon instead
- * of a start that always fails.
+ * Roles with reviewed System Design scenarios, from the same list Practice
+ * uses. A PM or an undeclared role does not see the round.
  */
-const SYSTEM_DESIGN_ROLES = new Set(["backend", "fullstack", "ai-ml"]);
-
 export function systemDesignSupportsRole(role: string | null | undefined): boolean {
-  return Boolean(role && SYSTEM_DESIGN_ROLES.has(role));
+  return isArchitectureDesignRole(role);
 }

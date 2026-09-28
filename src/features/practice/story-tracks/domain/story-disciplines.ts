@@ -44,8 +44,8 @@ export interface StoryDisciplineDefinition {
   resumePath(profile: CandidateProfile, track: PersistedAiMlPracticeTrack): AiMlStoryPath | null;
   /** Authored questions a new cohort receives, excluding any resume path. */
   catalogQuestionCount(track: PersistedAiMlPracticeTrack): number;
-  /** AI/ML candidates also practise Architecture & Design scenarios. */
-  includesArchitecture: boolean;
+  /** Architecture & Design card copy, or null when this role has no scenarios. */
+  architecture: Pick<TrackCopy, "purpose" | "covers"> | null;
 }
 
 const DEFINITIONS: Record<StoryDiscipline, StoryDisciplineDefinition> = {
@@ -74,7 +74,15 @@ const DEFINITIONS: Record<StoryDiscipline, StoryDisciplineDefinition> = {
     quickCheck: aiMlQuickCheckPath,
     resumePath: aiMlResumePracticePath,
     catalogQuestionCount: aiMlPracticeQuestionCount,
-    includesArchitecture: true
+    architecture: {
+      purpose:
+        "Design production AI systems across data, serving, retrieval, evaluation, and safety.",
+      covers: [
+        "Requirements and data flow",
+        "Model and retrieval architecture",
+        "Scale and reliability"
+      ]
+    }
   },
   frontend: {
     discipline: "frontend",
@@ -102,7 +110,12 @@ const DEFINITIONS: Record<StoryDiscipline, StoryDisciplineDefinition> = {
     quickCheck: () => null,
     resumePath: () => null,
     catalogQuestionCount: (track) => countQuestions(frontendStoryPaths(track)),
-    includesArchitecture: false
+    // Frontend system design: client architecture scenarios in the shared engine.
+    architecture: {
+      purpose:
+        "Design web clients through state, data fetching, rendering, performance, and failure.",
+      covers: ["Client architecture", "Data and state", "Performance and resilience"]
+    }
   },
   data: {
     discipline: "data",
@@ -129,7 +142,12 @@ const DEFINITIONS: Record<StoryDiscipline, StoryDisciplineDefinition> = {
     quickCheck: () => null,
     resumePath: () => null,
     catalogQuestionCount: (track) => countQuestions(dataStoryPaths(track)),
-    includesArchitecture: false
+    // Data system design: pipeline and table scenarios in the shared engine.
+    architecture: {
+      purpose:
+        "Design data pipelines through contracts, table layout, late data, quality, and backfills.",
+      covers: ["Pipeline architecture", "Data modelling and correctness", "Quality and reliability"]
+    }
   }
 };
 

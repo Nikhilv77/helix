@@ -61,6 +61,8 @@ export const environmentSchema = z
         required_error: "GEMINI_REASONING_MODEL is required"
       })
       .min(1, "GEMINI_REASONING_MODEL is required"),
+    /** A third Gemini model for resume reading when the fast and reasoning models both fail. */
+    GEMINI_BACKUP_MODEL: z.string().trim().min(1).optional(),
     GEMINI_EMBEDDING_MODEL: z
       .string({
         required_error: "GEMINI_EMBEDDING_MODEL is required"
@@ -190,6 +192,7 @@ export const environmentSchema = z
     geminiApiKey: env.GEMINI_API_KEY,
     geminiFastModel: env.GEMINI_FAST_MODEL,
     geminiReasoningModel: env.GEMINI_REASONING_MODEL,
+    geminiBackupModel: env.GEMINI_BACKUP_MODEL ?? null,
     geminiEmbeddingModel: env.GEMINI_EMBEDDING_MODEL,
     geminiEmbeddingModelVersion: env.GEMINI_EMBEDDING_MODEL_VERSION,
     geminiLiveInterviewsEnabled: env.GEMINI_LIVE_INTERVIEWS_ENABLED,

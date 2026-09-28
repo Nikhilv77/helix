@@ -98,7 +98,7 @@ describe("ArchitectureDesignFocusService", () => {
         baselineEvidence: { derive: vi.fn().mockResolvedValue(evidence("UNKNOWN")) }
       });
     await expect(
-      create({ ...profile(), targetRole: "frontend" }).confirm("owner", {
+      create({ ...profile(), targetRole: "pm" }).confirm("owner", {
         path: "role-aligned"
       })
     ).rejects.toMatchObject({ code: "ARCHITECTURE_DESIGN_ROLE_UNSUPPORTED" });
@@ -403,7 +403,7 @@ describe("ArchitectureDesignEligibilityService", () => {
       reason: "CONTENT_UNAVAILABLE",
       publishedScenarioCount: 1
     });
-    await expect(all.forProfile({ targetRole: "frontend", level: "3-5" })).resolves.toMatchObject({
+    await expect(all.forProfile({ targetRole: "pm", level: "3-5" })).resolves.toMatchObject({
       reason: "UNSUPPORTED_ROLE"
     });
     await expect(all.forProfile({ targetRole: "backend", level: null })).resolves.toMatchObject({

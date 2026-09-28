@@ -220,6 +220,7 @@ export class MemorySessionStore implements SessionStore {
           session.ownerId === ownerId &&
           session.state.phase !== "done" &&
           session.state.setup.templateId === templateId &&
+          !session.state.setup.storyPracticeAssessment &&
           session.touchedAt >= since
       )
       .sort((left, right) => right.state.startedAt - left.state.startedAt)[0];
@@ -524,9 +525,11 @@ export class PrismaSessionStore implements SessionStore {
     templateId: string,
     since: number
   ): Promise<InterviewState | null> {
-    // One row, filtered in Postgres, instead of reading the owner's recent
-    // full interview states and filtering them here.
-    const row = await this.prisma.interviewSession.findFirst({
+    // Filtered in Postgres to a few recent rows. Architecture Practice
+    // checkpoints share the "system-design" template and are excluded here: a
+    // round must never resume a checkpoint. (A JSON NOT on a missing path
+    // would also drop every row without it, so that part is filtered below.)
+    const rows = await this.prisma.interviewSession.findMany({
       where: {
         ownerId,
         touchedAt: { gte: new Date(since) },
@@ -534,9 +537,13 @@ export class PrismaSessionStore implements SessionStore {
         NOT: { state: { path: ["phase"], equals: "done" } }
       },
       orderBy: { startedAt: "desc" },
+      take: 5,
       select: { state: true }
     });
-    return row ? (row.state as unknown as InterviewState) : null;
+    const active = rows
+      .map((row) => row.state as unknown as InterviewState)
+      .find((state) => !state.setup.storyPracticeAssessment);
+    return active ?? null;
   }
 
   async listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]> {

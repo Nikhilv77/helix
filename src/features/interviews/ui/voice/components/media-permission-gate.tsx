@@ -2,6 +2,15 @@
 
 import { ArrowRight, Camera, CameraOff, Check, Loader2, Mic, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MicMeter } from "@/features/interviews/ui/voice/mic-meter";
+import { MicrophonePicker } from "./microphone-picker";
+
+const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
+const MICROPHONE_CONSTRAINTS = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true
+} as const;
 
 type PermissionState = "idle" | "requesting" | "ready" | "skipped" | "error";
 
@@ -53,10 +62,57 @@ export function MediaPermissionGate({
     cameraOptional ? "Optional self view" : "Not used in this round"
   );
   const [error, setError] = useState<string | null>(null);
+  const [microphoneTrack, setMicrophoneTrack] = useState<MediaStreamTrack | null>(null);
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicrophoneId, setSelectedMicrophoneId] = useState("");
+  const [heardVoice, setHeardVoice] = useState(false);
+  const [switchingMicrophone, setSwitchingMicrophone] = useState(false);
 
   const releaseMicrophone = useCallback(() => {
     stopStream(microphoneStreamRef.current);
     microphoneStreamRef.current = null;
+    setMicrophoneTrack(null);
+  }, []);
+
+  /** Device labels are only available once access is granted. */
+  const refreshAudioInputs = useCallback(async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+    setAudioInputs(devices.filter((device) => device.kind === "audioinput"));
+  }, []);
+
+  const adoptMicrophoneStream = useCallback((stream: MediaStream) => {
+    microphoneStreamRef.current = stream;
+    const track = stream.getAudioTracks()[0] ?? null;
+    setMicrophoneTrack(track);
+    setMicrophoneLabel(track?.label || "Microphone ready");
+    setSelectedMicrophoneId(track?.getSettings().deviceId ?? "");
+    setHeardVoice(false);
+  }, []);
+
+  const switchMicrophone = useCallback(
+    async (deviceId: string) => {
+      if (!deviceId || switchingMicrophone) return;
+      setSwitchingMicrophone(true);
+      setError(null);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { ...MICROPHONE_CONSTRAINTS, deviceId: { exact: deviceId } },
+          video: false
+        });
+        stopStream(microphoneStreamRef.current);
+        adoptMicrophoneStream(stream);
+        window.localStorage.setItem(MIC_DEVICE_STORAGE_KEY, deviceId);
+      } catch (caught) {
+        setError(permissionError(caught, "microphone"));
+      } finally {
+        setSwitchingMicrophone(false);
+      }
+    },
+    [switchingMicrophone, adoptMicrophoneStream]
+  );
+
+  const handleSignalChange = useCallback((hearing: boolean) => {
+    if (hearing) setHeardVoice(true);
   }, []);
 
   const releaseCamera = useCallback(() => {
@@ -115,17 +171,21 @@ export function MediaPermissionGate({
       }
 
       try {
-        const microphoneStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          },
-          video: false
-        });
-        microphoneStreamRef.current = microphoneStream;
-        setMicrophoneLabel(microphoneStream.getAudioTracks()[0]?.label || "Microphone ready");
+        // Start from the microphone this learner chose last time, if it is still here.
+        const preferred = window.localStorage.getItem(MIC_DEVICE_STORAGE_KEY) ?? "";
+        const microphoneStream = await navigator.mediaDevices
+          .getUserMedia({
+            audio: preferred
+              ? { ...MICROPHONE_CONSTRAINTS, deviceId: { exact: preferred } }
+              : MICROPHONE_CONSTRAINTS,
+            video: false
+          })
+          .catch(() =>
+            navigator.mediaDevices.getUserMedia({ audio: MICROPHONE_CONSTRAINTS, video: false })
+          );
+        adoptMicrophoneStream(microphoneStream);
         setMicrophoneState("ready");
+        void refreshAudioInputs();
       } catch (caught) {
         setMicrophoneState("error");
         setCameraState(cameraOptional ? "idle" : "skipped");
@@ -135,7 +195,14 @@ export function MediaPermissionGate({
 
       if (includeCamera && cameraOptional) await requestCamera();
     },
-    [cameraOptional, releaseCamera, releaseMicrophone, requestCamera]
+    [
+      cameraOptional,
+      refreshAudioInputs,
+      releaseCamera,
+      releaseMicrophone,
+      requestCamera,
+      adoptMicrophoneStream
+    ]
   );
 
   const skipCamera = useCallback(() => {
@@ -171,6 +238,12 @@ export function MediaPermissionGate({
     },
     []
   );
+
+  useEffect(() => {
+    if (microphoneState !== "ready") return;
+    navigator.mediaDevices.addEventListener?.("devicechange", refreshAudioInputs);
+    return () => navigator.mediaDevices.removeEventListener?.("devicechange", refreshAudioInputs);
+  }, [microphoneState, refreshAudioInputs]);
 
   const requesting = microphoneState === "requesting" || cameraState === "requesting";
   const microphoneReady = microphoneState === "ready";
@@ -267,6 +340,37 @@ export function MediaPermissionGate({
               state={cameraState}
             />
           </div>
+
+          {microphoneReady ? (
+            <div className="interview-mic-check mt-4 rounded-2xl bg-black/15 px-4 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-cream/88">Check your microphone</p>
+                <span
+                  className={`text-sm ${heardVoice ? "text-[var(--workspace-accent)]" : "text-cream/42"}`}
+                  aria-live="polite"
+                >
+                  {heardVoice ? `${interviewerName} will hear you` : "Say something"}
+                </span>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-cream/52">
+                Speak normally. If the bars don&apos;t move, choose the microphone you are talking
+                into.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <MicrophonePicker
+                  devices={audioInputs}
+                  selectedId={selectedMicrophoneId}
+                  disabled={switchingMicrophone}
+                  onChange={(deviceId) => void switchMicrophone(deviceId)}
+                />
+                <MicMeter
+                  track={microphoneTrack}
+                  muted={false}
+                  onSignalChange={handleSignalChange}
+                />
+              </div>
+            </div>
+          ) : null}
 
           <div aria-live="polite" className={error ? "mt-3" : "hidden"}>
             {error ? <p className="text-sm leading-6 text-[#ffb4b4]">{error}</p> : null}

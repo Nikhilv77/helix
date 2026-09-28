@@ -42,3 +42,24 @@ export function architectureDesignAssessmentRoomHref(sessionId: string): string 
 export function openArchitectureDesignAssessmentRoom(sessionId: string): void {
   window.location.assign(architectureDesignAssessmentRoomHref(sessionId));
 }
+
+type RoomSetup = {
+  storyPracticeAssessment?: { practice?: string } | null;
+  dsaBlockAssessment?: { kind?: string } | null;
+} | null;
+
+/**
+ * The room a session belongs in. Practice checkpoints that run in their own
+ * typed room must not reopen in the live voice room, which would run them as
+ * a Gemini interview with one-click answers.
+ */
+export function sessionRoomHref(sessionId: string, setup?: RoomSetup): string {
+  const practice = setup?.storyPracticeAssessment?.practice;
+  if (practice === "architecture-design") return architectureDesignAssessmentRoomHref(sessionId);
+  if (practice === "applied-engineering") return appliedEngineeringAssessmentRoomHref(sessionId);
+  if (practice === "core-technical") return coreTechnicalAssessmentRoomHref(sessionId);
+  if (setup?.dsaBlockAssessment?.kind === "dsa-block-assessment") {
+    return dsaAssessmentRoomHref(sessionId);
+  }
+  return interviewRoomHref(sessionId);
+}

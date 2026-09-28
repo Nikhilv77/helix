@@ -1,3 +1,4 @@
+import { isArchitectureDesignRole } from "@/features/practice/architecture-design/domain/contracts";
 import { z } from "zod";
 import {
   ARCHITECTURE_DESIGN_FOCUS_SCHEMA_VERSION,
@@ -80,14 +81,10 @@ export class ArchitectureDesignFocusService {
         "Your profile could not be found."
       );
     }
-    if (
-      profile.targetRole !== "backend" &&
-      profile.targetRole !== "fullstack" &&
-      profile.targetRole !== "ai-ml"
-    ) {
+    if (!isArchitectureDesignRole(profile.targetRole)) {
       throw new ConflictErrorException(
         "ARCHITECTURE_DESIGN_ROLE_UNSUPPORTED",
-        "Architecture & Design currently supports Backend, Full-stack, and AI/ML profiles."
+        "Architecture & Design currently supports Backend, Full-stack, Frontend, Data, and AI/ML profiles."
       );
     }
     const seniority = toSeniority(profile.level);
@@ -133,7 +130,28 @@ const ARCHITECTURE_SKILL_MATCHERS = {
   observability: /observab|monitor|metrics|tracing/i,
   security: /secur|authentication|authorization|privacy/i,
   scalability: /scalab|throughput|high.?volume/i,
-  cloud: /\baws\b|\bgcp\b|azure|kubernetes|\bk8s\b/i
+  cloud: /\baws\b|\bgcp\b|azure|kubernetes|\bk8s\b/i,
+  // Frontend system design evidence.
+  "frontend-architecture": /\breact\b|\bvue\b|angular|svelte|next\.?js|frontend/i,
+  "web-performance": /core web vitals|lighthouse|performance budget|\blcp\b|\binp\b|bundle size/i,
+  accessibility: /accessib|\ba11y\b|wcag|\baria\b/i,
+  "offline-first": /service worker|\bpwa\b|offline|indexeddb/i,
+  "realtime-ui": /websocket|socket\.io|real.?time/i,
+  "design-systems": /design system|storybook|component library/i,
+  "client-state": /redux|zustand|mobx|react query|tanstack|apollo|state management/i,
+  // Data system design evidence, named after the Data scenario topics.
+  "event-ingestion": /clickstream|event tracking|segment|snowplow|ingestion/i,
+  "stream-processing":
+    /flink|spark streaming|structured streaming|kafka streams|stream processing|streaming pipeline/i,
+  "batch-orchestration": /airflow|dagster|prefect|\betl\b|\belt\b|batch pipeline|data pipeline/i,
+  "warehouse-modeling":
+    /snowflake|bigquery|redshift|data warehouse|dimensional model|star schema|\bdbt\b/i,
+  "change-data-capture": /\bcdc\b|change data capture|debezium/i,
+  "lakehouse-tables": /lakehouse|iceberg|delta lake|\bhudi\b|databricks|parquet/i,
+  "data-quality": /data quality|great expectations|data contract|data observability|\bsoda\b/i,
+  "data-lineage": /lineage|openlineage|data catalog/i,
+  "feature-store": /feature store|\bfeast\b|feature pipeline/i,
+  "experiment-metrics": /a\/b test|experimentation|experiment platform/i
 } as const;
 
 function deriveResumeEvidence(value: unknown): ArchitectureDesignConfirmedFocus["resumeEvidence"] {
@@ -151,7 +169,17 @@ function deriveResumeEvidence(value: unknown): ArchitectureDesignConfirmedFocus[
       "multi-tenancy",
       "migration",
       "latency",
-      "cost"
+      "cost",
+      "infinite scroll",
+      "autocomplete",
+      "dashboard",
+      "chat",
+      "ecommerce",
+      "clickstream",
+      "revenue",
+      "fraud",
+      "reporting",
+      "backfill"
     ].filter((keyword) => text.includes(keyword))
   ].filter(uniqueValue);
   return { architectureSkillKeys, projectKeywords: projectKeywords.slice(0, 30) };
@@ -201,7 +229,16 @@ function defaultTargetJob(
   seniority: ArchitectureDesignConfirmedFocus["seniority"]
 ): string {
   const level = seniority === "junior" ? "Junior" : seniority === "senior" ? "Senior" : "Mid-level";
-  const roleLabel = role === "backend" ? "Backend" : role === "ai-ml" ? "AI/ML" : "Full-stack";
+  const roleLabel =
+    role === "backend"
+      ? "Backend"
+      : role === "ai-ml"
+        ? "AI/ML"
+        : role === "frontend"
+          ? "Frontend"
+          : role === "data"
+            ? "Data"
+            : "Full-stack";
   return `${level} ${roleLabel} Engineer`;
 }
 

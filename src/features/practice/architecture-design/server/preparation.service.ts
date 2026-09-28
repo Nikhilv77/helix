@@ -8,7 +8,7 @@ import {
   architectureDesignPrepareInputSchema,
   architectureDesignStartPathInputSchema
 } from "@/features/practice/architecture-design/domain/practice-contracts";
-import { ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE } from "@/features/practice/architecture-design/domain/scenario-ranking-catalogue";
+import { ARCHITECTURE_DESIGN_PRACTICE_RANKING_CATALOGUE } from "@/features/practice/architecture-design/domain/scenario-ranking-catalogue";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
@@ -214,7 +214,7 @@ export class ArchitectureDesignPreparationService {
       const recentScenarioKeys = blocks.map((block) => block.scenarioVersion.scenarioKey);
       const recentTopicKeys = recentScenarioKeys.flatMap(
         (key) =>
-          ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.find((candidate) => candidate.key === key)
+          ARCHITECTURE_DESIGN_PRACTICE_RANKING_CATALOGUE.find((candidate) => candidate.key === key)
             ?.topicKeys ?? []
       );
       if (!this.dependencies.ranking.rankSelectedScenario) {

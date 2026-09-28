@@ -31,8 +31,8 @@ evaluation, reports, and how each role (backend, full-stack, frontend, data, AI/
 | --- | --- | --- |
 | Backend | 5 | Technical round's fallback MCQs include browser questions |
 | Full-stack | 5 | None specific |
-| Frontend | 5 shown | **System Design always fails to start** (no frontend scenarios) |
-| Data | 5 shown | **System Design always fails to start**; fallback MCQs are networking/browser; no data-specific content (SQL, pipelines) anywhere |
+| Frontend | 5 shown | **System Design always fails to start** (no frontend scenarios). Fixed: frontend scenarios built |
+| Data | 5 shown | **System Design always fails to start**; fallback MCQs are networking/browser; no data-specific content (SQL, pipelines) anywhere. Fixed: data pipeline scenarios built; SQL and data MCQs still missing |
 | AI/ML | 4 (no DSA) | Technical fallback MCQs are the same questions as AI/ML Practice |
 
 ## Status
@@ -41,7 +41,7 @@ evaluation, reports, and how each role (backend, full-stack, frontend, data, AI/
 | --- | --- | --- |
 | 1 | H1, H4, M1 | Done September 28 (uncommitted); needs a live test longer than 10 minutes |
 | 2 | H2 (quick fix), H3, M3, M8, plus H0 found while fixing M3 | Done September 28 (uncommitted); needs a live round |
-| 3 | M4, M5, M6, M7 | Done September 28 (uncommitted); Frontend and Data System Design scenarios and new question banks still need writing |
+| 3 | M4, M5, M6, M7 | Done September 28 (uncommitted); Frontend and Data System Design built; new question banks still need writing |
 | 4 | M2 | Done September 28 (uncommitted); re-run the live eval once Gemini quota allows |
 | 5 | L1–L7 | Done September 28 (uncommitted); L4 and L7 deliberately deferred |
 
@@ -82,8 +82,10 @@ The card and entry page show it as ready, but `architectureDesign.focus.confirm`
 `ARCHITECTURE_DESIGN_ROLE_UNSUPPORTED` for those roles; the catalogue has only backend/full-stack
 and AI/ML scenarios.
 *Done:* the round is hidden for these roles (and for learners with no declared role), the cards
-renumber, and `/interview/design` redirects to `/interviews`. Building it properly is planned in
-[Future scope](09_FUTURE_SCOPE.md#system-design-for-frontend-and-data).
+renumber, and `/interview/design` redirects to `/interviews`.
+*Frontend built September 28:* six client-architecture scenarios with frontend acts, Live rules,
+and report labels; the round is shown again for Frontend. *Data built the same day* with six
+pipeline scenarios, data acts, Live rules, and report labels.
 
 **H3. Skipped and unanswered questions do not lower the score.** *Fixed September 28.*
 The headline score averages only answered, graded questions. Declining, skipping, or ending early
