@@ -157,8 +157,9 @@ export async function POST(request: NextRequest) {
         targetRole: currentProfile?.targetRole,
         level,
         evidence: documentEvidence,
-        // Two attempts, each inside half the remaining budget.
-        timeoutMs: Math.floor(analysisBudget / 2),
+        // Gemini first (hedged), then the fallback provider with what is
+        // left; without a fallback, two Gemini attempts split the budget.
+        budgetMs: analysisBudget,
         maxAttempts: 2
       });
     } catch (error) {

@@ -68,3 +68,28 @@ describe("DsaQuestionActions skip", () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 });
+
+describe("DsaQuestionActions solved", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true } as Response)));
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the question as solved when its first accepted run is recorded, without a page refresh", async () => {
+    const { announceQuestionSolved } = await import("@/features/practice/dsa/domain/hint-tracker");
+    render(<DsaQuestionActions slug="two-sum" nextHref={null} />);
+    expect(screen.queryByText(/Solved/)).toBeNull();
+
+    act(() => announceQuestionSolved("another-question"));
+    expect(screen.queryByText(/Solved/)).toBeNull();
+
+    act(() => announceQuestionSolved("two-sum"));
+    expect(screen.getByText(/Solved/)).toBeTruthy();
+    expect(router.refresh).not.toHaveBeenCalled();
+  });
+});

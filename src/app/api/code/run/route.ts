@@ -347,6 +347,9 @@ async function handlePost(request: NextRequest) {
       }
     );
 
+    let released: Promise<void> | null = null;
+    const releaseOnce = () => (released ??= lease.release());
+
     try {
       const language =
         parsed.data.language === "python"
@@ -459,16 +462,20 @@ async function handlePost(request: NextRequest) {
       }
 
       // Saved before responding: the browser asks for the teacher debrief as
-      // soon as it sees an accepted run.
-      if (slug && data.accepted && parsed.data.sessionId === undefined) {
-        await rememberAcceptedRun(guard, ownerId, slug, parsed.data.code).catch((cacheError) =>
-          console.error("[code-run] Could not record the accepted run", cacheError)
-        );
-      }
+      // soon as it sees an accepted run. The lock is released in the same
+      // round trip window instead of after it.
+      await Promise.all([
+        slug && data.accepted && parsed.data.sessionId === undefined
+          ? rememberAcceptedRun(guard, ownerId, slug, parsed.data.code).catch((cacheError) =>
+              console.error("[code-run] Could not record the accepted run", cacheError)
+            )
+          : Promise.resolve(),
+        releaseOnce()
+      ]);
 
       return apiSuccess(data);
     } finally {
-      await lease.release();
+      await releaseOnce();
     }
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

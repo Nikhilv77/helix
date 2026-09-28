@@ -667,7 +667,8 @@ export function getAppContainer(): AppContainer {
     curriculumService: new CurriculumService(geminiAi),
     // Resume classification benefits from the document-oriented model path;
     // keep the low-latency interview model reserved for live conversation.
-    resumeService: new ResumeService(geminiAi),
+    // First uploads fall back from Gemini's fast model to its reasoning model.
+    resumeService: new ResumeService(geminiAi, { ai: geminiAi, modelClass: "reasoning" }),
     // Written once per resume and read by every later resume round, so the
     // round itself never spends a model call on planning.
     resumeInterviewKitService: new ResumeInterviewKitService(geminiAi, profileService),

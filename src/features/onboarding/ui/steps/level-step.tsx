@@ -22,7 +22,7 @@ const levelCopy: Record<Level, { word: string; line: string }> = {
   },
   "5-plus": {
     word: "Lead",
-    line: "You need to show judgment, leverage, and systems-level thinking."
+    line: "You need to show judgment, scope across teams, and systems-level thinking."
   }
 };
 

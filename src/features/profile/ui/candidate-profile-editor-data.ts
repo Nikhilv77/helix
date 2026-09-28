@@ -46,7 +46,7 @@ export const focusAreaDetails: Record<string, string> = {
   Communication: "Make your thinking easy to follow under interview pressure.",
   Ownership: "Show scope, accountability, and how you moved work forward.",
   Impact: "Connect your work to outcomes, metrics, and product value.",
-  Leadership: "Show judgment, leverage, and how you raised the team bar.",
+  Leadership: "Show your judgment and how you raised the bar for your team.",
   "Behavioral stories": "Defend real examples with situation, action, and result."
 };
 

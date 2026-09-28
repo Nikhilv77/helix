@@ -36,6 +36,17 @@ export function requestNextHint(slug: string): void {
   window.dispatchEvent(new CustomEvent(DSA_NEXT_HINT_EVENT, { detail: { slug } }));
 }
 
+export const DSA_QUESTION_SOLVED_EVENT = "trailgrad:dsa-question-solved";
+
+/**
+ * Tells the header's Complete/Skip control that the first accepted run was
+ * recorded, so it can show "Completed" without re-rendering the whole page.
+ */
+export function announceQuestionSolved(slug: string): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(DSA_QUESTION_SOLVED_EVENT, { detail: { slug } }));
+}
+
 /**
  * Only for tests. The store is per browser session and bounded by the number of
  * questions visited, so it is never cleared in normal use.

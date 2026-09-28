@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { AiService } from "@/server/ai/ai.service";
 import type { GenerateStructuredRequest } from "@/server/ai/interfaces/system-designer-ai-provider.interface";
+import { AiProviderException } from "@/server/ai/ai-provider.exception";
 import { ResumeService } from "./service";
 import type { ResumeDocumentEvidence } from "./document";
 
@@ -82,16 +83,74 @@ describe("ResumeService.analyze", () => {
     evidence
   };
 
-  it("passes the per-call budget through to the provider", async () => {
+  it("splits the budget across Gemini attempts when there is no fallback", async () => {
     const { ai, requests } = createAi(completeResponse);
 
-    await new ResumeService(ai).analyze({ ...input, timeoutMs: 12_000, maxAttempts: 2 });
+    await new ResumeService(ai).analyze({ ...input, budgetMs: 24_000, maxAttempts: 2 });
 
     expect(requests[0]).toMatchObject({
       operation: "resume_extract",
       timeoutMs: 12_000,
       maxAttempts: 2
     });
+  });
+
+  it("hedges a stalled Gemini call and falls back with the time that is left", async () => {
+    let now = 0;
+    const timeout = new AiProviderException({
+      code: "AI_TIMEOUT",
+      message: "timed out",
+      provider: "gemini",
+      operation: "resume_extract",
+      retryable: true
+    });
+    const primary = {
+      generateStructured: vi.fn(async () => {
+        now += 25_000;
+        throw timeout;
+      })
+    };
+    const { ai: fallback, requests: fallbackRequests } = createAi(completeResponse);
+
+    const analysis = await new ResumeService(
+      primary as never,
+      { ai: fallback, modelClass: "reasoning" },
+      () => now
+    ).analyze({
+      ...input,
+      budgetMs: 45_000
+    });
+
+    expect(analysis).toBeTruthy();
+    expect(primary.generateStructured).toHaveBeenCalledWith(
+      expect.objectContaining({ timeoutMs: 25_000, maxAttempts: 1, hedgeAfterMs: 12_000 })
+    );
+    expect(fallbackRequests[0]).toMatchObject({
+      operation: "resume_extract-fallback",
+      modelClass: "reasoning",
+      timeoutMs: 20_000,
+      maxAttempts: 1
+    });
+  });
+
+  it("does not fall back from a non-retryable failure or without time left", async () => {
+    const hardFailure = new AiProviderException({
+      code: "AI_PROVIDER_ERROR",
+      message: "bad request",
+      provider: "gemini",
+      operation: "resume_extract",
+      retryable: false
+    });
+    const primary = { generateStructured: vi.fn().mockRejectedValue(hardFailure) };
+    const { ai: fallback, requests } = createAi(completeResponse);
+
+    await expect(
+      new ResumeService(primary as never, { ai: fallback, modelClass: "reasoning" }).analyze({
+        ...input,
+        budgetMs: 45_000
+      })
+    ).rejects.toBe(hardFailure);
+    expect(requests).toHaveLength(0);
   });
 
   it("instructs analysis to infer the role when onboarding supplies no selection", async () => {

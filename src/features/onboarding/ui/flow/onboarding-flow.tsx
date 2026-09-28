@@ -31,6 +31,11 @@ import { pageTitle } from "@/lib/shared/seo";
 import type { CandidateProfile, Level, ResumeExtractionResponse } from "@/lib/shared/types";
 import { preparationWelcomeIntroCopy } from "@/features/preparation-onboarding/ui/welcome-copy";
 import { shouldAutoRetryResumeAnalysis } from "./resume-analysis-retry";
+import {
+  clearOnboardingDraft,
+  readOnboardingDraft,
+  writeOnboardingDraft
+} from "./onboarding-draft";
 
 const ANALYSIS_RETRY_NOTICE_MS = 700;
 
@@ -75,6 +80,27 @@ export function OnboardingFlow({
   const [retryingAnalysis, setRetryingAnalysis] = useState(false);
   const [result, setResult] = useState<ResumeExtractionResponse | null>(initialResult);
   const [error, setError] = useState<string | null>(null);
+  // New-account onboarding survives a refresh; resume replacement and the
+  // embedded preview harness always start fresh.
+  const persistDraft = !embedded && !replacingResume && !initialResult;
+  const draftRestored = useRef(!persistDraft);
+
+  useEffect(() => {
+    if (draftRestored.current) return;
+    draftRestored.current = true;
+    const draft = readOnboardingDraft();
+    if (!draft) return;
+    setTeacherId(draft.teacherId ?? initialTeacherId);
+    setLevel(draft.level ?? initialLevel ?? null);
+    if (draft.result) setResult(draft.result);
+    setStep(draft.step);
+  }, [initialLevel, initialTeacherId]);
+
+  useEffect(() => {
+    if (!persistDraft || !draftRestored.current) return;
+    writeOnboardingDraft({ step, teacherId, level, result });
+  }, [level, persistDraft, result, step, teacherId]);
+
   const selectedTeacherName =
     selectableTeacherById(teacherId ?? DEFAULT_TEACHER_ID)?.name ?? "Your teacher";
   const selectedTeacherId = teacherId ?? DEFAULT_TEACHER_ID;
@@ -255,6 +281,7 @@ export function OnboardingFlow({
         onCompleted?.(response.profile);
       } else {
         await completeOnboarding(result, teacherId);
+        clearOnboardingDraft();
       }
       if (embedded) return;
       router.push(
@@ -267,7 +294,7 @@ export function OnboardingFlow({
       setError(
         caught instanceof ApiClientError
           ? caught.message
-          : "Trailgrad could not finish onboarding. Try to Enter again."
+          : "Trailgrad couldn’t finish setting up your account. Try again."
       );
     } finally {
       setCompleting(false);

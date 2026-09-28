@@ -4,9 +4,11 @@
  * skeleton from the pathname. Each route owns its page-specific loading UI.
  */
 
+import { RootLoadingSurface } from "./root-loading-surface";
+
 /** Root fallback shared by the public home and signed-in workspace routes. */
 export default function RootLoading() {
-  return <UnknownRouteSkeleton />;
+  return <RootLoadingSurface fallback={<UnknownRouteSkeleton />} />;
 }
 
 function UnknownRouteSkeleton() {

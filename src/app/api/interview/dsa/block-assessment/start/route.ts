@@ -30,15 +30,18 @@ async function handlePost(request: NextRequest) {
       throw new ApiRouteError(400, "BAD_REQUEST", "A valid DSA block ID is required.");
     }
     const guard = getSharedGuard(app.config);
-    await guard.enforce(RATE_LIMIT_POLICIES.interviewCreation, owner.ownerId);
-    const lease = await guard.acquire(
+    // Rate limit and start lock in one Redis round trip instead of two.
+    const lease = await guard.enforceAndAcquire(
+      { policy: RATE_LIMIT_POLICIES.interviewCreation, identity: owner.ownerId },
       {
-        namespace: "dsa-block-assessment-start",
-        ttlMs: 65_000,
-        code: "DSA_BLOCK_ASSESSMENT_START_IN_PROGRESS",
-        message: "Your block assessment is already being prepared."
-      },
-      owner.ownerId
+        policy: {
+          namespace: "dsa-block-assessment-start",
+          ttlMs: 65_000,
+          code: "DSA_BLOCK_ASSESSMENT_START_IN_PROGRESS",
+          message: "Your block assessment is already being prepared."
+        },
+        identity: owner.ownerId
+      }
     );
     try {
       const result = await app.dsaBlockAssessmentRuntimeService.startOrResume(

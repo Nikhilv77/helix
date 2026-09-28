@@ -102,7 +102,7 @@ function InterviewReportContent({
   const rankedSignals = [...signals].sort((left, right) => right.score - left.score);
   const strongestSignal = rankedSignals[0];
   const gapSignal = rankedSignals.at(-1);
-  const strongest = strongestSignal?.label ?? "Your interview signal";
+  const strongest = strongestSignal?.label ?? "Your answers";
   const gap = gapSignal?.label ?? "Answer endings";
   const briefing = buildPdfBriefing(report, overview, candidate);
   const mayaMessage = mayaSummary(report, candidate.name, strongest, gap);
@@ -435,7 +435,7 @@ function ReportQuickRead({
 
       <div className="report-glass-card rounded-2xl px-5 py-4">
         <p className="text-xs font-medium uppercase tracking-[0.13em] text-cream/42">
-          {strongestScore >= 70 ? "Strongest signal" : "Highest current signal"}
+          {strongestScore >= 70 ? "Strongest area" : "Clearest area so far"}
         </p>
         <p className="mt-3 text-lg font-semibold leading-6 text-cream">{strongest}</p>
         <p className="mt-2 text-sm leading-6 text-cream/58">
@@ -693,7 +693,7 @@ function buildPdfBriefing(
   const rankedSignals = [...signals].sort((left, right) => right.score - left.score);
   const strongestSignal = rankedSignals[0];
   const gapSignal = rankedSignals.at(-1);
-  const strongest = strongestSignal?.label ?? "Your interview signal";
+  const strongest = strongestSignal?.label ?? "Your answers";
   const gap = gapSignal?.label ?? "Answer endings";
   const roundScore = roundParameterScore(report);
   return {
@@ -706,9 +706,11 @@ function buildPdfBriefing(
     scoreExplanation:
       "This is the saved overall judgement for the latest interview. The six parameters below provide the supporting evidence.",
     verdict:
-      roundScore >= 75
-        ? "Your interview signal is getting strong."
-        : "Your interview signal is developing.",
+      roundScore >= 78
+        ? "You're close to interview-ready."
+        : roundScore >= 55
+          ? "You're getting there."
+          : "It's early days.",
     trend:
       overview.scoreDelta && overview.scoreDelta > 0
         ? `Your score is up ${overview.scoreDelta} points from your first round.`

@@ -7,6 +7,7 @@ import type {
   WorkspaceInsights
 } from "@/lib/shared/types";
 import { SESSION_TTL_MS } from "./session-constants";
+import { learnerNextStep } from "@/features/interviews/domain/learner-next-step";
 import type { StoredInterviewSession } from "./session-store";
 import type { QuestionEvaluation } from "./types";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
@@ -200,12 +201,37 @@ export function readInterviewReportSnapshot(
       : Math.max(snapshot.lastTurnEndMs, now - snapshot.report.startedAt);
 
   return {
-    ...snapshot.report,
+    ...withLearnerNextSteps(snapshot.report),
     status,
     durationMs,
     transcript: []
   };
 }
+
+/**
+ * Snapshots saved before next steps were written for the learner still hold
+ * "Work on this next: <assessor note>". Rewrite those on read so old reports
+ * read the same way as new ones, without a backfill.
+ */
+function withLearnerNextSteps<T extends Pick<InterviewReport, "competencies" | "summary">>(
+  report: T
+): T {
+  const legacy = (text: string | null | undefined) => Boolean(text && LEGACY_NEXT_STEP.test(text));
+  if (!legacy(report.summary?.nextStep) && !report.competencies?.some((item) => legacy(item.nextStep))) {
+    return report;
+  }
+  return {
+    ...report,
+    competencies: report.competencies.map((item) =>
+      legacy(item.nextStep) ? { ...item, nextStep: learnerNextStep(item.nextStep) } : item
+    ),
+    summary: legacy(report.summary.nextStep)
+      ? { ...report.summary, nextStep: learnerNextStep(report.summary.nextStep) }
+      : report.summary
+  };
+}
+
+const LEGACY_NEXT_STEP = /^work on this next:/i;
 
 export function createWorkspaceInsights(
   sessions: StoredInterviewSession[],
@@ -413,8 +439,9 @@ function assessedTechnicalAnswer(
           : "developing",
     signals: evaluation.strengths,
     gap,
+    // The evaluator's gap is an assessor note; the learner sees advice.
     nextStep: evaluation.gaps.length
-      ? `Work on this next: ${gap}`
+      ? learnerNextStep(gap)
       : "Keep using this same clear, evidence-based way of answering.",
     evidenceBreakdown: {
       ownership: rubricScore("ownership", fallbackBreakdown.ownership),

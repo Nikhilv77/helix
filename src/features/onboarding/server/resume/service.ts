@@ -1,5 +1,7 @@
 import { z } from "zod";
 import type { AiService } from "@/server/ai/ai.service";
+import { AiProviderException } from "@/server/ai/ai-provider.exception";
+import type { AiModelClass } from "@/server/ai/interfaces/system-designer-ai-provider.interface";
 import type { Level, Role } from "@/lib/shared/types";
 import type { ResumeDocumentEvidence } from "./document";
 
@@ -139,8 +141,31 @@ Classify whether the document is plausibly an individual's real resume rather th
 
 Do not accept a document merely because it contains headings such as Skills, Education, or Experience. Require a supported candidate identity, a coherent personal chronology, concrete organizations, institutions, projects, or awards, and first-person career evidence represented through accomplishment bullets. Education-led early-career resumes may have education, certifications, awards, and projects instead of paid work history.`;
 
+/** A healthy analysis returns in 6-8 s; after this, race a duplicate request. */
+const ANALYSIS_HEDGE_AFTER_MS = 12_000;
+/** Used when a caller gives no budget (tests, scripts). */
+const DEFAULT_ANALYSIS_BUDGET_MS = 45_000;
+/** The fallback needs at least this long to be worth starting. */
+const MIN_FALLBACK_BUDGET_MS = 8_000;
+/** Most of the budget Gemini may use when a fallback is waiting behind it. */
+const MAX_PRIMARY_SLICE_MS = 25_000;
+
 export class ResumeService {
-  constructor(private readonly ai: AiService) {}
+  /**
+   * @param ai Gemini: reads visual PDFs (needs image input) and runs analysis.
+   * @param fallback where analysis goes when the first model fails or stalls.
+   *   A second Gemini model is used rather than Groq: Groq's models could not
+   *   produce this strict extraction reliably, while a different Gemini model
+   *   has its own capacity and quota and supports the full schema.
+   */
+  constructor(
+    private readonly ai: Pick<AiService, "generateStructured">,
+    private readonly fallback: {
+      ai: Pick<AiService, "generateStructured">;
+      modelClass: AiModelClass;
+    } | null = null,
+    private readonly now: () => number = Date.now
+  ) {}
 
   async readVisualPdf(input: {
     buffer: Buffer;
@@ -173,16 +198,75 @@ readable is false.`,
     return result.readable ? result.text : "";
   }
 
-  analyze(input: {
+  /**
+   * One grounded extraction inside `budgetMs`. With a fallback configured,
+   * Gemini gets the first slice (hedged after 12 s, since a stalled request
+   * otherwise holds the whole slice) and the fallback gets what is left.
+   * Without one, `maxAttempts` Gemini attempts split the budget evenly.
+   */
+  async analyze(input: {
     text: string;
     targetRole?: Role | null;
     level: Level;
     evidence: ResumeDocumentEvidence;
-    timeoutMs?: number;
+    /** Total time for the analysis, every attempt and the fallback included. */
+    budgetMs?: number;
     maxAttempts?: number;
   }): Promise<ResumeAnalysis> {
-    return this.ai.generateStructured({
-      operation: "resume_extract",
+    const budgetMs = input.budgetMs ?? DEFAULT_ANALYSIS_BUDGET_MS;
+    input = { ...input, budgetMs };
+    const deadline = this.now() + budgetMs;
+    if (!this.fallback) {
+      const attempts = Math.max(1, input.maxAttempts ?? 1);
+      return this.extract(this.ai, input, {
+        operation: "resume_extract",
+        timeoutMs: Math.floor(budgetMs / attempts),
+        maxAttempts: attempts,
+        hedge: budgetMs / attempts > ANALYSIS_HEDGE_AFTER_MS + 3_000,
+        modelClass: "fast"
+      });
+    }
+
+    const primarySlice = Math.max(
+      MIN_FALLBACK_BUDGET_MS,
+      Math.min(MAX_PRIMARY_SLICE_MS, budgetMs - MIN_FALLBACK_BUDGET_MS)
+    );
+    try {
+      return await this.extract(this.ai, input, {
+        operation: "resume_extract",
+        timeoutMs: Math.min(primarySlice, budgetMs),
+        maxAttempts: 1,
+        hedge: primarySlice > ANALYSIS_HEDGE_AFTER_MS + 3_000,
+        modelClass: "fast"
+      });
+    } catch (error) {
+      const remaining = deadline - this.now();
+      const retryable =
+        error instanceof AiProviderException && error.retryable && error.code !== "AI_CANCELLED";
+      if (!retryable || remaining < MIN_FALLBACK_BUDGET_MS) throw error;
+      return this.extract(this.fallback.ai, input, {
+        operation: "resume_extract-fallback",
+        timeoutMs: remaining,
+        maxAttempts: 1,
+        hedge: false,
+        modelClass: this.fallback.modelClass
+      });
+    }
+  }
+
+  private extract(
+    ai: Pick<AiService, "generateStructured">,
+    input: { text: string; targetRole?: Role | null; level: Level; evidence: ResumeDocumentEvidence },
+    call: {
+      operation: string;
+      timeoutMs: number;
+      maxAttempts: number;
+      hedge: boolean;
+      modelClass: AiModelClass;
+    }
+  ): Promise<ResumeAnalysis> {
+    return ai.generateStructured({
+      operation: call.operation,
       systemInstruction: SYSTEM_INSTRUCTION,
       prompt: `${
         input.targetRole
@@ -236,10 +320,11 @@ Length guidance: headline is one line under 140 characters, summary is under 120
 ${input.text.slice(0, 20_000)}
 </resume>`,
       schema: resumeAnalysisSchema,
-      modelClass: "fast",
+      modelClass: call.modelClass,
       temperature: 0.05,
-      timeoutMs: input.timeoutMs,
-      maxAttempts: input.maxAttempts
+      timeoutMs: call.timeoutMs,
+      maxAttempts: call.maxAttempts,
+      ...(call.hedge ? { hedgeAfterMs: ANALYSIS_HEDGE_AFTER_MS } : {})
     });
   }
 }

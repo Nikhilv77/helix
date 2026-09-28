@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { DSA_QUESTION_SOLVED_EVENT } from "@/features/practice/dsa/domain/hint-tracker";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, SkipForward } from "lucide-react";
 import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
@@ -37,6 +38,14 @@ export function DsaQuestionActions({
       initialStatus === "COMPLETED" ? "complete" : initialStatus === "SKIPPED" ? "skip" : "none"
     );
   }, [initialStatus]);
+
+  useEffect(() => {
+    const markSolved = (event: Event) => {
+      if ((event as CustomEvent<{ slug?: string }>).detail?.slug === slug) setMarked("complete");
+    };
+    window.addEventListener(DSA_QUESTION_SOLVED_EVENT, markSolved);
+    return () => window.removeEventListener(DSA_QUESTION_SOLVED_EVENT, markSolved);
+  }, [slug]);
 
   useEffect(() => {
     if (opened.current) return;

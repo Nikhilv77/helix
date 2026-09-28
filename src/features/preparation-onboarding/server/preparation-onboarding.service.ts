@@ -145,7 +145,15 @@ export class PreparationOnboardingService {
     ownerId: string,
     input: { section: BaselineSection; choiceId: string }
   ): Promise<PreparationOnboardingState> {
-    const current = await this.record(ownerId);
+    // The stored question does not depend on the profile read, so both run
+    // together: one round trip fewer on every baseline answer.
+    const [current, assignment] = await Promise.all([
+      this.record(ownerId),
+      this.prisma.preparationBaselineQuestion.findUnique({
+        where: { ownerId_section: { ownerId, section: input.section } },
+        select: { question: true }
+      })
+    ]);
     const state = preparationOnboardingState(current.preparationOnboarding);
     if (state.stage !== expectedBaselineStage[input.section]) {
       throw new ConflictErrorException(
@@ -159,10 +167,6 @@ export class PreparationOnboardingService {
         "Choose a target role before starting the baseline."
       );
     }
-    const assignment = await this.prisma.preparationBaselineQuestion.findUnique({
-      where: { ownerId_section: { ownerId, section: input.section } },
-      select: { question: true }
-    });
     const storedQuestion = assignment
       ? preparationOnboardingState({
           ...state,

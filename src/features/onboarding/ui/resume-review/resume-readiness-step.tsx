@@ -57,7 +57,11 @@ export function ResumeReadinessStep({
   const [visibleFocusCount, setVisibleFocusCount] = useState(0);
   const [entryStage, setEntryStage] = useState(0);
   const skillsTitle = useWordReveal(
-    replacingResume ? "Review your skill changes." : "Good, your skills are in great shape.",
+    replacingResume
+      ? "Review your skill changes."
+      : visibleSkills.length
+        ? "Skills from your resume."
+        : "No skills list found.",
     true,
     180
   );

@@ -3,7 +3,6 @@
 import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ChevronDown,
@@ -20,6 +19,7 @@ import {
   type DsaEditorSelection
 } from "@/features/interviews/ui/dsa/dsa-code-editor";
 import { AskSomeone } from "./ask-someone";
+import { announceQuestionSolved } from "@/features/practice/dsa/domain/hint-tracker";
 import { DsaTeacherFeedback, type DsaTeacherFeedbackState } from "./dsa-teacher-feedback";
 import { PracticeLanguagePicker } from "./practice-language-picker";
 import { dsaStarterCode, supportedDsaCodeLanguages } from "@/features/practice/dsa/domain/dsa-code-templates";
@@ -64,7 +64,6 @@ export function DsaQuestionWorkspace({
   initialStatus?: string | null;
   initialLanguage?: DsaEditorLanguage;
 }) {
-  const router = useRouter();
   const teacher = useWorkspaceTeacher();
   const [language, setLanguage] = useState<DsaEditorLanguage>(() =>
     preferredLanguageFor(question.slug, initialLanguage)
@@ -219,8 +218,10 @@ export function DsaQuestionWorkspace({
       }
       if (payload.data.accepted && !completionRecorded.current) {
         completionRecorded.current = true;
+        // Only the header's status control shows "solved", so update it in
+        // place rather than re-rendering the whole page on the server.
         void recordSolved(question.slug)
-          .then(() => router.refresh())
+          .then(() => announceQuestionSolved(question.slug))
           .catch(() => {
             completionRecorded.current = false;
           });
