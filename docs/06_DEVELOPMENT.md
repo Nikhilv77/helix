@@ -60,6 +60,7 @@ locks. That is fine for one machine but does not test cross-instance behaviour.
 | `pnpm assessments:rescore:dev` / `:production` | Rescore DSA block assessments |
 | `pnpm compatibility:audit` | Check old data against current contracts |
 | `pnpm data:reset-user` | Reset one user's data on the dev DB |
+| `pnpm trailmate:demo` / `--undo` | Add or remove the Trailmate demo data on the dev DB (demo account only) |
 
 ## Conventions
 
@@ -90,7 +91,7 @@ locks. That is fine for one machine but does not test cross-instance behaviour.
 
 - Two dev accounts: a demo account holds seeded Trailmate history; the other is kept empty to
   see new-user behaviour.
-- Trailmate demo data: `npx tsx scratch/trailmate-demo-seed.ts` to seed, `--undo` to remove. It
+- Trailmate demo data: `pnpm trailmate:demo` to seed, `pnpm trailmate:demo --undo` to remove. It
   only involves the demo account.
 - Emails are not in the database; look accounts up through the Clerk API.
 

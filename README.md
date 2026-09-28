@@ -102,8 +102,10 @@ Vercel's Git `patchBuild` step incorrectly rejects this project after a successf
 ## Verification
 
 ```bash
+npx tsc --noEmit -p .
 pnpm lint
 pnpm test
 pnpm build
-cd agent && .venv/bin/python -m compileall .
 ```
+
+Full project documentation is in [docs/](./docs/README.md).

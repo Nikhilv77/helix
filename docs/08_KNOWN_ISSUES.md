@@ -57,7 +57,6 @@ When an item is fixed, remove it here and note it in that release's [CHANGELOG](
 | --- | --- | --- |
 | Low | Dead code | [CLEANUP.md](CLEANUP.md) lists about 2,450 lines that can safely go, plus about 1,170 more that need a decision or visual check. None of it is removed yet. |
 | Low | Legacy models | `Project`, `DesignSession`, `KnowledgeDocument`, `KnowledgeChunk` (and the retrieval settings in the environment schema) belong to an earlier product. Check production rows before dropping. |
-| Low | `agent/` leftover | Only Python egg-info from an old LiveKit voice agent remains. The README's verification step still mentions compiling it. |
 | Low | Large `globals.css` | Many rules are page-specific and some are unused (see the CSS section of CLEANUP.md). |
 
 ## Documentation
@@ -65,5 +64,5 @@ When an item is fixed, remove it here and note it in that release's [CHANGELOG](
 | Severity | Issue | Detail |
 | --- | --- | --- |
 | Low | `INTERVIEW_ENGINE.md` paths are stale | Its "Key files" list points at `src/server/interview/…` and `src/lib/interviews/…`; most of that code now lives in `src/features/interviews/`. |
-| Low | README is dated | It says Groq is "for low-latency turn decisions" only and includes the `agent` compile step. The docs in this folder are more current. |
+| Low | README is dated | It says Groq is "for low-latency turn decisions" only. The docs in this folder are more current. |
 | Low | Root-level requirement docs | `HELP_AND_NOTIFICATIONS_REQUIREMENTS.md` and `trailgrad-contextual-peer-help.md` describe plans, parts of which are built. Treat them as history, not a spec. |

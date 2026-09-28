@@ -14,8 +14,6 @@ scratch/
 .env.*
 !.env.example
 *.log
-agent/.venv
-agent/__pycache__
 
 # TypeScript incremental build cache
 *.tsbuildinfo
@@ -24,8 +22,6 @@ agent/__pycache__
 .DS_Store
 
 # Python build artefacts
-agent/*.egg-info
-agent/__pycache__
 **/__pycache__
 
 # Local resume exports — contain real candidate CV data.

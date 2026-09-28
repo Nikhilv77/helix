@@ -48,8 +48,8 @@ Trailmate demo data lives only in the dev database and only involves the demo ac
 (vermanikhilwork@gmail.com). Other accounts see empty personal history and the global Top
 Trailmates list.
 
-- Seed: `npx tsx scratch/trailmate-demo-seed.ts`
-- Remove: `npx tsx scratch/trailmate-demo-seed.ts --undo`
+- Seed: `pnpm trailmate:demo` (script: `scripts/trailmate-demo-seed.ts`)
+- Remove: `pnpm trailmate:demo --undo`
 
 ## Useful commands
 

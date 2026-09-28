@@ -9,7 +9,7 @@ Work through these batches in order. This document records planned work; none of
 
 - [ ] **Batch 1 — delete the six whole files** listed under “Confirmed orphaned source files” (1,340 lines).
 - [ ] **Batch 2 — remove only the named declarations** in the detailed checklist at the end of this document (1,113 lines). Keep the containing files and all other live exports. Remove imports left unused by these deletions after checking their side effects.
-- [ ] **Batch 3 — remove orphaned configuration:** delete `agent/.dockerignore` (73 non-code lines). This does not mean deleting the local `agent` directory or virtual environment.
+- [x] **Batch 3 — remove orphaned configuration.** Done September 28: the whole `agent/` directory was deleted, including `agent/.dockerignore` (73 non-code lines) and the local virtual environment.
 - [ ] **Batch 4 — decide whether to retire the four dormant feature groups.** If retiring them, delete their implementations and dedicated tests together using the exact paths below (687 additional lines after overlap adjustment). Otherwise keep and integrate them.
 - [ ] **Batch 5 — remove the listed CSS candidates only after checking dynamic class construction and browser appearance** (486 candidate lines). Do this after the dead JSX removal.
 - [x] **Documentation — consolidate the four historical documents.** Done September 28: the old documents were deleted and replaced by the numbered series in [README.md](README.md). Their 3,467 lines were never counted as code savings.
@@ -116,9 +116,9 @@ These are disk usage, not repository code-removal lines:
 | --- | ---: | --- |
 | `.next` | 13 GB | Regenerable build/dev cache; remove only when the running dev/build process is stopped |
 | `node_modules` | 1.6 GB | Installed dependencies; reinstallable, not obsolete source |
-| `agent` | 353 MB | Almost entirely ignored local environment; only `.dockerignore` is tracked |
+| `agent` | 353 MB | Deleted September 28 |
 | `.vercel` | 88 MB | Local deployment metadata/artifacts; retain project linkage as needed |
-| `scratch` | 29 MB | Mixed local work, including scripts referenced by Remaining Work; inspect before removing |
+| `scratch` | 29 MB | Deleted September 28; the Trailmate demo seed moved to `scripts/`. Still the output folder for `capture-screens` and `compare-screens` (ignored by git) |
 | `output` / `tmp` | 124 KB / 160 KB | Local outputs; excluded from source totals |
 
 No tracked `.tsbuildinfo`, `.log` or `.pyc` files were found. No cache, local environment, or personal-data export was deleted or added to the code count.

@@ -43,7 +43,6 @@ src/
 prisma/                   schema.prisma, migrations, seed
 scripts/                  Deploy helpers, evals, publishers, backfills
 public/voice/             Pre-recorded teacher lines (about 950 MP3s)
-agent/                    Leftover Python egg-info from an old LiveKit voice agent (unused)
 ```
 
 Feature areas in `src/features`: account, analytics, dashboard, interviews, marketing,
