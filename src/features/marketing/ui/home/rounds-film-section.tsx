@@ -15,8 +15,10 @@ export function RoundsFilmSection() {
       <Reveal>
         <ProductFilm
           src="/videos/marketing/trailgrad-rounds.mp4?v=1"
-          mobileSrc="/videos/marketing/trailgrad-rounds-mobile.mp4?v=2"
+          touchSrc="/videos/marketing/trailgrad-rounds-mobile.mp4?v=2"
+          portraitSrc="/videos/marketing/trailgrad-rounds-portrait.mp4?v=1"
           poster="/videos/marketing/trailgrad-rounds-poster.jpg?v=1"
+          portraitPoster="/videos/marketing/trailgrad-rounds-portrait-poster.jpg?v=1"
           label="Trailgrad round film"
           description="A short silent film. Upload once. It reads what you built: a resume line about moving order events onto Kafka is highlighted. Then it asks why Kafka and not a simple queue. Stuck? Ask for a hint: think about what happens when a consumer falls behind. Then drill the gaps: two pointers, rate limiter, idempotent APIs, cache invalidation. After every round, one thing to fix: lead with the trade-off, then the numbers. A little sharper every round."
         />

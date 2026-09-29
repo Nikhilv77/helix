@@ -3874,6 +3874,8 @@ html[data-theme="light"] {
    on the first screen. No shadow: a thin ember border that warms from
    amber to orange and fades along the edges frames it on the white page. */
 .product-film {
+  position: relative;
+  aspect-ratio: 16 / 9;
   width: min(100%, 68rem, calc((100svh - 19rem) * 16 / 9));
   min-width: min(100%, 22rem);
   overflow: hidden;
@@ -3892,8 +3894,28 @@ html[data-theme="light"] {
       border-box;
 }
 
-@media (max-width: 639px) {
+/* The still and the video fill the same frame; the video is transparent
+   until its first frame, so the still shows through until then. */
+.product-film-poster,
+.product-film-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-film-poster {
+  background: #ffffff;
+}
+
+/* Phones get the 4:5 cut (see PHONE_FILM_QUERY in product-film.tsx), so the
+   text in the film is about twice the size it would be at 16:9. */
+@media (max-width: 767px) {
   .product-film {
+    aspect-ratio: 4 / 5;
+    width: min(100%, calc((100svh - 19rem) * 4 / 5));
+    min-width: min(100%, 17rem);
     border-radius: 1rem;
   }
 }
@@ -4572,7 +4594,8 @@ header .site-nav-icon:hover {
   filter: none;
 }
 
-.marketing-theme-section button.rounded-full:hover {
+/* Quiet round buttons only; the dark CTA pill keeps its own hover. */
+.marketing-theme-section button.rounded-full:not(.glass-cta):hover {
   border-color: rgba(255, 255, 255, 0.18) !important;
   background: rgba(255, 255, 255, 0.06) !important;
 }

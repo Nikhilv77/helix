@@ -30,7 +30,16 @@ npm run poster
 npm run render:rounds
 npm run poster:rounds
 npm run mobile
+npm run render:portrait
+npm run poster:portrait
 ```
+
+`TrailgradDemoPortrait` and `TrailgradRoundsPortrait` are the same films in a
+1080 × 1350 (4:5) frame for phones: `useFrameLayout()` in `src/kit.tsx`
+wraps text to the narrower frame and shrinks one-word flashes to fit, so the
+type is about twice the size it would be in a 16:9 film on a phone.
+`render:portrait` renders them at 60 fps into `out/` (ignored) and encodes
+the page files at 30 fps.
 
 `npm run mobile` makes the phone versions (`*-mobile.mp4`: 1080p, 30 fps,
 H.264 Main 4.0, about 3 MB each) from the 1080p60 masters. Budget phones may
@@ -45,7 +54,8 @@ Run these scripts from this package so Remotion resolves its pinned
 dependencies, which are separate from the Next.js application.
 
 `ProductFilm` picks the file on first view (the master on desktop, the
-mobile encode on phones, only the poster with data saver, on 2G/3G-class
+30 fps encode on tablets and touch screens, the portrait cut on phones, only
+the poster with data saver, on 2G/3G-class
 connections, or on devices reporting 2 GB of memory or less), then plays it
 muted and looping with no controls while it is visible, pauses off-screen or in a hidden tab, and stays on the poster for
 reduced-motion visitors. A screen-reader description carries the copy.

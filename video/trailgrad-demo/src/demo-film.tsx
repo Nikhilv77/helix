@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { SpeakingTeacher, W, type TeacherId } from "./teacher";
-import { Beat, Letters, Stage, Underline, Words, clamp, easeIn, easeOut, ink, muted, orange, t } from "./kit";
+import { Beat, Letters, Stage, Underline, Words, clamp, easeIn, easeOut, ink, muted, orange, t, useFrameLayout } from "./kit";
 
 /* The hero film: teachers, a follow-up, an answer, a score. */
 // Teacher montage: each teacher gets a quick cut; the mouth follows their recorded greeting silently.
@@ -27,19 +27,20 @@ function Teachers({ f }: { f: number }) {
   const dir = slot.from === "right" ? 1 : -1;
   const shown = f >= MONTAGE_START && f <= MONTAGE_END;
   const push = 1 + t(f, slotStart, SLOT, Easing.linear) * 0.06;
+  const { width, portrait } = useFrameLayout();
   return (
     <AbsoluteFill style={{ opacity: shown ? 1 : 0 }}>
       {/* Giant name behind the teacher, sliding the opposite way. */}
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", transform: `translateX(${(1 - i) * -dir * 260 + o * dir * 200}px)`, opacity: Math.min(i, 1 - o) * 0.09 }}>
         <div style={{ fontSize: 460, fontWeight: 800, letterSpacing: -26, color: ink }}>{slot.name}</div>
       </AbsoluteFill>
-      <div style={{ position: "absolute", top: 70, left: (1920 - W) / 2, opacity: Math.min(i, 1 - o), transform: `translateX(${(1 - i) * dir * 420 - o * dir * 420}px) scale(${(0.9 + i * 0.1) * push})`, transformOrigin: "50% 45%", filter: `blur(${(1 - i) * 10 + o * 10}px)` }}>
+      <div style={{ position: "absolute", top: portrait ? 150 : 70, left: (width - W) / 2, opacity: Math.min(i, 1 - o), transform: `translateX(${(1 - i) * dir * 420 - o * dir * 420}px) scale(${(0.9 + i * 0.1) * push})`, transformOrigin: "50% 45%", filter: `blur(${(1 - i) * 10 + o * 10}px)` }}>
         <SpeakingTeacher frame={f} teacher={slot.id} speakingFrom={slotStart} />
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 800, display: "flex", flexDirection: "column", alignItems: "center", opacity: 1 - o }}>
-        <Letters key={slot.id} f={f} at={slotStart + 6} text={slot.name} size={84} />
+      <div style={{ position: "absolute", left: 0, right: 0, top: portrait ? 900 : 800, display: "flex", flexDirection: "column", alignItems: "center", opacity: 1 - o }}>
+        <Letters key={slot.id} f={f} at={slotStart + 6} text={slot.name} size={portrait ? 104 : 84} />
         <div style={{ marginTop: 14 }}>
-          <Words key={slot.id + "l"} f={f} at={slotStart + 16} text={slot.line} size={34} color={muted} weight={500} gap={2} />
+          <Words key={slot.id + "l"} f={f} at={slotStart + 16} text={slot.line} size={portrait ? 44 : 34} color={muted} weight={500} gap={2} />
         </div>
       </div>
     </AbsoluteFill>
@@ -48,6 +49,7 @@ function Teachers({ f }: { f: number }) {
 
 export function DemoFilm() {
   const f = useCurrentFrame();
+  const { fit } = useFrameLayout();
   const answer = "I traced the slow query, added an index, and it felt a lot faster after that.";
   const typed = Math.floor(interpolate(f, [1010, 1110], [0, answer.length], clamp));
   const score = Math.round(interpolate(f, [1180, 1240], [0, 8], { ...clamp, easing: easeOut }));
@@ -83,7 +85,7 @@ export function DemoFilm() {
       </Beat>
 
       <Beat f={f} start={984} end={1160} enter="right" exit="zoom">
-        <div style={{ width: 1400, textAlign: "left" }}>
+        <div style={{ width: fit(1400, 80), textAlign: "left" }}>
           <Words f={f} at={990} text="You answer out loud." size={64} color={muted} weight={500} style={{ justifyContent: "flex-start" }} />
           <div style={{ marginTop: 40, fontSize: 60, lineHeight: 1.3, fontWeight: 500, letterSpacing: -1.6, minHeight: 170 }}>
             {answer.slice(0, typed)}

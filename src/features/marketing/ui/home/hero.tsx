@@ -32,8 +32,10 @@ export function Hero() {
         >
           <ProductFilm
             src="/videos/marketing/trailgrad-demo.mp4?v=4"
-            mobileSrc="/videos/marketing/trailgrad-demo-mobile.mp4?v=2"
+            touchSrc="/videos/marketing/trailgrad-demo-mobile.mp4?v=2"
+            portraitSrc="/videos/marketing/trailgrad-demo-portrait.mp4?v=1"
             poster="/videos/marketing/trailgrad-demo-poster.jpg?v=4"
+            portraitPoster="/videos/marketing/trailgrad-demo-portrait-poster.jpg?v=1"
             label="Trailgrad product film"
             description="A short silent film. Headlines say: your next interview, practised before it happens, built from your resume. Teachers Maya, Daniel, Olivia, Ryan, and Claire each appear with a line about how they teach, then: pick the teacher you learn best with. A follow-up question asks what happens to sign-in when Redis drops at peak. An answer is typed out, a score of 8 out of 10 appears with the note: now show how you measured it. Then DSA, system design, behavioural, and Resume Roast flash by, ending on: walk in ready."
             coveredAfterScroll={0.75}

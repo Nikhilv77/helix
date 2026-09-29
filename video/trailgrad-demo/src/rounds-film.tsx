@@ -1,6 +1,6 @@
 import React from "react";
 import { interpolate, useCurrentFrame } from "remotion";
-import { Beat, Letters, Stage, Words, clamp, easeOut, ink, muted, orange, t } from "./kit";
+import { Beat, Letters, Stage, Words, clamp, easeOut, ink, muted, orange, t, useFrameLayout } from "./kit";
 
 /*
  * The second film: one round from resume to report. It reads what you built,
@@ -16,8 +16,9 @@ const resumeLines = [
 ];
 
 function Resume({ f }: { f: number }) {
+  const { fit, portrait } = useFrameLayout();
   return (
-    <div style={{ width: 1360, display: "flex", flexDirection: "column", gap: 34 }}>
+    <div style={{ width: fit(1360, 90), display: "flex", flexDirection: "column", gap: portrait ? 40 : 34 }}>
       {resumeLines.map((line, i) => {
         const at = 130 + i * 14;
         const inT = t(f, at, 30);
@@ -30,7 +31,8 @@ function Resume({ f }: { f: number }) {
             style={{
               position: "relative",
               alignSelf: "flex-start",
-              fontSize: 58,
+              fontSize: portrait ? 56 : 58,
+              lineHeight: 1.2,
               fontWeight: 600,
               letterSpacing: -1.8,
               color: ink,
@@ -50,8 +52,9 @@ function Resume({ f }: { f: number }) {
 
 function Typed({ f, from, to, text, size, color = ink }: { f: number; from: number; to: number; text: string; size: number; color?: string }) {
   const shown = Math.floor(interpolate(f, [from, to], [0, text.length], clamp));
+  const { fit } = useFrameLayout();
   return (
-    <div style={{ fontSize: size, lineHeight: 1.3, fontWeight: 500, letterSpacing: -size * 0.025, color, maxWidth: 1400, textAlign: "center", minHeight: size * 2.6 }}>
+    <div style={{ fontSize: size, lineHeight: 1.3, fontWeight: 500, letterSpacing: -size * 0.025, color, maxWidth: fit(1400, 80), textAlign: "center", minHeight: size * 2.6 }}>
       {text.slice(0, shown)}
       <span style={{ display: "inline-block", width: 4, height: size * 0.95, background: orange, marginLeft: 6, verticalAlign: `-${size * 0.14}px`, opacity: Math.floor(f / 18) % 2 ? 0 : 1 }} />
     </div>

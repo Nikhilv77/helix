@@ -14,6 +14,15 @@ export const easeOut = Easing.bezier(0.16, 1, 0.3, 1);
 export const easeIn = Easing.bezier(0.7, 0, 0.84, 0);
 export const t = (f: number, from: number, dur: number, easing = easeOut) => interpolate(f, [from, from + dur], [0, 1], { ...clamp, easing });
 
+/** Frame size helpers so one film lays out in 16:9 and in the 4:5 phone cut. */
+export function useFrameLayout() {
+  const { width, height } = useVideoConfig();
+  const portrait = height > width;
+  /** A block width that never runs closer than `pad` to the frame edges. */
+  const fit = (desired: number, pad = 70) => Math.min(desired, width - pad * 2);
+  return { width, height, portrait, fit };
+}
+
 /** A beat on screen from `start` to `end`: zooms in on entry and punches past the camera on exit. */
 export function Beat({ f, start, end, children, enter = "zoom", exit = "zoom" }: { f: number; start: number; end: number; children: ReactNode; enter?: "zoom" | "left" | "right" | "up"; exit?: "zoom" | "left" | "right" }) {
   if (f < start - 1 || f > end + 1) return null;
@@ -31,8 +40,10 @@ export function Beat({ f, start, end, children, enter = "zoom", exit = "zoom" }:
 /** Words rise out of a mask one after another, each with a little overshoot. */
 export function Words({ f, at, text, size, color = ink, gap = 3, weight = 600, style }: { f: number; at: number; text: string; size: number; color?: string; gap?: number; weight?: number; style?: CSSProperties }) {
   const { fps } = useVideoConfig();
+  const { fit } = useFrameLayout();
+  const maxWidth = fit(typeof style?.maxWidth === "number" ? style.maxWidth : 1780);
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", columnGap: size * 0.26, fontSize: size, fontWeight: weight, letterSpacing: -size * 0.045, lineHeight: 1.05, color, ...style }}>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", columnGap: size * 0.26, fontSize: size, fontWeight: weight, letterSpacing: -size * 0.045, lineHeight: 1.05, color, ...style, maxWidth }}>
       {text.split(" ").map((word, i) => {
         const s = spring({ frame: f - at - i * gap, fps, config: { damping: 14, stiffness: 170, mass: 0.7 } });
         return (
@@ -46,8 +57,11 @@ export function Words({ f, at, text, size, color = ink, gap = 3, weight = 600, s
 }
 
 /** Letters of one word drop in with a stagger and settle with a spring. */
-export function Letters({ f, at, text, size }: { f: number; at: number; text: string; size: number }) {
+export function Letters({ f, at, text, size: desired }: { f: number; at: number; text: string; size: number }) {
   const { fps } = useVideoConfig();
+  const { width } = useFrameLayout();
+  // One unbroken word: shrink it until it fits the frame width.
+  const size = Math.min(desired, (width * 0.88) / (text.length * 0.56));
   return (
     <div style={{ display: "flex", fontSize: size, fontWeight: 700, letterSpacing: -size * 0.05, color: ink, lineHeight: 1 }}>
       {text.split("").map((ch, i) => {

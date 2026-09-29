@@ -4,14 +4,27 @@ import { useEffect, useId, useRef } from "react";
 
 type NetworkInformationLike = { saveData?: boolean; effectiveType?: string };
 
+/** Phones get the 4:5 cut. Keep in sync with `.product-film` in globals.css. */
+export const PHONE_FILM_QUERY = "(max-width: 767px)";
+
+export type FilmSources = {
+  /** 1080p60 16:9 master for desktops. */
+  src: string;
+  /** 1080p30 16:9 encode for tablets and other touch devices. */
+  touchSrc: string;
+  /** 1080×1350 30 fps 4:5 cut for phones. */
+  portraitSrc: string;
+};
+
 /**
  * Which file this device should play, or null to stay on the poster. Phones
- * and small screens get the 720p30 encode, which every phone decodes in
- * hardware; data saver, 2G/3G-class connections, and devices reporting 2 GB
- * of memory or less skip the video. `connection` and `deviceMemory` are
- * Chromium-only, so other browsers simply fall through to the size check.
+ * get the portrait cut, tablets and touch devices the 30 fps encode that
+ * every mobile chip decodes in hardware, desktops the master. Data saver,
+ * 2G/3G-class connections, and devices reporting 2 GB of memory or less skip
+ * the video. `connection` and `deviceMemory` are Chromium-only, so other
+ * browsers simply fall through to the size checks.
  */
-export function pickFilmSource(src: string, mobileSrc: string): string | null {
+export function pickFilmSource({ src, touchSrc, portraitSrc }: FilmSources): string | null {
   const nav = navigator as Navigator & {
     connection?: NetworkInformationLike;
     deviceMemory?: number;
@@ -20,10 +33,9 @@ export function pickFilmSource(src: string, mobileSrc: string): string | null {
   if (connection?.saveData) return null;
   if (connection?.effectiveType && /^(slow-2g|2g|3g)$/.test(connection.effectiveType)) return null;
   if (typeof nav.deviceMemory === "number" && nav.deviceMemory <= 2) return null;
-  const small = window.matchMedia(
-    "(max-width: 767px), (hover: none) and (pointer: coarse)"
-  ).matches;
-  return small ? mobileSrc : src;
+  if (window.matchMedia(PHONE_FILM_QUERY).matches) return portraitSrc;
+  if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return touchSrc;
+  return src;
 }
 
 /**
@@ -34,17 +46,16 @@ export function pickFilmSource(src: string, mobileSrc: string): string | null {
  */
 export function ProductFilm({
   src,
-  mobileSrc,
+  touchSrc,
+  portraitSrc,
   poster,
+  portraitPoster,
   label,
   description,
   coveredAfterScroll
-}: {
-  /** 1080p60 master for desktops. */
-  src: string;
-  /** 720p30 encode for phones, tablets, and small screens. */
-  mobileSrc: string;
+}: FilmSources & {
   poster: string;
+  portraitPoster: string;
   label: string;
   description: string;
   /**
@@ -72,7 +83,7 @@ export function ProductFilm({
         video.pause();
         return;
       }
-      if (source === undefined) source = pickFilmSource(src, mobileSrc);
+      if (source === undefined) source = pickFilmSource({ src, touchSrc, portraitSrc });
       if (source === null) return;
       // Keep the video request out of the page's initial load: no src is
       // rendered, so nothing downloads until the film is first seen.
@@ -110,13 +121,18 @@ export function ProductFilm({
       window.removeEventListener("scroll", onScroll);
       video.pause();
     };
-  }, [coveredAfterScroll, mobileSrc, src]);
+  }, [coveredAfterScroll, portraitSrc, src, touchSrc]);
 
   return (
     <figure className="product-film mx-auto">
+      {/* The still sits under the video, picked by the same breakpoint as the
+          film, so phones show the portrait frame before anything loads. */}
+      <picture>
+        <source media={PHONE_FILM_QUERY} srcSet={portraitPoster} />
+        <img src={poster} alt="" className="product-film-poster" decoding="async" />
+      </picture>
       <video
         ref={videoRef}
-        poster={poster}
         width={1920}
         height={1080}
         muted
@@ -125,7 +141,7 @@ export function ProductFilm({
         preload="none"
         aria-label={label}
         aria-describedby={descriptionId}
-        className="block aspect-video h-auto w-full bg-white"
+        className="product-film-video"
       />
       <p id={descriptionId} className="sr-only">
         {description}

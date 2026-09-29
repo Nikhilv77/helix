@@ -5,7 +5,9 @@ import { ProductFilm } from "./product-film";
 const film = (
   <ProductFilm
     src="/videos/marketing/trailgrad-demo.mp4"
-    mobileSrc="/videos/marketing/trailgrad-demo-mobile.mp4"
+    touchSrc="/videos/marketing/trailgrad-demo-mobile.mp4"
+    portraitSrc="/videos/marketing/trailgrad-demo-portrait.mp4"
+    portraitPoster="/videos/marketing/trailgrad-demo-portrait-poster.jpg"
     poster="/videos/marketing/trailgrad-demo-poster.jpg"
     label="Trailgrad product film"
     description="A short silent film."
@@ -16,12 +18,14 @@ describe("ProductFilm playback", () => {
   let onIntersection: IntersectionObserverCallback;
   let reducedMotion: boolean;
   let smallScreen: boolean;
+  let touch: boolean;
   let play: ReturnType<typeof vi.spyOn>;
   let pause: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     reducedMotion = false;
     smallScreen = false;
+    touch = false;
     vi.stubGlobal(
       "IntersectionObserver",
       class {
@@ -33,7 +37,11 @@ describe("ProductFilm playback", () => {
       }
     );
     vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: query.includes("reduced-motion") ? reducedMotion : smallScreen,
+      matches: query.includes("reduced-motion")
+        ? reducedMotion
+        : query.includes("pointer")
+          ? touch
+          : smallScreen,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn()
     }));
@@ -78,7 +86,9 @@ describe("ProductFilm playback", () => {
     render(
       <ProductFilm
         src="/videos/marketing/trailgrad-demo.mp4"
-        mobileSrc="/videos/marketing/trailgrad-demo-mobile.mp4"
+        touchSrc="/videos/marketing/trailgrad-demo-mobile.mp4"
+        portraitSrc="/videos/marketing/trailgrad-demo-portrait.mp4"
+        portraitPoster="/videos/marketing/trailgrad-demo-portrait-poster.jpg"
         poster="/videos/marketing/trailgrad-demo-poster.jpg"
         label="Trailgrad product film"
         description="A short silent film."
@@ -103,13 +113,21 @@ describe("ProductFilm playback", () => {
     expect(video.getAttribute("src")).toBe("/videos/marketing/trailgrad-demo.mp4");
   });
 
-  it("plays the 720p encode on phones", async () => {
+  it("plays the portrait cut on phones", async () => {
     smallScreen = true;
     render(film);
     await visibility(1);
     const video = screen.getByLabelText("Trailgrad product film") as HTMLVideoElement;
-    expect(video.getAttribute("src")).toBe("/videos/marketing/trailgrad-demo-mobile.mp4");
+    expect(video.getAttribute("src")).toBe("/videos/marketing/trailgrad-demo-portrait.mp4");
     expect(play).toHaveBeenCalledOnce();
+  });
+
+  it("plays the 30 fps encode on tablets and touch screens", async () => {
+    touch = true;
+    render(film);
+    await visibility(1);
+    const video = screen.getByLabelText("Trailgrad product film") as HTMLVideoElement;
+    expect(video.getAttribute("src")).toBe("/videos/marketing/trailgrad-demo-mobile.mp4");
   });
 
   it("stays on the poster with data saver on", async () => {
