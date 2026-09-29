@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { ProfileAvatar } from "@/features/profile/ui/profile-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { THEME_LOCK_ATTRIBUTE, useTheme } from "@/lib/theme/theme-context";
 import { HelpRequestToast } from "@/features/peer-help/ui/help-request-toast";
 import { ActivePeerHelpToast } from "@/features/peer-help/ui/active-peer-help-toast";
 import { CurrentPeerHelpPrompt } from "@/features/peer-help/ui/current-peer-help-prompt";
@@ -125,6 +126,13 @@ export function WorkspaceShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { lockTheme } = useTheme();
+
+  // The workspace always follows the saved theme. This clears a marketing
+  // light lock if the early theme script ever set one for a signed-in visit.
+  useEffect(() => {
+    if (document.documentElement.hasAttribute(THEME_LOCK_ATTRIBUTE)) lockTheme(null);
+  }, [lockTheme]);
   const searchParams = useSearchParams();
   const { user, isLoaded } = useUser();
   const lastRefreshedAccount = useRef<string | null>(null);

@@ -1,68 +1,79 @@
 import Link from "next/link";
 import { TrailgradMark } from "@/components/trailgrad-mark";
 
-const footerLinks: Array<{ label: string; href: string }> = [
+const productLinks: Array<{ label: string; href: string }> = [
   { label: "Interview", href: "#interview" },
-  { label: "Practice", href: "#practice" },
   { label: "Help", href: "#help" },
+  { label: "FAQ", href: "#faq" },
   { label: "Blog", href: "/blog" }
+];
+
+const legalLinks: Array<{ label: string; href: string }> = [
+  { label: "Terms", href: "/terms" },
+  { label: "Privacy", href: "/privacy" }
 ];
 
 function sectionHref(href: string, prefix: string): string {
   return href.startsWith("#") ? `${prefix}${href}` : href;
 }
 
+const linkClass =
+  "site-footer-link rounded-md text-cream/60 outline-none transition-colors duration-300 hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40";
+
 /**
- * Same language as the bar at the top: a hairline, plain type, nothing
- * enclosed. The cream CTA that used to sit here is gone — the closing section
- * directly above it already makes that ask, and two in a row read as nagging.
+ * White like the page, so the footer ends it instead of boxing it off. The
+ * mark and one line on the left, two short link groups on the right, and a
+ * large faded wordmark along the bottom edge. The only rule is a hairline
+ * that fades out at both ends.
  */
 export function SiteFooter({ sectionHrefPrefix = "" }: { sectionHrefPrefix?: string }) {
   return (
-    <footer className="site-footer relative z-10 border-t border-white/[0.06] px-5 py-10 sm:px-8">
-      <div className="mx-auto flex w-full max-w-[72rem] flex-col gap-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <Link
-            href="/"
-            aria-label="Trailgrad home"
-            className="inline-flex items-center gap-2.5 rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
-          >
-            <TrailgradMark className="marketing-brand-mark h-5 w-5" sizes="20px" />
-            <span className="text-[0.95rem] font-medium tracking-tight">Trailgrad</span>
-          </Link>
-
-          <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-7 gap-y-3">
-            {footerLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={sectionHref(link.href, sectionHrefPrefix)}
-                className="text-sm text-cream/50 outline-none transition-colors duration-300 hover:text-cream/90 focus-visible:ring-2 focus-visible:ring-cream/40"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-white/[0.05] pt-7 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[0.8125rem] text-cream/34">
-            © {new Date().getFullYear()} Trailgrad · AI interview practice
-          </p>
-          <div className="flex gap-6">
+    <footer className="site-footer relative z-10 overflow-hidden px-5 pt-12 sm:px-8">
+      <div className="site-footer-inner mx-auto w-full max-w-[72rem] pt-12 sm:pt-14">
+        <div className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex max-w-[20rem] flex-col gap-3">
             <Link
-              href="/terms"
-              className="text-[0.8125rem] text-cream/42 transition-colors duration-300 hover:text-cream/80"
+              href="/"
+              aria-label="Trailgrad home"
+              className="inline-flex items-center gap-2.5 self-start rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
             >
-              Terms
+              <TrailgradMark className="marketing-brand-mark h-6 w-6" sizes="24px" />
+              <span className="text-[1.05rem] font-semibold tracking-tight">Trailgrad</span>
             </Link>
-            <Link
-              href="/privacy"
-              className="text-[0.8125rem] text-cream/42 transition-colors duration-300 hover:text-cream/80"
-            >
-              Privacy
-            </Link>
+            <p className="text-[0.9375rem] leading-relaxed text-cream/55">
+              Learn, practise, and interview on the work you&rsquo;ve actually done.
+            </p>
+          </div>
+
+          <div className="flex gap-14 text-[0.9375rem] sm:gap-20">
+            <nav aria-label="Footer" className="flex flex-col gap-3">
+              {productLinks.map((link) => (
+                <Link
+                  key={link.label}
+                  href={sectionHref(link.href, sectionHrefPrefix)}
+                  className={linkClass}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+            <nav aria-label="Legal" className="flex flex-col gap-3">
+              {legalLinks.map((link) => (
+                <Link key={link.label} href={link.href} className={linkClass}>
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
           </div>
         </div>
+
+        <p className="mt-14 text-[0.8125rem] text-cream/40 sm:mt-16">
+          © {new Date().getFullYear()} Trailgrad
+        </p>
+      </div>
+
+      <div aria-hidden="true" className="site-footer-wordmark wordmark">
+        Trailgrad
       </div>
     </footer>
   );

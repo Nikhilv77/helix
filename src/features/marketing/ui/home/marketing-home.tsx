@@ -1,30 +1,24 @@
 import { SiteFooter } from "../chrome/site-footer";
-import { SiteNav } from "../chrome/site-nav";
+import { SiteMark } from "../chrome/site-mark";
 import { Begin } from "./begin-section";
+import { Faq } from "./faq-section";
 import { Hero } from "./hero";
-import { HomeThemeArrival } from "./home-theme-arrival";
-import { Practice } from "./practice-section";
-import { Pushback } from "./pushback-section";
+import { RoundsFilmSection } from "./rounds-film-section";
 import { Stuck } from "./stuck-section";
 
 export function MarketingHome() {
   return (
-    <HomeThemeArrival>
-      <div
-        className="blueprint marketing-theme overflow-x-clip"
-        data-marketing-accent="orange"
-      >
-        <SiteNav />
+    <div className="blueprint marketing-theme overflow-x-clip" data-marketing-accent="orange">
+      <SiteMark />
 
-        <main className="relative">
-          <Hero />
-          <Pushback />
-          <Practice />
-          <Stuck />
-          <Begin />
-          <SiteFooter />
-        </main>
-      </div>
-    </HomeThemeArrival>
+      <main className="relative">
+        <Hero />
+        <RoundsFilmSection />
+        <Stuck />
+        <Faq />
+        <Begin />
+        <SiteFooter />
+      </main>
+    </div>
   );
 }

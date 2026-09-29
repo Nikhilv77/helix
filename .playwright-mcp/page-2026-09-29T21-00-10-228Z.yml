@@ -1,0 +1,235 @@
+- generic [active] [ref=f15e1]:
+  - generic [ref=f15e2]:
+    - complementary [ref=f15e3]:
+      - generic [ref=f15e4]:
+        - button "Collapse sidebar" [ref=f15e5] [cursor=pointer]
+        - link "Home" [ref=f15e9] [cursor=pointer]:
+          - /url: /
+        - link "Practice" [ref=f15e14] [cursor=pointer]:
+          - /url: /practice
+        - link "Interviews" [ref=f15e18] [cursor=pointer]:
+          - /url: /interviews
+        - link "Roastumé" [ref=f15e22] [cursor=pointer]:
+          - /url: /resume-roast
+        - link "Progress" [ref=f15e25] [cursor=pointer]:
+          - /url: /progress
+        - link "Reports" [ref=f15e28] [cursor=pointer]:
+          - /url: /reports
+        - link "Trailmate" [ref=f15e32] [cursor=pointer]:
+          - /url: /trailmate
+        - link "My profile" [ref=f15e37] [cursor=pointer]:
+          - /url: /profile
+        - link "Settings" [ref=f15e41] [cursor=pointer]:
+          - /url: /manage
+      - generic [ref=f15e45]:
+        - navigation "Trail navigation" [ref=f15e46]:
+          - generic [ref=f15e47]:
+            - paragraph [ref=f15e48]: Practice
+            - generic [ref=f15e49]:
+              - link "Home" [ref=f15e50] [cursor=pointer]:
+                - /url: /
+              - link "Practice" [ref=f15e56] [cursor=pointer]:
+                - /url: /practice
+              - link "Interviews" [ref=f15e61] [cursor=pointer]:
+                - /url: /interviews
+              - link "Roastumé" [ref=f15e66] [cursor=pointer]:
+                - /url: /resume-roast
+              - link "Progress" [ref=f15e70] [cursor=pointer]:
+                - /url: /progress
+              - link "Reports" [ref=f15e74] [cursor=pointer]:
+                - /url: /reports
+          - generic [ref=f15e79]:
+            - paragraph [ref=f15e80]: Community
+            - link "Trailmate" [ref=f15e82] [cursor=pointer]:
+              - /url: /trailmate
+          - generic [ref=f15e88]:
+            - paragraph [ref=f15e89]: Account
+            - link "My profile" [ref=f15e91] [cursor=pointer]:
+              - /url: /profile
+        - link "Trailguide 1:1 sessions with senior engineers who have run real interview loops" [ref=f15e96] [cursor=pointer]:
+          - /url: /trailguide
+          - generic [ref=f15e100]: Trailguide
+          - generic [ref=f15e105]: 1:1 sessions with senior engineers who have run real interview loops
+        - link "Your account Profile" [ref=f15e107] [cursor=pointer]:
+          - /url: /profile
+          - generic [ref=f15e108]: Your account
+          - generic [ref=f15e109]: Profile
+    - generic [ref=f15e110]:
+      - generic [ref=f15e112]:
+        - generic [ref=f15e113]: Search workspace
+        - combobox "Search workspace" [ref=f15e114]
+      - generic [ref=f15e115]:
+        - button "Switch to dark theme" [ref=f15e116] [cursor=pointer]
+        - button "Notifications" [ref=f15e121] [cursor=pointer]
+        - button "Open account menu" [ref=f15e126] [cursor=pointer]:
+          - img "Account avatar" [ref=f15e127]
+    - main [ref=f15e128]:
+      - main [ref=f15e130]:
+        - generic [ref=f15e131]:
+          - region "Overview highlights" [ref=f15e132]:
+            - article "Teacher coaching" [ref=f15e133]:
+              - generic [ref=f15e138]:
+                - button "Play teacher summary" [ref=f15e140] [cursor=pointer]
+                - heading "Career overview is still the clearest place to improve." [level=2] [ref=f15e145]
+                - paragraph [ref=f15e146]: Next time, provide a career story or employment history. Nice going—1 completed question this week is real momentum. Maintain the pace, but aim the next block at Career overview.
+                - generic [ref=f15e147]:
+                  - paragraph
+                  - link "Focus practice" [ref=f15e148] [cursor=pointer]:
+                    - /url: /dsa-questions/missing-number
+            - article "Interview readiness" [ref=f15e151]:
+              - generic [ref=f15e152]:
+                - paragraph [ref=f15e153]: Interview readiness
+                - generic [ref=f15e154]: Baseline
+              - heading "Needs focus" [level=2] [ref=f15e155]
+              - img "Readiness score 0 out of 100" [ref=f15e156]:
+                - generic [ref=f15e162]:
+                  - generic [ref=f15e163]: "0"
+                  - generic [ref=f15e164]: "%"
+              - generic [ref=f15e165]:
+                - paragraph [ref=f15e166]: What this means
+                - paragraph [ref=f15e167]: Your signal is still early. Use one clear structure and support every answer with evidence.
+                - paragraph [ref=f15e168]: Based on your first scored interview.
+          - region "Weekly direction" [ref=f15e169]:
+            - article "Weekly practice rhythm" [ref=f15e170]:
+              - generic [ref=f15e171]:
+                - paragraph [ref=f15e176]: Weekly rhythm
+                - heading "30 questions solved" [level=2] [ref=f15e177]
+                - paragraph [ref=f15e178]: You are spreading the work across the week. Keep the next session short and deliberate.
+                - generic [ref=f15e179]:
+                  - generic [ref=f15e180]:
+                    - paragraph [ref=f15e181]: Solved
+                    - paragraph [ref=f15e182]: "30"
+                  - generic [ref=f15e183]:
+                    - paragraph [ref=f15e184]: Attempts
+                    - paragraph [ref=f15e185]: "96"
+                  - generic [ref=f15e186]:
+                    - paragraph [ref=f15e187]: Active days
+                    - paragraph [ref=f15e188]: 4/7
+                - link "View full progress" [ref=f15e190] [cursor=pointer]:
+                  - /url: /progress
+              - 'img "Seven-day practice activity: 30 solved across 4 active days" [ref=f15e194]':
+                - generic [ref=f15e195]:
+                  - generic [ref=f15e196]:
+                    - generic [ref=f15e198]: Wed
+                    - tooltip "Wednesday, Sep 23 0 questions solved":
+                      - generic: Wednesday, Sep 23
+                      - generic: 0 questions solved
+                  - generic [ref=f15e199]:
+                    - generic [ref=f15e201]: Thu
+                    - tooltip "Thursday, Sep 24 0 questions solved":
+                      - generic: Thursday, Sep 24
+                      - generic: 0 questions solved
+                  - generic [ref=f15e202]:
+                    - generic [ref=f15e205]: Fri
+                    - tooltip "Friday, Sep 25 1 question solved":
+                      - generic: Friday, Sep 25
+                      - generic: 1 question solved
+                  - generic [ref=f15e206]:
+                    - generic [ref=f15e209]: Sat
+                    - tooltip "Saturday, Sep 26 28 questions solved":
+                      - generic: Saturday, Sep 26
+                      - generic: 28 questions solved
+                  - generic [ref=f15e210]:
+                    - generic [ref=f15e212]: Sun
+                    - tooltip "Sunday, Sep 27 0 questions solved":
+                      - generic: Sunday, Sep 27
+                      - generic: 0 questions solved
+                  - generic [ref=f15e213]:
+                    - generic [ref=f15e215]: Mon
+                    - tooltip "Monday, Sep 28 0 questions solved":
+                      - generic: Monday, Sep 28
+                      - generic: 0 questions solved
+                  - generic [ref=f15e216]:
+                    - generic [ref=f15e219]: Tue
+                    - tooltip "Tuesday, Sep 29 1 question solved":
+                      - generic: Tuesday, Sep 29
+                      - generic: 1 question solved
+            - article "Recommended next focus" [ref=f15e220]:
+              - generic [ref=f15e221]:
+                - paragraph [ref=f15e226]: Next focus
+                - generic [ref=f15e227]: From your latest interview
+              - heading "Career overview" [level=2] [ref=f15e228]
+              - paragraph [ref=f15e229]: Next time, provide a career story or employment history.
+              - generic [ref=f15e230]:
+                - paragraph [ref=f15e231]: "Keep using: Career overview"
+                - link "Practice this focus" [ref=f15e232] [cursor=pointer]:
+                  - /url: /dsa-questions/missing-number
+          - region "Continue preparing" [ref=f15e235]:
+            - article "Practice continuation" [ref=f15e236]:
+              - generic [ref=f15e237]:
+                - paragraph [ref=f15e243]: Practice
+                - heading "Missing Number" [level=2] [ref=f15e244]
+                - paragraph [ref=f15e245]: Arrays & Hashing · Easy · 15 min
+                - link "Continue question" [ref=f15e247] [cursor=pointer]:
+                  - /url: /dsa-questions/missing-number
+              - complementary "Teacher note" [ref=f15e251]:
+                - paragraph [ref=f15e252]: A note from your teacher
+                - paragraph [ref=f15e253]: Use the constraints to rule out approaches before comparing implementation details.
+                - generic [ref=f15e254]:
+                  - generic [ref=f15e255]:
+                    - generic [ref=f15e256]: Practice path
+                    - generic [ref=f15e257]: 16%
+                  - paragraph [ref=f15e260]: 29 of 184 questions complete
+            - article "Interview continuation" [ref=f15e261]:
+              - generic [ref=f15e262]:
+                - paragraph [ref=f15e269]: Interviews
+                - heading "Take your next interview." [level=2] [ref=f15e270]
+                - paragraph [ref=f15e271]: Your latest behavioral round points to Career overview as the next thing to pressure-test.
+                - link "Choose next interview" [ref=f15e273] [cursor=pointer]:
+                  - /url: /interviews
+              - generic [ref=f15e277]:
+                - img "Latest interview score 0%" [ref=f15e278]:
+                  - generic [ref=f15e284]:
+                    - generic [ref=f15e285]: "0"
+                    - generic [ref=f15e286]: "%"
+                - paragraph [ref=f15e287]: Latest score
+                - paragraph [ref=f15e288]: 4 completed rounds
+          - region "Progress and community" [ref=f15e289]:
+            - article "Progress summary" [ref=f15e290]:
+              - generic [ref=f15e291]:
+                - paragraph [ref=f15e296]: Progress
+                - generic [ref=f15e297]: 1-day rhythm
+              - heading "29 questions completed" [level=2] [ref=f15e298]
+              - paragraph [ref=f15e299]: 1-day rhythm active. Keep the next session focused and repeatable.
+              - generic [ref=f15e300]:
+                - generic [ref=f15e301]:
+                  - generic [ref=f15e302]: Practice path
+                  - generic [ref=f15e303]: 16%
+                - generic [ref=f15e306]:
+                  - img "Activity over the last seven days" [ref=f15e307]:
+                    - generic [ref=f15e308]: 4 active days
+                  - link "View progress" [ref=f15e317] [cursor=pointer]:
+                    - /url: /progress
+            - article "Reports summary" [ref=f15e320]:
+              - generic [ref=f15e321]:
+                - paragraph [ref=f15e327]: Reports
+                - generic [ref=f15e328]: Report ready
+              - heading "0% latest signal" [level=2] [ref=f15e329]
+              - paragraph [ref=f15e330]: Your clearest next focus is career overview.
+              - generic [ref=f15e331]:
+                - generic [ref=f15e332]:
+                  - generic [ref=f15e333]:
+                    - paragraph [ref=f15e334]: Latest signal
+                    - paragraph [ref=f15e335]: 0%
+                  - generic [ref=f15e336]:
+                    - paragraph [ref=f15e337]: Scored rounds
+                    - paragraph [ref=f15e338]: "4"
+                - link "View reports" [ref=f15e339] [cursor=pointer]:
+                  - /url: /reports
+            - article "Trailmate summary" [ref=f15e342]:
+              - generic [ref=f15e343]:
+                - paragraph [ref=f15e350]: Trailmate
+                - generic [ref=f15e351]: Your circle
+              - heading "12 peers supported" [level=2] [ref=f15e352]
+              - paragraph [ref=f15e353]: Keep building the circle that helps everyone get unstuck faster.
+              - generic [ref=f15e354]:
+                - generic [ref=f15e355]:
+                  - generic [ref=f15e356]:
+                    - paragraph [ref=f15e357]: Helped
+                    - paragraph [ref=f15e358]: "12"
+                  - generic [ref=f15e359]:
+                    - paragraph [ref=f15e360]: Supported by
+                    - paragraph [ref=f15e361]: "17"
+                - link "Open Trailmate" [ref=f15e362] [cursor=pointer]:
+                  - /url: /trailmate
+  - alert [ref=f15e365]

@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { blogPosts } from "@/features/marketing/content/blog";
 import { privacyPolicy, termsOfService } from "@/features/marketing/content/legal";
 import { BlogIndexPage } from "./blog/blog-index-page";
@@ -17,7 +17,26 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Public Pages", () => {
-  afterEach(cleanup);
+  // The scroll reveals read these; jsdom has neither.
+  beforeEach(() => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    }));
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   describe("BlogIndexPage", () => {
     it("renders blog index page with featured and secondary posts", () => {

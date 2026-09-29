@@ -230,6 +230,7 @@ export function Practice() {
   return (
     <section
       id="practice"
+      data-ember="right"
       className="marketing-deferred-section marketing-theme-section relative z-10 overflow-hidden px-5 py-20 sm:px-10 sm:py-28"
     >
       <div className="relative mx-auto flex w-full max-w-[72rem] flex-col items-center">

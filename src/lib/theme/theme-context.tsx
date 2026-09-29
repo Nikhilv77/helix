@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode
 } from "react";
@@ -18,20 +19,17 @@ interface ThemeContextValue {
   resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
-  /** Shows a theme for this page view without saving it as the visitor's choice. */
-  previewTheme: (theme: ResolvedTheme) => void;
-}
-
-/** True when the visitor has picked a theme with the toggle (it is saved). */
-export function hasSavedThemePreference(): boolean {
-  try {
-    return localStorage.getItem(THEME_STORAGE_KEY) !== null;
-  } catch {
-    return false;
-  }
+  /**
+   * Holds the page in one theme without touching the saved choice, e.g. the
+   * always-light marketing pages. Pass null to go back to the saved theme.
+   */
+  lockTheme: (theme: ResolvedTheme | null) => void;
 }
 
 const THEME_STORAGE_KEY = "trailgrad-theme";
+
+/** Set on <html> by pages that render in a fixed theme; see `lockTheme`. */
+export const THEME_LOCK_ATTRIBUTE = "data-theme-lock";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -50,6 +48,15 @@ export function ThemeScript() {
       ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
       : theme;
     var d = document.documentElement;
+    // Public marketing pages are always light. "/" is public only when signed
+    // out; Clerk's readable __client_uat cookie is 0 or missing then. Locking
+    // here, before first paint, also lets CSS hide the app's loading skeleton.
+    var path = location.pathname;
+    var signedIn = /(?:^|; )__client_uat(?:_[^=]*)?=[1-9]/.test(document.cookie);
+    if (/^\\/(blog|privacy|terms)(\\/|$)/.test(path) || (path === "/" && !signedIn)) {
+      resolved = "light";
+      d.setAttribute("${THEME_LOCK_ATTRIBUTE}", "light");
+    }
     d.classList.remove("light", "dark");
     d.classList.add(resolved);
     d.setAttribute("data-theme", resolved);
@@ -70,6 +77,9 @@ export function ThemeProvider({
   const [theme, setThemeState] = useState<Theme>(defaultTheme);
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
   const [mounted, setMounted] = useState(false);
+  const lockRef = useRef<ResolvedTheme | null>(null);
+  const themeRef = useRef<Theme>(defaultTheme);
+  themeRef.current = theme;
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
@@ -78,7 +88,12 @@ export function ThemeProvider({
       const initialTheme = stored || defaultTheme;
       setThemeState(initialTheme);
 
-      const resolved = initialTheme === "system" ? getSystemTheme() : initialTheme;
+      // A locked page's inline script already set <html>; keep it that way.
+      const locked = document.documentElement.getAttribute(THEME_LOCK_ATTRIBUTE);
+      if (locked === "light" || locked === "dark") lockRef.current = locked;
+
+      const resolved =
+        lockRef.current ?? (initialTheme === "system" ? getSystemTheme() : initialTheme);
       setResolvedTheme(resolved);
 
       const root = document.documentElement;
@@ -93,7 +108,7 @@ export function ThemeProvider({
 
   // Update DOM when theme changes
   const applyTheme = useCallback((newTheme: Theme) => {
-    const resolved = newTheme === "system" ? getSystemTheme() : newTheme;
+    const resolved = lockRef.current ?? (newTheme === "system" ? getSystemTheme() : newTheme);
     setResolvedTheme(resolved);
 
     const root = document.documentElement;
@@ -115,10 +130,13 @@ export function ThemeProvider({
     [applyTheme]
   );
 
-  const previewTheme = useCallback(
-    (newTheme: ResolvedTheme) => {
-      setThemeState(newTheme);
-      applyTheme(newTheme);
+  const lockTheme = useCallback(
+    (locked: ResolvedTheme | null) => {
+      lockRef.current = locked;
+      const root = document.documentElement;
+      if (locked) root.setAttribute(THEME_LOCK_ATTRIBUTE, locked);
+      else root.removeAttribute(THEME_LOCK_ATTRIBUTE);
+      applyTheme(themeRef.current);
     },
     [applyTheme]
   );
@@ -144,9 +162,9 @@ export function ThemeProvider({
       resolvedTheme: mounted ? resolvedTheme : "dark",
       setTheme,
       toggleTheme,
-      previewTheme
+      lockTheme
     }),
-    [theme, resolvedTheme, mounted, setTheme, toggleTheme, previewTheme]
+    [theme, resolvedTheme, mounted, setTheme, toggleTheme, lockTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -157,7 +175,7 @@ const DEFAULT_THEME_CONTEXT: ThemeContextValue = {
   resolvedTheme: "dark",
   setTheme: () => {},
   toggleTheme: () => {},
-  previewTheme: () => {}
+  lockTheme: () => {}
 };
 
 export function useTheme(): ThemeContextValue {

@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PrimaryAction } from "@/features/marketing/ui/home/primary-action";
+import { MarketingLightTheme } from "./marketing-light-theme";
 
 // Every href below resolves to a section that exists on this page, in the
 // order those sections appear — the previous set listed Interview before
@@ -14,8 +14,8 @@ import { PrimaryAction } from "@/features/marketing/ui/home/primary-action";
 const navLinks: Array<{ label: string; href: string }> = [
   { label: "Learn", href: "#learn" },
   { label: "Interview", href: "#interview" },
-  { label: "Practice", href: "#practice" },
-  { label: "Help", href: "#help" }
+  { label: "Help", href: "#help" },
+  { label: "FAQ", href: "#faq" }
 ];
 
 /**
@@ -58,7 +58,7 @@ function sectionHref(href: string, prefix: string): string {
 }
 
 const desktopActionClass =
-  "site-nav-action hidden sm:block [&>*]:inline-flex [&>*]:h-11 [&>*]:items-center [&>*]:rounded-full [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&>*]:tracking-tight [&>*]:outline-none";
+  "site-nav-action hidden sm:block [&>*]:inline-flex [&>*]:h-9 [&>*]:items-center [&>*]:rounded-full [&>*]:px-4 [&>*]:text-[0.8125rem] [&>*]:font-semibold [&>*]:tracking-tight [&>*]:outline-none";
 const mobileActionClass =
   "site-nav-action px-5 pb-5 pt-3 [&>*]:inline-flex [&>*]:h-11 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-xl [&>*]:text-sm [&>*]:font-semibold [&>*]:outline-none";
 
@@ -131,21 +131,22 @@ export function SiteNav({
           : "border-transparent bg-transparent"
       ].join(" ")}
     >
+      <MarketingLightTheme />
       {/* Three tracks rather than justify-between: the mark and the action are
             different widths, so a flex row centres the links on the gap between
             them instead of on the page. */}
-      <div className="mx-auto grid h-16 w-full max-w-[72rem] grid-cols-[1fr_auto_1fr] items-center gap-6 px-5 sm:h-[4.5rem] sm:px-8">
+      <div className="mx-auto grid h-14 w-full max-w-[72rem] grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 sm:h-[3.75rem] sm:gap-6 sm:px-8">
         <Link
           href="/"
           aria-label="Trailgrad home"
-          className="shrink-0 rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
+          className="inline-flex h-11 w-11 items-center justify-center justify-self-start rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
         >
-          <TrailgradMark className="marketing-brand-mark h-8 w-8" />
+          <TrailgradMark className="marketing-brand-mark h-7 w-7" />
         </Link>
 
         <nav
           aria-label="Sections"
-          className="site-nav-links hidden h-11 items-center justify-center gap-1 rounded-full px-1.5 sm:flex"
+          className="site-nav-links hidden h-full items-center justify-center gap-7 sm:flex"
         >
           {navLinks.map((link) => {
             const active = activeSection === link.href.slice(1);
@@ -155,10 +156,8 @@ export function SiteNav({
                 href={sectionHref(link.href, sectionHrefPrefix)}
                 aria-current={active ? "true" : undefined}
                 className={[
-                  "inline-flex h-8 items-center rounded-full px-4 text-[0.875rem] font-medium tracking-tight outline-none transition-[background-color,color] duration-300 focus-visible:ring-2 focus-visible:ring-cream/40",
-                  active
-                    ? "bg-cream/[0.1] text-cream"
-                    : "text-cream/72 hover:bg-cream/[0.06] hover:text-cream"
+                  "site-nav-link relative inline-flex h-11 items-center rounded-sm px-0.5 text-[0.8125rem] font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-cream/40",
+                  active ? "text-cream" : "text-cream/60 hover:text-cream"
                 ].join(" ")}
               >
                 {link.label}
@@ -168,7 +167,6 @@ export function SiteNav({
         </nav>
 
         <div className="col-start-3 flex shrink-0 items-center justify-self-end gap-2.5">
-          <ThemeToggle className="site-nav-icon !h-11 !w-11 !rounded-full" size={17} />
           <div className={desktopActionClass}>{action}</div>
           <button
             type="button"
@@ -210,13 +208,6 @@ export function SiteNav({
               </a>
             );
           })}
-        </div>
-
-        <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-cream/50">
-            Theme
-          </span>
-          <ThemeToggle />
         </div>
 
         <div className={mobileActionClass}>{action}</div>

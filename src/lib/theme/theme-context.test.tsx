@@ -8,7 +8,30 @@ describe("Theme system", () => {
     localStorage.clear();
     document.documentElement.className = "";
     document.documentElement.removeAttribute("data-theme");
+    document.documentElement.removeAttribute("data-theme-lock");
     document.documentElement.style.colorScheme = "";
+  });
+
+  it("holds a locked page light without touching the saved dark choice", () => {
+    localStorage.setItem("trailgrad-theme", "dark");
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>
+    });
+
+    act(() => {
+      result.current.lockTheme("light");
+    });
+
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.getAttribute("data-theme-lock")).toBe("light");
+    expect(localStorage.getItem("trailgrad-theme")).toBe("dark");
+
+    act(() => {
+      result.current.lockTheme(null);
+    });
+
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.hasAttribute("data-theme-lock")).toBe(false);
   });
 
   it("defaults to dark mode and applies dark classes to root", () => {

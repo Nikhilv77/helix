@@ -1,10 +1,12 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { blogPosts, getBlogPost } from "@/features/marketing/content/blog";
 import { SiteFooter } from "@/features/marketing/ui/chrome/site-footer";
-import { SiteNav } from "@/features/marketing/ui/chrome/site-nav";
+import { SiteMark } from "@/features/marketing/ui/chrome/site-mark";
+import { Reveal } from "@/shared/ui/motion/reveal";
 
 export function generateStaticParams() {
   return blogPosts.map((post) => ({ slug: post.slug }));
@@ -49,6 +51,10 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * One column of type on white, like the home page: the header rises in on
+ * load, sections rise in as you scroll, and nothing is boxed or ruled off.
+ */
 export async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = getBlogPost(slug);
@@ -61,122 +67,143 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
       className="blueprint marketing-blog marketing-theme min-h-screen overflow-x-clip"
       data-marketing-accent="orange"
     >
-      <SiteNav sectionHrefPrefix="/" />
+      <SiteMark />
 
-      <main className="marketing-theme-section relative z-10 px-5 pb-24 pt-36 sm:px-10 sm:pb-28 sm:pt-40">
+      <main className="marketing-theme-section relative z-10 px-5 pb-24 pt-32 sm:px-10 sm:pb-32 sm:pt-40">
         <article className="mx-auto w-full max-w-[44rem]">
-          <nav className="flex flex-wrap items-center gap-2 text-sm text-cream/35">
-            <Link href="/blog" className="transition-colors duration-300 hover:text-cream/80">
-              Blog
-            </Link>
-            <span aria-hidden="true" className="text-cream/15">
-              /
-            </span>
-            <span className="text-cream/55">{post.category}</span>
-          </nav>
+          <Link
+            href="/blog"
+            className="page-rise page-back inline-flex items-center gap-2 rounded-md text-sm font-medium text-cream/50 outline-none transition-colors duration-300 hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/30"
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            All notes
+          </Link>
 
           <header className="mt-10">
-            <h1 className="marketing-page-title text-cream">{post.title}</h1>
-            <p className="marketing-page-lede mt-5 text-cream/70 sm:mt-6">{post.dek}</p>
-            <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8125rem] font-medium text-cream/35">
-              <span>{post.publishedAt}</span>
-              <span className="text-cream/15">·</span>
-              <span>{post.readTime}</span>
+            <p className="page-rise text-sm text-cream/45" style={{ "--i": 1 } as CSSProperties}>
+              {post.category}
+            </p>
+            <h1
+              className="page-rise marketing-page-title wordmark mt-3 text-cream"
+              style={{ "--i": 2 } as CSSProperties}
+            >
+              {post.title}
+            </h1>
+            <p
+              className="page-rise marketing-page-lede mt-6 text-cream/66 sm:mt-7"
+              style={{ "--i": 3 } as CSSProperties}
+            >
+              {post.dek}
+            </p>
+            <p
+              className="page-rise mt-6 text-[0.875rem] text-cream/40"
+              style={{ "--i": 4 } as CSSProperties}
+            >
+              <time>{post.publishedAt}</time>, {post.readTime}
             </p>
           </header>
 
-          {/* The takeaways, on a hairline rather than in a card — the article
-              is one column of type now, so nothing here needs a container. */}
-          <ul className="mt-10 grid gap-3 border-y border-white/[0.06] py-7">
+          <ul
+            className="page-rise ember-card mt-12 grid gap-3 rounded-[1.4rem] px-6 py-6 sm:px-8 sm:py-7"
+            style={{ "--i": 5 } as CSSProperties}
+          >
             {post.summary.map((item) => (
-              <li key={item} className="flex gap-3 text-base leading-[1.7] text-cream/60">
-                <span className="mt-3 h-1 w-1 shrink-0 rounded-full bg-[color:var(--dm-accent)]" />
+              <li key={item} className="flex gap-3 text-base leading-[1.7] text-cream/66">
+                <span className="mt-[0.7rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--dm-accent)]" />
                 {item}
               </li>
             ))}
           </ul>
 
-          <div className="mt-14 space-y-14">
+          <div className="mt-16 space-y-16">
             {post.sections.map((section) => (
-              <section key={section.heading}>
-                {section.kicker ? (
-                  <p className="blueprint-label text-[color:var(--dm-accent-soft)]">
-                    {section.kicker}
-                  </p>
-                ) : null}
-                <h2 className="marketing-reading-title mt-3 text-cream">{section.heading}</h2>
-                <div className="mt-5 space-y-5">
-                  {section.paragraphs.map((paragraph) => (
-                    <p key={paragraph} className="marketing-reading-copy text-cream/65">
-                      {paragraph}
+              <Reveal key={section.heading}>
+                <section>
+                  {section.kicker ? (
+                    <p className="text-sm font-semibold text-[color:var(--dm-accent)]">
+                      {section.kicker}
                     </p>
-                  ))}
-                </div>
-
-                {section.bullets ? (
-                  <ul className="mt-7 grid gap-3.5">
-                    {section.bullets.map((bullet) => (
-                      <li key={bullet} className="flex gap-3 text-base leading-[1.7] text-cream/55">
-                        <span className="mt-3 h-1 w-1 shrink-0 rounded-full bg-cream/25" />
-                        {bullet}
-                      </li>
+                  ) : null}
+                  <h2 className="marketing-reading-title mt-3 text-cream">{section.heading}</h2>
+                  <div className="mt-5 space-y-5">
+                    {section.paragraphs.map((paragraph) => (
+                      <p key={paragraph} className="marketing-reading-copy text-cream/66">
+                        {paragraph}
+                      </p>
                     ))}
-                  </ul>
-                ) : null}
-              </section>
+                  </div>
+
+                  {section.bullets ? (
+                    <ul className="mt-7 grid gap-3.5">
+                      {section.bullets.map((bullet) => (
+                        <li
+                          key={bullet}
+                          className="flex gap-3 text-base leading-[1.7] text-cream/60"
+                        >
+                          <span className="mt-[0.7rem] h-1.5 w-1.5 shrink-0 rounded-full bg-cream/25" />
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </section>
+              </Reveal>
             ))}
           </div>
 
-          <section className="mt-16 border-t border-white/[0.06] pt-10">
-            <p className="blueprint-label text-[color:var(--dm-accent-soft)]">Try this next</p>
-            <ol className="mt-6 grid gap-4">
-              {post.nextPractice.map((item, index) => (
-                <li key={item} className="flex gap-4 text-base leading-[1.7] text-cream/65">
-                  <span className="font-mono text-sm text-cream/25">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
+          <Reveal>
+            <section className="mt-20">
+              <h2 className="marketing-reading-title text-cream">Try this next</h2>
+              <ul className="mt-6 grid gap-4">
+                {post.nextPractice.map((item) => (
+                  <li key={item} className="flex gap-3 text-base leading-[1.7] text-cream/66">
+                    <span className="mt-[0.7rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--dm-accent)]" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </Reveal>
 
-          <section className="mt-16 border-t border-white/[0.06] pt-10">
-            <div className="flex items-baseline justify-between gap-4">
-              <p className="blueprint-label text-cream/35">Read next</p>
-              <Link
-                href="/blog"
-                className="inline-flex items-center gap-2 text-sm text-cream/50 transition-colors duration-300 hover:text-cream"
-              >
-                All notes <ArrowRight size={14} aria-hidden="true" />
-              </Link>
-            </div>
-
-            <div className="mt-2">
-              {relatedPosts.map((related) => (
+          <Reveal>
+            <section className="mt-20">
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="marketing-reading-title text-cream">Read next</h2>
                 <Link
-                  key={related.slug}
-                  href={`/blog/${related.slug}`}
-                  className="group flex items-baseline gap-6 border-b border-white/[0.06] py-6"
+                  href="/blog"
+                  className="inline-flex items-center gap-2 rounded-md text-sm font-medium text-cream/50 outline-none transition-colors duration-300 hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/30"
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className="blueprint-label text-cream/30">{related.category}</span>
-                    <h3 className="mt-2.5 text-lg font-semibold leading-snug tracking-[-0.02em] text-cream">
-                      {related.title}
-                    </h3>
-                    <p className="mt-2 text-[0.9375rem] leading-[1.65] text-cream/45">
-                      {related.dek}
-                    </p>
-                  </div>
-                  <ArrowRight
-                    size={15}
-                    aria-hidden="true"
-                    className="shrink-0 text-cream/25 transition-[color,transform] duration-300 group-hover:translate-x-1 group-hover:text-cream/70"
-                  />
+                  All notes <ArrowRight size={14} aria-hidden="true" />
                 </Link>
-              ))}
-            </div>
-          </section>
+              </div>
+
+              <div className="mt-4">
+                {relatedPosts.map((related) => (
+                  <Link
+                    key={related.slug}
+                    href={`/blog/${related.slug}`}
+                    className="page-row group flex items-center gap-6 rounded-2xl px-1 py-6 outline-none focus-visible:ring-2 focus-visible:ring-cream/30"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-cream/45">{related.category}</p>
+                      <h3 className="page-row-title mt-2 text-lg font-semibold leading-snug tracking-[-0.02em] text-cream sm:text-xl">
+                        {related.title}
+                      </h3>
+                      <p className="mt-2 text-[0.9375rem] leading-[1.65] text-cream/50">
+                        {related.dek}
+                      </p>
+                    </div>
+                    <span
+                      aria-hidden="true"
+                      className="page-row-arrow grid h-10 w-10 shrink-0 place-items-center rounded-full"
+                    >
+                      <ArrowRight size={17} />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </Reveal>
         </article>
       </main>
 
