@@ -10,7 +10,14 @@ import { AuthSync } from "@/components/workspace/chrome/auth-sync";
 import { WorkspaceTeacherProvider } from "@/lib/avatars/teacher-context";
 import { ScrollRestoration } from "@/components/scroll-restoration";
 import { clerkAppearance } from "@/lib/auth/clerk-theme";
-import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
+import {
+  appUrl,
+  baseOpenGraph,
+  baseTwitter,
+  defaultDescription,
+  defaultTitle,
+  siteName
+} from "@/lib/shared/seo";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { isWorkspaceCanvasRoute, isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
@@ -62,25 +69,15 @@ export const metadata: Metadata = {
     }
   },
   openGraph: {
-    type: "website",
+    ...baseOpenGraph,
     url: "/",
-    siteName,
     title: defaultTitle,
-    description: defaultDescription,
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Trailgrad AI interview practice"
-      }
-    ]
+    description: defaultDescription
   },
   twitter: {
-    card: "summary_large_image",
+    ...baseTwitter,
     title: defaultTitle,
-    description: defaultDescription,
-    images: ["/opengraph-image"]
+    description: defaultDescription
   },
   robots: {
     index: true,

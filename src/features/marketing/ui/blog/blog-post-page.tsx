@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { baseOpenGraph, baseTwitter } from "@/lib/shared/seo";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { blogPosts, getBlogPost } from "@/features/marketing/content/blog";
@@ -31,6 +32,8 @@ export async function generateMetadata({
     description: post.dek,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
+      ...baseOpenGraph,
+      type: "article",
       title: post.title,
       description: post.dek,
       url: `/blog/${post.slug}`,
@@ -44,6 +47,7 @@ export async function generateMetadata({
       ]
     },
     twitter: {
+      ...baseTwitter,
       title: post.title,
       description: post.dek,
       images: [post.coverImage]

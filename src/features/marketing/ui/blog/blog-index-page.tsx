@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { baseOpenGraph } from "@/lib/shared/seo";
 import { ArrowRight } from "lucide-react";
 import { blogPosts } from "@/features/marketing/content/blog";
 import { SiteFooter } from "@/features/marketing/ui/chrome/site-footer";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     "Trailgrad notes on resume-based practice, interview answers, AI coaching, and clearer feedback.",
   alternates: { canonical: "/blog" },
   openGraph: {
+    ...baseOpenGraph,
     title: "Trailgrad Blog",
     description: "Practical notes on turning your resume into better interview answers.",
     url: "/blog"

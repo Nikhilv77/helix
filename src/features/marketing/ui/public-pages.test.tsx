@@ -2,7 +2,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { blogPosts } from "@/features/marketing/content/blog";
 import { privacyPolicy, termsOfService } from "@/features/marketing/content/legal";
-import { BlogIndexPage } from "./blog/blog-index-page";
+import { metadata as privacyMetadata } from "@/app/(marketing)/privacy/page";
+import { metadata as termsMetadata } from "@/app/(marketing)/terms/page";
+import { BlogIndexPage, metadata as blogIndexMetadata } from "./blog/blog-index-page";
 import { BlogPostPage, generateMetadata, generateStaticParams } from "./blog/blog-post-page";
 import { LegalPage } from "./legal/legal-page";
 
@@ -81,6 +83,18 @@ describe("Public Pages", () => {
       expect(meta.alternates?.canonical).toBe(`/blog/${post.slug}`);
       expect(meta.openGraph?.title).toBe(post.title);
       expect(meta.openGraph?.url).toBe(`/blog/${post.slug}`);
+      // A page's openGraph replaces the layout's, so it must carry these itself.
+      expect(meta.openGraph).toMatchObject({ siteName: "Trailgrad", type: "article" });
+      expect(meta.twitter).toMatchObject({ card: "summary_large_image" });
+    });
+
+    it("keeps the site name and preview image on the other public pages", () => {
+      for (const meta of [blogIndexMetadata, privacyMetadata, termsMetadata]) {
+        expect(meta.openGraph).toMatchObject({
+          siteName: "Trailgrad",
+          images: [expect.objectContaining({ url: "/opengraph-image" })]
+        });
+      }
     });
 
     it("generates fallback metadata when blog post is not found", async () => {

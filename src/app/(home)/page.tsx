@@ -8,7 +8,14 @@ import { PreparationWelcomeScreen } from "@/features/preparation-onboarding/ui/p
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { loadDashboardOverview } from "@/features/dashboard/server/load-dashboard-overview";
 import { getAppContainer } from "@/server/app-container";
-import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
+import {
+  appUrl,
+  baseOpenGraph,
+  baseTwitter,
+  defaultDescription,
+  defaultTitle,
+  siteName
+} from "@/lib/shared/seo";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import {
   getProfileForRequest,
@@ -29,11 +36,13 @@ export const metadata: Metadata = {
   description: defaultDescription,
   alternates: { canonical: "/" },
   openGraph: {
+    ...baseOpenGraph,
     title: defaultTitle,
     description: defaultDescription,
     url: "/"
   },
   twitter: {
+    ...baseTwitter,
     title: defaultTitle,
     description: defaultDescription
   }
@@ -124,7 +133,14 @@ export default async function HomePage({
   );
 }
 
+/**
+ * Structured data for the public home page. `WebSite` is what Google reads for
+ * the site name shown above the URL in results ("Trailgrad" rather than the
+ * domain); `alternateName` covers how people type it. `Organization` ties the
+ * name to the logo, and `SoftwareApplication` describes the product.
+ */
 function SoftwareJsonLd() {
+  const home = `${appUrl.replace(/\/$/, "")}/`;
   return (
     <script
       type="application/ld+json"
@@ -132,17 +148,37 @@ function SoftwareJsonLd() {
       dangerouslySetInnerHTML={{
         __html: JSON.stringify({
           "@context": "https://schema.org",
-          "@type": "SoftwareApplication",
-          name: siteName,
-          applicationCategory: "EducationalApplication",
-          operatingSystem: "Web",
-          url: appUrl,
-          description: defaultDescription,
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD"
-          }
+          "@graph": [
+            {
+              "@type": "WebSite",
+              "@id": `${home}#website`,
+              name: siteName,
+              alternateName: ["Trailgrad Prep", "trailgrad.com"],
+              url: home,
+              publisher: { "@id": `${home}#organization` }
+            },
+            {
+              "@type": "Organization",
+              "@id": `${home}#organization`,
+              name: siteName,
+              url: home,
+              logo: `${home}brand/logo-black-bg.png`
+            },
+            {
+              "@type": "SoftwareApplication",
+              name: siteName,
+              applicationCategory: "EducationalApplication",
+              operatingSystem: "Web",
+              url: home,
+              description: defaultDescription,
+              publisher: { "@id": `${home}#organization` },
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "USD"
+              }
+            }
+          ]
         })
       }}
     />
