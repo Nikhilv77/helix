@@ -1,0 +1,86 @@
+- generic [active] [ref=f24e1]:
+  - generic [ref=f24e2]:
+    - complementary [ref=f24e3]:
+      - generic [ref=f24e4]:
+        - button "Collapse sidebar" [ref=f24e5] [cursor=pointer]
+        - link "Home" [ref=f24e9] [cursor=pointer]:
+          - /url: /
+        - link "Practice" [ref=f24e13] [cursor=pointer]:
+          - /url: /practice
+        - link "Interviews" [ref=f24e17] [cursor=pointer]:
+          - /url: /interviews
+        - link "Roastumé" [ref=f24e21] [cursor=pointer]:
+          - /url: /resume-roast
+        - link "Progress" [ref=f24e24] [cursor=pointer]:
+          - /url: /progress
+        - link "Reports" [ref=f24e28] [cursor=pointer]:
+          - /url: /reports
+        - link "Trailmate" [ref=f24e32] [cursor=pointer]:
+          - /url: /trailmate
+        - link "My profile" [ref=f24e37] [cursor=pointer]:
+          - /url: /profile
+        - link "Settings" [ref=f24e41] [cursor=pointer]:
+          - /url: /manage
+      - generic [ref=f24e45]:
+        - navigation "Trail navigation" [ref=f24e46]:
+          - generic [ref=f24e47]:
+            - paragraph [ref=f24e48]: Practice
+            - generic [ref=f24e49]:
+              - link "Home" [ref=f24e50] [cursor=pointer]:
+                - /url: /
+              - link "Practice" [ref=f24e55] [cursor=pointer]:
+                - /url: /practice
+              - link "Interviews" [ref=f24e60] [cursor=pointer]:
+                - /url: /interviews
+              - link "Roastumé" [ref=f24e65] [cursor=pointer]:
+                - /url: /resume-roast
+              - link "Progress" [ref=f24e69] [cursor=pointer]:
+                - /url: /progress
+              - link "Reports" [ref=f24e74] [cursor=pointer]:
+                - /url: /reports
+          - generic [ref=f24e79]:
+            - paragraph [ref=f24e80]: Community
+            - link "Trailmate" [ref=f24e82] [cursor=pointer]:
+              - /url: /trailmate
+          - generic [ref=f24e88]:
+            - paragraph [ref=f24e89]: Account
+            - link "My profile" [ref=f24e91] [cursor=pointer]:
+              - /url: /profile
+        - link "Trailguide 1:1 sessions with senior engineers who have run real interview loops" [ref=f24e96] [cursor=pointer]:
+          - /url: /trailguide
+          - generic [ref=f24e100]: Trailguide
+          - generic [ref=f24e105]: 1:1 sessions with senior engineers who have run real interview loops
+        - link "Your account Profile" [ref=f24e107] [cursor=pointer]:
+          - /url: /profile
+          - generic [ref=f24e108]: Your account
+          - generic [ref=f24e109]: Profile
+    - generic [ref=f24e110]:
+      - generic [ref=f24e112]:
+        - generic [ref=f24e113]: Search workspace
+        - combobox "Search workspace" [ref=f24e114]
+      - generic [ref=f24e115]:
+        - button "Switch to dark theme" [ref=f24e116] [cursor=pointer]
+        - button "Notifications" [ref=f24e121] [cursor=pointer]
+        - button "Open account menu" [ref=f24e126] [cursor=pointer]:
+          - img "Account avatar" [ref=f24e127]
+    - main [ref=f24e128]:
+      - main [ref=f24e130]:
+        - generic [ref=f24e137]:
+          - generic [ref=f24e138]:
+            - paragraph [ref=f24e140]: "Here's your last 7 days, Priya: how much you got done, how often you showed up, and what to do next."
+            - list [ref=f24e141]:
+              - listitem [ref=f24e142]:
+                - paragraph [ref=f24e146]:
+                  - generic [ref=f24e147]: Pace.
+                  - text: You solved 30 questions in the last 7 days, over 4 active days, about 7.5 a day. That's a real routine. Keep it before adding more.
+              - listitem [ref=f24e148]:
+                - paragraph [ref=f24e151]:
+                  - generic [ref=f24e152]: Consistency.
+                  - text: You showed up on 4 of the last 7 days and you're on a 1-day streak. What matters now is coming back tomorrow, not doing a longer session.
+              - listitem [ref=f24e153]:
+                - paragraph [ref=f24e158]:
+                  - generic [ref=f24e159]: Next move.
+                  - text: Do one question while your streak is alive. Keep it short enough that tomorrow still feels easy.
+          - link "Continue practice" [ref=f24e160] [cursor=pointer]:
+            - /url: /practice
+  - alert [ref=f24e164]

@@ -247,10 +247,8 @@ export function TeacherStep({
                 aria-live="polite"
                 className="absolute inset-0 z-20 grid place-items-center bg-[#15161a]"
               >
-                <div className="flex flex-col items-center gap-3 text-cream/60">
-                  <Loader2 size={24} className="animate-spin text-[#F26E01]" aria-hidden="true" />
-                  <span className="blueprint-label">LOADING {focused.name.toUpperCase()}...</span>
-                </div>
+                <Loader2 size={24} className="animate-spin text-[#F26E01]" aria-hidden="true" />
+                <span className="sr-only">Loading {focused.name}</span>
               </div>
             ) : null}
 
@@ -304,8 +302,9 @@ export function TeacherStep({
 
       <div className="mx-auto mt-7 flex w-full max-w-5xl flex-col items-center gap-4">
         <p className="teacher-carousel-status min-h-5 text-[12.5px] text-cream/50" role="status">
+          {/* The card's spinner already shows the load; no words for it here. */}
           {loadingTeacher
-            ? `Loading ${focused.name}...`
+            ? ""
             : loadError
               ? loadError
               : voiceBroken

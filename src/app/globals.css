@@ -181,9 +181,44 @@ html[data-theme="light"] .trailgrad-auth-backdrop {
 
 html.light .trailgrad-auth-card-box,
 html[data-theme="light"] .trailgrad-auth-card-box {
+  /* Everything inside that uses the cream utilities (the email pill, code
+     boxes, links) reads as ink on the white card, as it does in the app. */
+  --color-cream-rgb: 19 21 27;
+  --color-cream-soft-rgb: 51 65 85;
+  --color-cream-dim-rgb: 100 116 139;
   border-color: rgba(15, 23, 42, 0.1) !important;
   background: #ffffff !important;
   box-shadow: none !important;
+}
+
+/* The email pill: Clerk draws its own border as a box-shadow and on inner
+   parts, so clear all of them, in both themes. */
+.trailgrad-auth-identity,
+.trailgrad-auth-identity * {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.trailgrad-auth-identity *:focus-visible {
+  outline: 2px solid rgb(var(--color-cream-rgb) / 0.4) !important;
+  outline-offset: 2px;
+}
+
+/* The filled "current digit" box would put dark text on its dark fill. */
+html.light .trailgrad-auth-otp[data-active="true"],
+html[data-theme="light"] .trailgrad-auth-otp[data-active="true"] {
+  color: #ffffff !important;
+}
+
+/* Clerk colours the resend link with the dark theme's near-white primary. */
+html.light .trailgrad-auth-resend,
+html[data-theme="light"] .trailgrad-auth-resend {
+  color: #64748b !important;
+}
+
+html.light .trailgrad-auth-resend:hover:not(:disabled),
+html[data-theme="light"] .trailgrad-auth-resend:hover:not(:disabled) {
+  color: #111827 !important;
 }
 
 html.light .trailgrad-auth-card,
@@ -1864,10 +1899,12 @@ html[data-theme="light"] .workspace-theme-toggle {
   color: #475569 !important;
 }
 
-html.light .workspace-theme-toggle:hover,
-html[data-theme="light"] .workspace-theme-toggle:hover {
-  background: rgba(15, 23, 42, 0.045) !important;
-  color: #111827 !important;
+/* Hover only scales the toggle; the frame and icon stay as they are. This also
+   outranks the mobile top bar's generic button hover. */
+html.light button.workspace-theme-toggle:hover,
+html[data-theme="light"] button.workspace-theme-toggle:hover {
+  background: transparent !important;
+  color: #475569 !important;
 }
 
 html.light .manage-appearance-toggle .theme-toggle-icon,

@@ -1,5 +1,5 @@
 import type { Level, ResumeExtractionResponse } from "@/lib/shared/types";
-import type { Step } from "./onboarding-data";
+import { onboardingSteps, type Step } from "./onboarding-data";
 
 /**
  * Keeps an unfinished onboarding in this browser tab, so a refresh during the
@@ -25,6 +25,8 @@ export function readOnboardingDraft(now = Date.now()): OnboardingDraft | null {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw) as OnboardingDraft;
+    // A draft saved by an older build can name a step that no longer exists.
+    if (!onboardingSteps.some((item) => item.value === draft.step)) return null;
     const reviewing = REVIEW_STEPS.includes(draft.step);
     const previewAlive =
       typeof draft.result?.previewExpiresAt === "number" &&

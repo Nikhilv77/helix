@@ -211,7 +211,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   }
 
   const app = (
-    <ThemeProvider defaultTheme="dark">
+    <ThemeProvider defaultTheme="light">
       <ScrollRestoration />
       {userId ? (
         <WorkspaceTeacherProvider teacherId={initialTeacherId}>

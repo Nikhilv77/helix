@@ -16,7 +16,7 @@ import { BlueprintBackdrop } from "../shared/onboarding-ui";
 import { LevelStep } from "../steps/level-step";
 import { DEFAULT_TEACHER_ID, TeacherStep } from "../steps/teacher-step";
 import { ResumeStep } from "../steps/resume-upload-step";
-import { ThemeStep } from "../steps/theme-step";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ResumeEvidenceStep } from "../resume-review/resume-evidence-step";
 import { ResumeIdentityStep } from "../resume-review/resume-identity-step";
 import { ResumeReadinessStep } from "../resume-review/resume-readiness-step";
@@ -45,9 +45,9 @@ export function OnboardingFlow({
   embedded = false,
   // Let the dev preview harness open a step directly, with a stand-in
   // extraction for the steps that only exist after an upload. Production
-  // passes neither, so the flow still always begins at the theme picker with
+  // passes neither, so the flow still always begins at the teacher picker with
   // no result.
-  initialStep = "theme",
+  initialStep = "teacher",
   initialResult = null,
   initialTeacherId = null,
   initialLevel,
@@ -362,6 +362,9 @@ export function OnboardingFlow({
                 />
               ))}
             </div>
+            {/* The theme is picked here rather than as a step: marketing pages
+                are always light, so this is the first place it can change. */}
+            <ThemeToggle className="absolute right-0 h-10 w-10" size={17} />
           </header>
         ) : null}
 
@@ -372,7 +375,6 @@ export function OnboardingFlow({
           ].join(" ")}
         >
           <section key={step} className="step-in w-full min-w-0">
-            {step === "theme" ? <ThemeStep onContinue={() => setStep("teacher")} /> : null}
             {step === "teacher" ? (
               <TeacherStep
                 selected={teacherId}

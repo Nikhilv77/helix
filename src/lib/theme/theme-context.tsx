@@ -43,7 +43,8 @@ export function ThemeScript() {
 (function() {
   try {
     var stored = localStorage.getItem("${THEME_STORAGE_KEY}");
-    var theme = stored || "dark";
+    // Visitors who have never picked a theme start in light.
+    var theme = stored || "light";
     var resolved = theme === "system"
       ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
       : theme;
@@ -69,13 +70,13 @@ export function ThemeScript() {
 
 export function ThemeProvider({
   children,
-  defaultTheme = "dark"
+  defaultTheme = "light"
 }: {
   children: ReactNode;
   defaultTheme?: Theme;
 }) {
   const [theme, setThemeState] = useState<Theme>(defaultTheme);
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
   const [mounted, setMounted] = useState(false);
   const lockRef = useRef<ResolvedTheme | null>(null);
   const themeRef = useRef<Theme>(defaultTheme);
@@ -159,7 +160,7 @@ export function ThemeProvider({
   const value = useMemo(
     () => ({
       theme,
-      resolvedTheme: mounted ? resolvedTheme : "dark",
+      resolvedTheme: mounted ? resolvedTheme : "light",
       setTheme,
       toggleTheme,
       lockTheme
@@ -171,8 +172,8 @@ export function ThemeProvider({
 }
 
 const DEFAULT_THEME_CONTEXT: ThemeContextValue = {
-  theme: "dark",
-  resolvedTheme: "dark",
+  theme: "light",
+  resolvedTheme: "light",
   setTheme: () => {},
   toggleTheme: () => {},
   lockTheme: () => {}

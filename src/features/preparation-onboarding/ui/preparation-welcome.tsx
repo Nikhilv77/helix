@@ -237,6 +237,12 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
     },
     [blocking, stopVoice]
   );
+  // Read through a ref so the scroll lock below never re-runs. Saving the last
+  // baseline answer refreshes the page, which flips `blocking`, changes
+  // `dismiss`, and would otherwise run that effect's cleanup and cut the
+  // teacher off mid-sentence on the completion screen.
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
 
   useEffect(() => {
     if (!activeBaselineSection) return;
@@ -259,8 +265,9 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
     root.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
+    // `dismiss` itself ignores Escape while the dialog is blocking.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !blocking) dismiss();
+      if (event.key === "Escape") dismissRef.current();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -269,7 +276,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
       stopVoice();
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [dismiss, stopVoice]);
+  }, [stopVoice]);
 
   useEffect(() => {
     const node = contentScrollRef.current;

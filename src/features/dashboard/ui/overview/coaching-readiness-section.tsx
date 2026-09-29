@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { overviewTourLine } from "@/features/dashboard/domain/overview-tour";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
@@ -34,14 +34,12 @@ export function CoachingReadinessSection({
   /** True only on the learner's first Overview after onboarding. */
   introduce?: boolean;
 }) {
-  const { state, speak, stop, awaitingGesture } = useMayaVoice();
+  const { state, speak, stop } = useMayaVoice();
   const teacher = useWorkspaceTeacher();
   const speaking = state === "loading" || state === "speaking";
   // The welcome tour waits here until it actually starts playing; if the
   // browser blocks autoplay, the speaker button plays it instead.
   const [tourPending, setTourPending] = useState(introduce && !tourHeardThisVisit);
-  const [tourPlaying, setTourPlaying] = useState(false);
-  const tourStarted = useRef(false);
   const tourLine = introduce ? overviewTourLine() : null;
 
   const playTour = () => {
@@ -51,7 +49,6 @@ export function CoachingReadinessSection({
       // Only now is the tour used up: a blocked autoplay is offered again.
       tourHeardThisVisit = true;
       setTourPending(false);
-      setTourPlaying(true);
       void fetch("/api/profile", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -62,20 +59,17 @@ export function CoachingReadinessSection({
   };
 
   useEffect(() => {
-    if (!tourLine || tourStarted.current) return;
-    tourStarted.current = true;
+    // No "already started" ref: a remount (React Strict Mode does one in
+    // development) stops the first attempt, and this retry is what plays.
+    // `tourHeardThisVisit` still keeps it to once per visit.
+    if (!tourLine) return;
     playTour();
-    // Runs once on arrival; the script is fixed for this visit.
+    // Runs on arrival; the script is fixed for this visit.
   }, []);
-
-  useEffect(() => {
-    if (tourPlaying && state === "idle") setTourPlaying(false);
-  }, [state, tourPlaying]);
 
   const toggleVoice = () => {
     if (speaking) {
       stop();
-      setTourPlaying(false);
       return;
     }
     if (tourPending) {
@@ -139,17 +133,8 @@ export function CoachingReadinessSection({
 
             <div className="relative z-10 mt-auto flex flex-wrap items-center justify-between gap-4 pt-7">
               <p className="min-h-4 text-[12px] leading-4 text-cream/40" aria-live="polite">
-                {state === "unavailable"
-                  ? "Voice unavailable — tap to retry"
-                  : awaitingGesture
-                    ? tourPending
-                      ? "Tap to hear your welcome tour"
-                      : "Tap to hear the summary"
-                    : speaking
-                      ? tourPlaying
-                        ? "Welcome tour is playing"
-                        : "Teacher summary is playing"
-                      : ""}
+                {/* Only a failure needs words; playing and waiting show on the button. */}
+                {state === "unavailable" ? "Voice unavailable — tap to retry" : ""}
               </p>
               <Link
                 href={data.coaching.actionHref}

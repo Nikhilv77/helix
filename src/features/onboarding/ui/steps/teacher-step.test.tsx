@@ -88,14 +88,14 @@ describe("TeacherStep model handoff", () => {
     fireEvent.click(screen.getByRole("button", { name: "Next teacher" }));
 
     expect(screen.getByTestId("teacher-avatar")).toHaveAttribute("data-url", "/avatars/pooja.glb");
-    expect(screen.getByText("LOADING POOJA...")).toBeInTheDocument();
+    expect(screen.getByText("Loading Pooja")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next teacher" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /continue with pooja/i })).toBeDisabled();
     expect(mocks.speak).not.toHaveBeenCalled();
 
     act(() => mocks.avatarProps?.onModelReady?.("/avatars/pooja.glb"));
 
-    expect(screen.queryByText("LOADING POOJA...")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading Pooja")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next teacher" })).toBeEnabled();
     expect(mocks.speak).toHaveBeenCalledWith(expect.any(String), "pooja");
   });

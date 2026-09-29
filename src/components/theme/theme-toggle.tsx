@@ -37,7 +37,7 @@ export function ThemeToggle({ className = "", size = 18 }: { className?: string;
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
       title={isDark ? "Switch to light theme" : "Switch to dark theme"}
       className={[
-        "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-cream/20 bg-transparent text-cream/75 outline-none transition-[border-color,color,transform] duration-300 hover:scale-[1.04] hover:border-cream/35 hover:bg-cream/[0.035] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40",
+        "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-cream/20 bg-transparent text-cream/75 outline-none transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.08] focus-visible:ring-2 focus-visible:ring-cream/40",
         className
       ].join(" ")}
     >

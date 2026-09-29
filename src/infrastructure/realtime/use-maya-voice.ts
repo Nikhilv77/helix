@@ -8,7 +8,11 @@ import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { attachElement, detachVoice } from "./voice-bus";
 
 export type VoiceState = "idle" | "loading" | "speaking" | "unavailable";
-export type SpeakResult = "started" | "blocked" | "unavailable";
+/**
+ * `interrupted`: stopped or replaced by a newer line before it could start.
+ * That is not a broken voice, so callers may simply try again.
+ */
+export type SpeakResult = "started" | "blocked" | "interrupted" | "unavailable";
 
 export interface VoicePlaybackCallbacks {
   onEnded?: () => void;
@@ -130,6 +134,8 @@ export function useMayaVoice() {
       stop();
       setAwaitingGesture(false);
       setState("loading");
+      // The element this call is playing, for the interrupted check below.
+      let playing: HTMLAudioElement | null = null;
 
       try {
         const resolvedPersonaId = personaId ?? teacher.id;
@@ -139,6 +145,7 @@ export function useMayaVoice() {
         // which is why a preloaded transition still appeared to be loading.
         const element = preloadedAudio.get(url) ?? new Audio();
         preloadedAudio.delete(url);
+        playing = element;
         if (!element.src) element.src = url;
         element.pause();
         try {
@@ -194,9 +201,20 @@ export function useMayaVoice() {
         // on the avatar's face.
         attachElement(element);
         await element.play();
+        if (audio.current !== element) return "interrupted";
         setState("speaking");
         return "started";
       } catch (error) {
+        // Stopped or replaced while play() was pending: pausing rejects it
+        // with an AbortError. The newer line (or the stop) owns the state
+        // now, so leave it alone instead of reporting the voice as broken.
+        if (
+          (playing && audio.current !== playing) ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          if (playing && audio.current === playing) stop();
+          return "interrupted";
+        }
         stop();
         // Arriving without a click of your own means autoplay was refused, not
         // that the voice is broken. Wait for any gesture instead.

@@ -58,7 +58,8 @@ export const clerkAppearance = {
     otpCodeFieldInputs: "!border-0 !bg-transparent !shadow-none",
 
     otpCodeFieldInput:
-      "!border !border-cream/35 !bg-cream/18 !text-cream !shadow-none !ring-0 focus:!border-cream focus:!bg-cream/24 focus:!ring-2 focus:!ring-cream/28 data-[active=true]:!border-cream data-[active=true]:!bg-cream/90 data-[active=true]:!text-[#152864]",
+      "trailgrad-auth-otp !border !border-cream/35 !bg-cream/18 !text-cream !shadow-none !ring-0 focus:!border-cream focus:!bg-cream/24 focus:!ring-2 focus:!ring-cream/28 data-[active=true]:!border-cream data-[active=true]:!bg-cream/90 data-[active=true]:!text-[#152864]",
+    formResendCodeLink: "trailgrad-auth-resend",
     formButtonPrimary:
       "trailgrad-auth-primary-button !min-h-12 !rounded-xl !bg-[#f3f1ec] !font-semibold !text-[#17181b] !shadow-none hover:!bg-white max-sm:!min-h-11",
     footer: "trailgrad-auth-footer !border-none !bg-transparent !shadow-none",
@@ -66,10 +67,11 @@ export const clerkAppearance = {
     footerActionLink:
       "trailgrad-auth-footer-link !font-semibold !text-[#F26E01] hover:!text-[#F26E01]",
     footerPagesLink: "trailgrad-auth-footer-pages-link !text-cream/40 hover:!text-cream",
+    // A quiet pill sized to the address: no border, a faint tint, lighter text.
     identityPreview:
-      "!mx-auto !mt-3 !min-h-10 !w-full !max-w-[23rem] !justify-center !gap-2 !rounded-xl !border !border-cream/20 !bg-cream/[0.075] !px-4 !py-2 !shadow-none [&_*]:!min-w-0",
+      "trailgrad-auth-identity !mx-auto !mt-3 !min-h-0 !w-auto !max-w-[min(23rem,100%)] !justify-center !gap-2 !rounded-full !border-0 !bg-cream/[0.05] !px-4 !py-1.5 !shadow-none [&_*]:!min-w-0",
     identityPreviewText:
-      "!block !w-full !truncate !text-center !text-[0.95rem] !font-medium !leading-6 !text-cream",
+      "!block !truncate !text-center !text-[0.875rem] !font-normal !leading-6 !text-cream/70",
     formFieldAction: "!text-cream/65 hover:!text-cream",
     formFieldErrorText: "!text-[#ffb6b6]"
   }

@@ -26,9 +26,9 @@ export default async function OnboardingPage({
   return (
     <OnboardingFlow
       replacingResume={replacingResume}
-      // Someone swapping their resume already has a theme and a teacher; send
-      // them straight past the pickers rather than making them choose again.
-      initialStep={replacingResume ? "resume" : "theme"}
+      // Someone swapping their resume already has a teacher; send them straight
+      // past the picker rather than making them choose again.
+      initialStep={replacingResume ? "resume" : "teacher"}
       initialTeacherId={shellState?.teacherId ?? null}
       initialLevel={shellState?.level ?? undefined}
     />

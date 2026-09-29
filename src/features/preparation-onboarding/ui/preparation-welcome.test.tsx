@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CandidateProfile } from "@/lib/shared/types";
 
+const voice = vi.hoisted(() => ({ stopVoice: vi.fn() }));
+
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() })
@@ -15,7 +17,7 @@ vi.mock("./welcome-voice", async (original) => ({
     voiceState: "idle",
     speaking: false,
     awaitingGesture: false,
-    stopVoice: vi.fn(),
+    stopVoice: voice.stopVoice,
     toggleVoice: vi.fn()
   })
 }));
@@ -68,6 +70,19 @@ describe("PreparationWelcome", () => {
     expect(screen.getByText("First Skill Profile")).toBeInTheDocument();
     expect(screen.queryByText("Welcome back")).toBeNull();
     expect(screen.getByRole("button", { name: /Build my preparation/ })).toBeInTheDocument();
+  });
+
+  it("keeps the teacher talking when the refresh after the last answer unblocks the dialog", () => {
+    voice.stopVoice.mockClear();
+    const view = render(<PreparationWelcome profile={profile(null)} blocking />);
+
+    // Saving the final answer refreshes Home, and the server now reports the
+    // baseline as done, so the dialog stops being blocking mid-sentence.
+    view.rerender(<PreparationWelcome profile={profile(Date.now())} blocking={false} />);
+
+    expect(voice.stopVoice).not.toHaveBeenCalled();
+    view.unmount();
+    expect(voice.stopVoice).toHaveBeenCalled();
   });
 
   it("welcomes back someone who reopens the welcome after onboarding", () => {

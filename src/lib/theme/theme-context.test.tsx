@@ -34,15 +34,25 @@ describe("Theme system", () => {
     expect(document.documentElement.hasAttribute("data-theme-lock")).toBe(false);
   });
 
-  it("defaults to dark mode and applies dark classes to root", () => {
+  it("defaults to light mode and applies light classes to root", () => {
     const { result } = renderHook(() => useTheme(), {
       wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>
     });
 
-    expect(result.current.theme).toBe("dark");
+    expect(result.current.theme).toBe("light");
+    expect(result.current.resolvedTheme).toBe("light");
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+  });
+
+  it("keeps a saved dark choice", () => {
+    localStorage.setItem("trailgrad-theme", "dark");
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>
+    });
+
     expect(result.current.resolvedTheme).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
 
   it("can toggle between light and dark themes", () => {
@@ -54,23 +64,23 @@ describe("Theme system", () => {
       result.current.toggleTheme();
     });
 
-    expect(result.current.theme).toBe("light");
-    expect(result.current.resolvedTheme).toBe("light");
-    expect(document.documentElement.classList.contains("light")).toBe(true);
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(result.current.theme).toBe("dark");
+    expect(result.current.resolvedTheme).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     expect(document.documentElement.style.colorScheme).toBe("");
-    expect(localStorage.getItem("trailgrad-theme")).toBe("light");
+    expect(localStorage.getItem("trailgrad-theme")).toBe("dark");
 
     act(() => {
       result.current.toggleTheme();
     });
 
-    expect(result.current.theme).toBe("dark");
-    expect(result.current.resolvedTheme).toBe("dark");
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-    expect(localStorage.getItem("trailgrad-theme")).toBe("dark");
+    expect(result.current.theme).toBe("light");
+    expect(result.current.resolvedTheme).toBe("light");
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(localStorage.getItem("trailgrad-theme")).toBe("light");
   });
 
   it("ThemeToggle button clicks toggle theme state", () => {
@@ -80,12 +90,12 @@ describe("Theme system", () => {
       </ThemeProvider>
     );
 
-    const button = screen.getByRole("button", { name: /switch to light theme/i });
+    const button = screen.getByRole("button", { name: /switch to dark theme/i });
     expect(button).toBeInTheDocument();
 
     fireEvent.click(button);
 
-    expect(document.documentElement.classList.contains("light")).toBe(true);
-    expect(screen.getByRole("button", { name: /switch to dark theme/i })).toBeInTheDocument();
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(screen.getByRole("button", { name: /switch to light theme/i })).toBeInTheDocument();
   });
 });
