@@ -58,7 +58,10 @@ export function recommendAiMlPractice(input: {
   profile: CandidateProfile;
   paths: readonly AiMlPracticePath[];
   questions: readonly SavedQuestion[];
+  /** Resume signals describe AI/ML work; other disciplines skip resume matching. */
+  discipline?: string;
 }): AiMlPracticeRecommendation | null {
+  const matchResume = (input.discipline ?? "ai-ml") === "ai-ml";
   const byKey = new Map(input.questions.map((question) => [question.questionKey, question]));
   const resume = input.profile.resume;
   const evidence = [
@@ -85,9 +88,11 @@ export function recommendAiMlPractice(input: {
         const saved = byKey.get(question.id);
         if (!saved || saved.status !== "ACTIVE") return [];
         const topics = question.topicKeys.join(" ");
-        const resumeMatch = topicSignals.find(
-          (signal) => signal.evidence.test(evidence) && signal.topic.test(topics)
-        );
+        const resumeMatch = matchResume
+          ? topicSignals.find(
+              (signal) => signal.evidence.test(evidence) && signal.topic.test(topics)
+            )
+          : undefined;
         const baselineMatch = needsReview.some((topic) =>
           question.topicKeys.some((key) => {
             const normalizedKey = normalizeTopic(key);

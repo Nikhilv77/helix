@@ -12,6 +12,7 @@ import type { PersistedAiMlPracticeTrack } from "../domain/ai-ml-practice";
 import {
   storyDiscipline,
   storyTrackHref,
+  storyTrackLabel,
   type StoryDiscipline
 } from "@/features/practice/story-tracks/domain/story-disciplines";
 
@@ -29,7 +30,10 @@ export function AiMlStoryWorkspace({
   const disciplineLabel = storyDiscipline(discipline).label;
   const experience: StoryPracticeWorkspaceExperience = {
     slug: track,
-    label: `${disciplineLabel} ${track === "core-technical" ? "Core Technical" : "Applied Engineering"}`,
+    label:
+      discipline === "backend"
+        ? storyTrackLabel(discipline, track)
+        : `${disciplineLabel} ${storyTrackLabel(discipline, track)}`,
     // Every discipline shares the story-practice API; questions are owner-scoped by id.
     apiBase: "/api/practice/ai-ml",
     routeBase: storyTrackHref(discipline, track),

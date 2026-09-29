@@ -205,6 +205,15 @@ export function WorkspaceShell({
     return () => document.body.classList.remove("workspace");
   }, [pathname]);
 
+  // Dialogs portalled to <body> sit outside this shell; mirroring the accent
+  // there lets their `.workspace-black` surfaces use it instead of Ember.
+  useEffect(() => {
+    document.body.dataset.workspaceAccent = workspaceAccent;
+    return () => {
+      delete document.body.dataset.workspaceAccent;
+    };
+  }, [workspaceAccent]);
+
   useEffect(() => {
     if (!showChrome) return;
 

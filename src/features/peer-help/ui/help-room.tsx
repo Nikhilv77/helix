@@ -239,7 +239,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
 
   if (loading) {
     return (
-      <div className="grid min-h-[calc(100dvh-4.25rem)] place-items-center">
+      <div className="practice-paper grid min-h-[calc(100dvh-4.25rem)] place-items-center">
         <span className="inline-flex items-center gap-2 text-sm text-cream/45">
           <Loader2 size={15} className="animate-spin" /> Opening Trailmate room…
         </span>
@@ -249,7 +249,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
 
   if (!room || error) {
     return (
-      <div className="mx-auto grid min-h-[calc(100dvh-4.25rem)] max-w-lg place-items-center px-5 text-center">
+      <div className="practice-paper mx-auto grid min-h-[calc(100dvh-4.25rem)] max-w-lg place-items-center px-5 text-center">
         <div>
           <p className="text-lg font-semibold text-cream">Room unavailable</p>
           <p className="mt-2 text-sm leading-6 text-cream/45">{error}</p>
@@ -262,7 +262,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
   }
 
   return (
-    <main className="relative mx-auto w-full max-w-[104rem] px-3 pb-8 pt-3 sm:px-5 md:pt-5">
+    <main className="practice-paper relative mx-auto w-full max-w-[104rem] px-3 pb-8 pt-3 sm:px-5 md:pt-5">
       <header className="mb-3 flex min-h-16 flex-wrap items-center gap-3 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:px-4">
         {room.peer?.profileImage ? (
           <Image

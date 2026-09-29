@@ -20,18 +20,26 @@ export function VoiceShell({
   children,
   workspaceAccent,
   wide = false,
-  withinWorkspaceChrome = false
+  withinWorkspaceChrome = false,
+  className = ""
 }: {
   children: React.ReactNode;
-  workspaceAccent: WorkspaceAccent;
+  /** Omitted by route fallbacks; the room then inherits the shell's accent. */
+  workspaceAccent?: WorkspaceAccent;
   wide?: boolean;
   withinWorkspaceChrome?: boolean;
+  /** Extra scope classes, such as `practice-paper` for Practice assessments. */
+  className?: string;
 }) {
   return (
     <main
       data-workspace-accent={workspaceAccent}
-      style={workspaceAccentCssVariables(workspaceAccent) as CSSProperties}
-      className={`interview-workspace-page workspace-black relative overflow-hidden bg-black px-4 text-cream sm:px-8 ${
+      style={
+        workspaceAccent
+          ? (workspaceAccentCssVariables(workspaceAccent) as CSSProperties)
+          : undefined
+      }
+      className={`interview-workspace-page workspace-black relative overflow-hidden bg-black px-4 text-cream sm:px-8 ${className} ${
         withinWorkspaceChrome ? "h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4.25rem)]" : "h-[100dvh]"
       }`}
     >
@@ -61,7 +69,7 @@ export function SessionLoadingScreen({
 }: {
   error: string | null;
   onRetry: () => void;
-  workspaceAccent: WorkspaceAccent;
+  workspaceAccent?: WorkspaceAccent;
 }) {
   const teacher = useWorkspaceTeacher();
   return (

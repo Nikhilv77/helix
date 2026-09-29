@@ -457,7 +457,7 @@ export function SystemDesignCanvas({
 
   return (
     <section
-      className={`${
+      className={`system-design-canvas practice-paper ${
         embedded
           ? "overflow-hidden"
           : "mt-6 overflow-hidden rounded-xl border border-white/[0.07] bg-black/20"
@@ -627,7 +627,7 @@ export function SystemDesignCanvas({
       <div
         ref={canvasRef}
         tabIndex={0}
-        className={`relative touch-none overflow-hidden bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.055)_1px,transparent_1px)] [background-size:20px_20px] outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--workspace-accent)]/50 ${embedded ? "h-[22rem]" : "h-[26rem]"}`}
+        className={`system-design-grid relative touch-none overflow-hidden bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.055)_1px,transparent_1px)] [background-size:20px_20px] outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--workspace-accent)]/50 ${embedded ? "h-[22rem]" : "h-[26rem]"}`}
         aria-label="System design diagram canvas"
         onPointerMove={(event) => {
           if (!dragging || !canvasRef.current) return;
@@ -687,7 +687,11 @@ export function SystemDesignCanvas({
                 refY="4"
                 orient="auto"
               >
-                <path d="M0,0 L8,4 L0,8 Z" fill="rgba(232,226,213,0.55)" />
+                <path
+                  d="M0,0 L8,4 L0,8 Z"
+                  fill="rgba(232,226,213,0.55)"
+                  className="system-design-arrow"
+                />
               </marker>
             </defs>
             {snapshot.edges.map((edge) => {
@@ -705,7 +709,7 @@ export function SystemDesignCanvas({
                     strokeWidth={selected ? 2.2 : 1.5}
                     strokeDasharray={edge.mode === "async" ? "6 4" : undefined}
                     markerEnd={`url(#${markerId})`}
-                    className="pointer-events-none"
+                    className={`pointer-events-none ${selected ? "" : `system-design-edge-${edge.mode}`}`}
                   />
                   <path
                     d={geometry.path}
@@ -735,7 +739,7 @@ export function SystemDesignCanvas({
                       x={geometry.labelX}
                       y={geometry.labelY}
                       textAnchor="middle"
-                      className="pointer-events-none fill-cream/45 text-[9px]"
+                      className="system-design-edge-label pointer-events-none fill-cream/45 text-[9px]"
                       paintOrder="stroke"
                       stroke="#0d0f12"
                       strokeWidth="4"

@@ -1,37 +1,66 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { hasSavedThemePreference, useTheme } from "@/lib/theme/theme-context";
 
-type HomeAmbience = "dawn" | "night" | "settled";
+type HomeAmbience = "night" | "dusk" | "day" | "settled";
 
-const DAWN_HOLD_MS = 300;
+/** Time the night hero holds before the page brightens. */
+const NIGHT_HOLD_MS = 600;
 
 /**
- * Gives the signed-out home hero a one-time daylight-to-night entrance without
- * changing the application theme or the visitor's saved preference.
+ * Gives a first-time visitor's home page a one-time night-to-day entrance that
+ * ends in the light theme. The light theme is shown, not saved, so it never
+ * overrides a choice the visitor makes with the theme toggle.
+ *
+ * Order matters for a smooth fade: the night overlay goes up while the page is
+ * still dark (no visible change), the theme switches to light underneath it
+ * only after that frame is painted, and the overlay starts fading a frame later.
  */
 export function HomeThemeArrival({ children }: { children: ReactNode }) {
-  const [ambience, setAmbience] = useState<HomeAmbience>("dawn");
+  const { previewTheme } = useTheme();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [ambience, setAmbience] = useState<HomeAmbience>("night");
 
   useEffect(() => {
-    // An explicit light preference wins. The entrance is only a visual lead-in
-    // to the default dark landing experience, never a global theme mutation.
-    if (document.documentElement.dataset.theme === "light") {
+    // A theme the visitor picked themselves always wins, with no entrance.
+    if (hasSavedThemePreference()) {
       setAmbience("settled");
       return;
     }
 
+    // Deferred one tick so the theme provider has applied its startup theme
+    // first; otherwise it would put the page back to dark.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setAmbience("night");
-      return;
+      const immediate = window.setTimeout(() => {
+        previewTheme("light");
+        setAmbience("settled");
+      }, 0);
+      return () => window.clearTimeout(immediate);
     }
 
-    const timer = window.setTimeout(() => setAmbience("night"), DAWN_HOLD_MS);
+    const timer = window.setTimeout(() => setAmbience("dusk"), NIGHT_HOLD_MS);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [previewTheme]);
+
+  useEffect(() => {
+    if (ambience !== "dusk") return;
+    let second = 0;
+    // The overlay is committed; wait for it to paint before switching themes.
+    const first = window.requestAnimationFrame(() => {
+      previewTheme("light");
+      // Flush the light styles under the still-opaque overlay, then fade.
+      wrapperRef.current?.getBoundingClientRect();
+      second = window.requestAnimationFrame(() => setAmbience("day"));
+    });
+    return () => {
+      window.cancelAnimationFrame(first);
+      window.cancelAnimationFrame(second);
+    };
+  }, [ambience, previewTheme]);
 
   return (
-    <div className="home-theme-arrival" data-home-ambience={ambience}>
+    <div ref={wrapperRef} className="home-theme-arrival" data-home-ambience={ambience}>
       {children}
     </div>
   );

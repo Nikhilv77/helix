@@ -15,6 +15,7 @@ import {
   storyDisciplineForRole,
   storyTrackHref,
   storyTrackQuestionTotal,
+  usesNodePracticeTracks,
   type StoryDiscipline
 } from "@/features/practice/story-tracks/domain/story-disciplines";
 import type { StoryPracticeEntry } from "@/features/practice/shared/domain/practice-roadmap";
@@ -32,8 +33,9 @@ export async function loadPracticeHomeView(ownerId: string, profile: CandidatePr
   // AI/ML replaces the DSA roadmap entirely; frontend and data keep DSA and
   // add their story tracks alongside it.
   const aiMlPractice = discipline === "ai-ml";
-  // Node.js Core Technical and Applied Engineering serve backend and full-stack paths.
-  const nodeTracks = discipline === null;
+  // Node.js Core Technical and Applied Engineering serve backend and full-stack
+  // paths; those roles also get the Backend Fundamentals story track.
+  const nodeTracks = usesNodePracticeTracks(profile.targetRole);
   const architectureTrack =
     nodeTracks || (discipline !== null && storyDiscipline(discipline).architecture !== null);
   const hasDsaPulse = !aiMlPractice && includesDsaPulse(profile.targetRole ?? "fullstack");
@@ -291,32 +293,31 @@ function storyPracticeEntries(
 ): StoryPracticeEntry[] {
   const definition = storyDiscipline(discipline);
   const summaryByTrack = new Map(summaries.map((summary) => [summary.track, summary]));
-  // AI/ML has no DSA session, so its tracks lead; others follow DSA.
+  // AI/ML has no DSA session, so its tracks lead; others follow DSA. Backend
+  // Fundamentals shares order 2 and sorts after Node.js Core Technical.
   const firstOrder = discipline === "ai-ml" ? 1 : 2;
-  const entries: StoryPracticeEntry[] = (["core-technical", "applied-engineering"] as const).map(
-    (track, index) => {
-      const summary = summaryByTrack.get(track);
-      const copy = definition.tracks[track];
-      const completed = summary?.completedQuestions ?? 0;
-      const total = storyTrackQuestionTotal(profile, discipline, track, summary?.totalQuestions);
-      return {
-        key: `${discipline}-${track}`,
-        order: firstOrder + index,
-        title: copy.title,
-        purpose: copy.purpose,
-        covers: copy.covers,
-        difficulty: "guided",
-        durationMinutes: copy.durationMinutes,
-        availability: "available",
-        status: progressStatus(completed, total),
-        totalQuestions: total,
-        attemptedQuestions: completed,
-        completedQuestions: completed,
-        progressPercent: total ? Math.round((completed / total) * 100) : 0,
-        href: storyTrackHref(discipline, track)
-      };
-    }
-  );
+  const entries: StoryPracticeEntry[] = definition.offeredTracks.map((track, index) => {
+    const summary = summaryByTrack.get(track);
+    const copy = definition.tracks[track];
+    const completed = summary?.completedQuestions ?? 0;
+    const total = storyTrackQuestionTotal(profile, discipline, track, summary?.totalQuestions);
+    return {
+      key: `${discipline}-${track}`,
+      order: firstOrder + index,
+      title: copy.title,
+      purpose: copy.purpose,
+      covers: copy.covers,
+      difficulty: "guided",
+      durationMinutes: copy.durationMinutes,
+      availability: "available",
+      status: progressStatus(completed, total),
+      totalQuestions: total,
+      attemptedQuestions: completed,
+      completedQuestions: completed,
+      progressPercent: total ? Math.round((completed / total) * 100) : 0,
+      href: storyTrackHref(discipline, track)
+    };
+  });
   if (!architecture || !definition.architecture) return entries;
   return [
     ...entries,

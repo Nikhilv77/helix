@@ -26,7 +26,7 @@ export async function aiMlStoryOwner(policy: RateLimitPolicy) {
     throw new ApiRouteError(
       409,
       "AI_ML_PRACTICE_ROLE_REQUIRED",
-      "Story practice requires an AI/ML, frontend, or data target role."
+      "Story practice requires an AI/ML, frontend, data, backend, or full-stack target role."
     );
   }
   return { ownerId, app, discipline };

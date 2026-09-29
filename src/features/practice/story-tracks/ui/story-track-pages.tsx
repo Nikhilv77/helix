@@ -6,6 +6,7 @@ import { isAiMlPracticeTrack } from "@/features/practice/ai-ml/domain/ai-ml-prac
 import { AiMlStoryOverview } from "@/features/practice/ai-ml/ui/ai-ml-story-overview";
 import { AiMlStoryWorkspace } from "@/features/practice/ai-ml/ui/ai-ml-story-workspace";
 import {
+  offersStoryTrack,
   storyDiscipline,
   storyDisciplineForRole,
   storyTrackHref,
@@ -34,6 +35,7 @@ export async function StoryTrackPage({
   const { track } = await params;
   if (!isAiMlPracticeTrack(track)) notFound();
   if (track === "architecture-design") redirect("/practice/architecture-design");
+  if (!offersStoryTrack(discipline, track)) notFound();
   const session = await getAppContainer().aiMlStoryPracticeService.session(
     ownerId,
     track,
@@ -89,6 +91,7 @@ export async function StoryTrackQuestionPage({
   const { track, questionId } = await params;
   if (!isAiMlPracticeTrack(track)) notFound();
   if (track === "architecture-design") redirect("/practice/architecture-design");
+  if (!offersStoryTrack(discipline, track)) notFound();
   if (discipline === "ai-ml" && /^ai-ml-(?:core|applied)-[1-8]$/.test(questionId)) {
     // Preserve URLs from the original eight-question AI/ML cohort.
     const legacy = await getAppContainer().aiMlPracticeService.session(ownerId, track);
@@ -131,6 +134,7 @@ export async function StoryTrackAssessmentPage({
   if (storyDisciplineForRole(profile.targetRole) !== discipline) redirect("/practice");
   const [{ track }, query] = await Promise.all([params, searchParams]);
   if (!isAiMlPracticeTrack(track) || track === "architecture-design") notFound();
+  if (!offersStoryTrack(discipline, track)) notFound();
   const trackHref = storyTrackHref(discipline, track);
   const sessionId = typeof query.session === "string" ? query.session.trim() : "";
   if (!/^[0-9a-f-]{36}$/i.test(sessionId)) redirect(trackHref);

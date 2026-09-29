@@ -50,4 +50,25 @@ describe("recommendAiMlPractice", () => {
     });
     expect(recommendation?.blockId).toBe("resume-project-d81b");
   });
+
+  it("uses AI/ML resume signals only for the AI/ML discipline", () => {
+    const first = path("databases-sql", "artifact-diagnosis");
+    const second = path("auth-security", "artifact-diagnosis");
+    const questions = [
+      { id: "a", questionKey: "databases-sql-1", status: "ACTIVE", draft: null },
+      { id: "b", questionKey: "auth-security-1", status: "ACTIVE", draft: null }
+    ];
+    // Both questions match the retrieval resume; only AI/ML should cite it.
+    expect(
+      recommendAiMlPractice({ profile, paths: [first, second], questions })?.reason
+    ).toContain("Your resume points to");
+    const backend = recommendAiMlPractice({
+      profile,
+      paths: [first, second],
+      questions,
+      discipline: "backend"
+    });
+    expect(backend?.blockId).toBe("databases-sql");
+    expect(backend?.reason).not.toContain("resume");
+  });
 });

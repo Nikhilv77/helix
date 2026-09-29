@@ -308,7 +308,7 @@ export class AiMlStoryPracticeService {
       ...(quickCheck ? [quickCheck] : [])
     ];
     const recommendation = profile
-      ? recommendAiMlPractice({ profile, paths, questions: row.questions })
+      ? recommendAiMlPractice({ profile, paths, questions: row.questions, discipline })
       : null;
     const currentPath =
       recommendation?.blockId ??
@@ -1080,10 +1080,12 @@ function choiceFeedback(
       ? "You selected the decision supported by the evidence."
       : "You made a clear choice that we can examine.",
     mechanism: explanation,
+    // A correct choice still gets the mistake others make, shown as a caution.
     missingOrIncorrect: correct
-      ? "Nothing needs correcting for this choice."
+      ? (answer.commonMistakes?.[0] ?? "Nothing needs correcting for this choice.")
       : (answer.commonMistakes?.[0] ?? explanation),
     productionConsequence:
+      question.interviewConnection ??
       "In production, this decision affects the quality and safety of the system.",
     transferExample: `For a similar case, use the same check: ${explanation}`,
     interviewerFollowUp:

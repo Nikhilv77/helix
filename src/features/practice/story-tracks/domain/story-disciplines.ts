@@ -7,14 +7,17 @@ import {
 import { aiMlQuickCheckPath } from "@/features/practice/ai-ml/domain/ai-ml-quick-check-catalog";
 import { aiMlResumePracticePath } from "@/features/practice/ai-ml/domain/resume-practice-path";
 import type { CandidateProfile } from "@/lib/shared/types";
+import { backendStoryPaths } from "./backend-story-catalog";
 import { dataStoryPaths } from "./data-story-catalog";
 import { frontendStoryPaths } from "./frontend-story-catalog";
 
 /**
- * Role disciplines served by the story-practice engine. Each one owns a
- * Core Technical and an Applied Engineering track built from authored paths.
+ * Role disciplines served by the story-practice engine. AI/ML, frontend, and
+ * data own a Core Technical and an Applied Engineering track. Backend owns only
+ * language-independent fundamentals; its runtime and incident practice stays
+ * on the Node.js Core Technical and Applied Engineering tracks.
  */
-export const STORY_DISCIPLINES = ["ai-ml", "frontend", "data"] as const;
+export const STORY_DISCIPLINES = ["ai-ml", "frontend", "data", "backend"] as const;
 export type StoryDiscipline = (typeof STORY_DISCIPLINES)[number];
 
 export function isStoryDiscipline(value: unknown): value is StoryDiscipline {
@@ -25,7 +28,16 @@ export function isStoryDiscipline(value: unknown): value is StoryDiscipline {
 export function storyDisciplineForRole(
   role: CandidateProfile["targetRole"] | undefined
 ): StoryDiscipline | null {
+  if (role === "backend" || role === "fullstack") return "backend";
   return isStoryDiscipline(role) ? role : null;
+}
+
+/**
+ * Roles served by the Node.js Core Technical, Applied Engineering, and
+ * Architecture tracks. Backend and full-stack also get backend fundamentals.
+ */
+export function usesNodePracticeTracks(role: CandidateProfile["targetRole"] | undefined): boolean {
+  return role !== "ai-ml" && role !== "frontend" && role !== "data";
 }
 
 type TrackCopy = { title: string; purpose: string; covers: string[]; durationMinutes: number };
@@ -33,6 +45,8 @@ type TrackCopy = { title: string; purpose: string; covers: string[]; durationMin
 export interface StoryDisciplineDefinition {
   discipline: StoryDiscipline;
   label: string;
+  /** Tracks this discipline serves, in display order. */
+  offeredTracks: readonly PersistedAiMlPracticeTrack[];
   candidateRole: string;
   /** Who the written-answer evaluator should grade as. */
   reviewer: string;
@@ -52,6 +66,7 @@ const DEFINITIONS: Record<StoryDiscipline, StoryDisciplineDefinition> = {
   "ai-ml": {
     discipline: "ai-ml",
     label: "AI/ML",
+    offeredTracks: ["core-technical", "applied-engineering"],
     candidateRole: "AI/ML engineer",
     reviewer: "experienced AI/ML engineer",
     overviewDescription: "Work through practical AI/ML decisions, one piece of evidence at a time.",
@@ -87,6 +102,7 @@ const DEFINITIONS: Record<StoryDiscipline, StoryDisciplineDefinition> = {
   frontend: {
     discipline: "frontend",
     label: "Frontend",
+    offeredTracks: ["core-technical", "applied-engineering"],
     candidateRole: "frontend engineer",
     reviewer: "experienced senior frontend engineer",
     overviewDescription:
@@ -120,6 +136,7 @@ const DEFINITIONS: Record<StoryDiscipline, StoryDisciplineDefinition> = {
   data: {
     discipline: "data",
     label: "Data",
+    offeredTracks: ["core-technical", "applied-engineering"],
     candidateRole: "data engineer",
     reviewer: "experienced senior data engineer",
     overviewDescription:
@@ -148,11 +165,59 @@ const DEFINITIONS: Record<StoryDiscipline, StoryDisciplineDefinition> = {
         "Design data pipelines through contracts, table layout, late data, quality, and backfills.",
       covers: ["Pipeline architecture", "Data modelling and correctness", "Quality and reliability"]
     }
+  },
+  backend: {
+    discipline: "backend",
+    label: "Backend",
+    offeredTracks: ["core-technical"],
+    candidateRole: "backend engineer",
+    reviewer: "experienced senior backend engineer",
+    overviewDescription:
+      "Work through databases, APIs, security, concurrency, caching, and queues, one piece of evidence at a time.",
+    tracks: {
+      "core-technical": {
+        title: "Backend Fundamentals",
+        purpose:
+          "Reason about databases, APIs, auth, concurrency, caching, and queues in any language.",
+        covers: ["Databases and SQL", "API design and security", "Concurrency and queues"],
+        durationMinutes: 45
+      },
+      // Backend applied practice is the Node.js incident track; this copy is unused.
+      "applied-engineering": {
+        title: "Applied Engineering · Backend",
+        purpose: "Diagnose production backend incidents.",
+        covers: [],
+        durationMinutes: 45
+      }
+    },
+    paths: backendStoryPaths,
+    quickCheck: () => null,
+    resumePath: () => null,
+    catalogQuestionCount: (track) => countQuestions(backendStoryPaths(track)),
+    // Backend Architecture & Design is the shared Node.js-era scenario track.
+    architecture: null
   }
 };
 
 export function storyDiscipline(discipline: StoryDiscipline): StoryDisciplineDefinition {
   return DEFINITIONS[discipline];
+}
+
+/** What a track is called in page headings: "Backend Fundamentals", "Core Technical". */
+export function storyTrackLabel(
+  discipline: StoryDiscipline,
+  track: PersistedAiMlPracticeTrack
+): string {
+  if (discipline === "backend" && track === "core-technical") return "Backend Fundamentals";
+  return track === "core-technical" ? "Core Technical" : "Applied Engineering";
+}
+
+/** Whether a discipline serves this track at all. */
+export function offersStoryTrack(
+  discipline: StoryDiscipline,
+  track: PersistedAiMlPracticeTrack
+): boolean {
+  return storyDiscipline(discipline).offeredTracks.includes(track);
 }
 
 /** Every path a discipline shows for a track, in display order. */

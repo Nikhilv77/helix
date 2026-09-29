@@ -3,6 +3,43 @@
 What changed, newest first. Each release lists what a deploy needs (migrations, files to commit,
 checks to run) under **Deploy notes**. Add an entry with every release.
 
+## Unreleased: Backend Fundamentals, light theme pass, report scoring
+
+- **Backend and full-stack learners get Backend Fundamentals**, a language-independent track on
+  the story-practice engine at `/practice/backend/core-technical`. Six paths, 33 questions: databases
+  and SQL, API design, auth and security, concurrency, caching, and messaging. Code is SQL, HTTP,
+  or pseudocode, so Java, Python, Go, and Node engineers can all answer. The Node.js Core Technical,
+  Applied Engineering, and Architecture tracks are unchanged.
+- **Story-practice fixes that affect every discipline:**
+  - Resume-based path picks now apply only to AI/ML; they were sending Frontend, Data, and Backend
+    learners to the wrong path with "Your resume points to model delivery".
+  - A correct multiple-choice answer shows the question's common mistake and its own interview
+    note, instead of "Nothing needs correcting" and a generic line.
+  - Topic chips read "SQL", "API", "CSS and Layout" instead of "Sql", "Api", "Css And Layout".
+  - A failed DSA roadmap now shows its warning even when other Practice cards are listed.
+- **Light theme:** Practice, assessment rooms, the Trailmate help room, peer-help dialogs,
+  interview dialogs, the design canvas, mic meter, skeletons, and the DSA audit page have light
+  versions; the scrollbar gutter is no longer a dark strip; nested and portalled dark shells
+  inherit the learner's accent instead of Ember.
+- **Report scores:** criteria on a graded answer come from the evaluator, not keyword matches, so a
+  vague answer that says "because" no longer scores 86 for decision-making. Old reports are
+  corrected on read.
+- The voice room opens with "Preparing your interview" instead of a skeleton.
+
+**Deploy notes**
+
+- **Run the production migration before deploying:**
+  `20260929120000_backend_story_discipline` (adds `'backend'` to the `AiMlPracticeSession`
+  discipline check). Without it, opening Backend Fundamentals fails for every backend user.
+- New files to commit: `src/features/practice/story-tracks/domain/backend-story-catalog.ts`,
+  `src/app/practice/backend/**`, `prisma/migrations/20260929120000_backend_story_discipline/`,
+  `src/features/practice/shared/ui/presentation.test.ts`,
+  `src/features/interviews/ui/shared/interview-route-loading.tsx`,
+  `src/features/interviews/ui/voice/components/preparing-interview-screen.tsx`.
+- Snapshot versions bumped: Practice home 6, Reports 4, Interviews 8. They rebuild on first visit.
+- Known issue: every multiple-choice question outside Backend Fundamentals has its correct answer
+  as option A, and choices are not shuffled.
+
 ## Unreleased: Frontend and Data System Design and Architecture Practice
 
 - **Frontend and Data learners get Architecture & Design practice and the System Design

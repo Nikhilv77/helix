@@ -17,6 +17,7 @@ import type { AiMlStorySession } from "../server/ai-ml-story-practice.service";
 import {
   storyDiscipline,
   storyDisciplinePaths,
+  storyTrackLabel,
   storyTrackHref
 } from "@/features/practice/story-tracks/domain/story-disciplines";
 import Link from "next/link";
@@ -33,7 +34,7 @@ export function AiMlStoryOverview({
   assessment?: StoryAssessmentSummary | null;
 }) {
   const routeBase = storyTrackHref(session.discipline, session.track);
-  const label = session.track === "core-technical" ? "Core Technical" : "Applied Engineering";
+  const label = storyTrackLabel(session.discipline, session.track);
   // The same overview as Core Technical and Applied Engineering. Its assessment
   // slot always receives the story-track card (or nothing), so the Node.js
   // assessment settings inherited here are never used.

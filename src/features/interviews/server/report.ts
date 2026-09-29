@@ -234,7 +234,7 @@ export function readInterviewReportSnapshot(
       : Math.max(snapshot.lastTurnEndMs, now - snapshot.report.startedAt);
 
   return {
-    ...withLearnerNextSteps(snapshot.report),
+    ...withEvaluatorBreakdowns(withLearnerNextSteps(snapshot.report)),
     status,
     durationMs,
     transcript: []
@@ -268,6 +268,31 @@ function withLearnerNextSteps<T extends Pick<InterviewReport, "competencies" | "
 }
 
 const LEGACY_NEXT_STEP = /^work on this next:/i;
+
+/**
+ * Snapshots saved before evaluatorBreakdown existed kept keyword scores for
+ * graded answers. Their stored rubric scores are enough to rebuild the same
+ * numbers on read, so old reports match new ones without a backfill.
+ */
+function withEvaluatorBreakdowns<T extends Pick<InterviewReport, "competencies">>(report: T): T {
+  if (!report.competencies?.some((item) => item.technicalEvaluation && item.evidenceBreakdown)) {
+    return report;
+  }
+  return {
+    ...report,
+    competencies: report.competencies.map((item) =>
+      item.technicalEvaluation && item.evidenceBreakdown
+        ? {
+            ...item,
+            evidenceBreakdown: evaluatorBreakdown(
+              item.technicalEvaluation.score,
+              item.technicalEvaluation.rubricScores
+            )
+          }
+        : item
+    )
+  };
+}
 
 export function createWorkspaceInsights(
   sessions: StoredInterviewSession[],
@@ -448,22 +473,43 @@ function assessAnswer(
   };
 }
 
+/** Evaluator rubric keys (see evaluation-profile.ts) behind each evidence dimension. */
+const EVIDENCE_DIMENSION_RUBRICS = {
+  ownership: /ownership|accountability/,
+  decision: /decision|judgement|reasoning|approach|trade-?off/,
+  specificity: /specificity|credibility|concept|understanding/,
+  outcome: /impact|learning|outcome/
+} as const;
+
+/**
+ * Once the evaluator has graded an answer, keyword hits ("I", "because") must
+ * not stand in for criteria it scored lower or left out: a vague answer that
+ * says "I chose" is not strong decision-making. Each dimension takes the
+ * evaluator's matching rubric scores, else its overall score.
+ */
+function evaluatorBreakdown(
+  score: number,
+  rubricScores: ReadonlyArray<{ rubricKey: string; score: number }>
+): NonNullable<InterviewCompetencyReport["evidenceBreakdown"]> {
+  const dimension = (pattern: RegExp) => {
+    const matches = rubricScores.filter((item) => pattern.test(item.rubricKey));
+    if (!matches.length) return Math.round(score);
+    return Math.round(matches.reduce((total, item) => total + item.score, 0) / matches.length);
+  };
+  return {
+    ownership: dimension(EVIDENCE_DIMENSION_RUBRICS.ownership),
+    decision: dimension(EVIDENCE_DIMENSION_RUBRICS.decision),
+    specificity: dimension(EVIDENCE_DIMENSION_RUBRICS.specificity),
+    outcome: dimension(EVIDENCE_DIMENSION_RUBRICS.outcome)
+  };
+}
+
 function assessedTechnicalAnswer(
   heuristic: ReturnType<typeof assessAnswer>,
   evaluation: QuestionEvaluation
 ): ReturnType<typeof assessAnswer> & Pick<InterviewCompetencyReport, "technicalEvaluation"> {
   const gap = evaluation.gaps[0] ?? evaluation.summary;
-  const fallbackBreakdown = heuristic.evidenceBreakdown ?? {
-    ownership: heuristic.evidenceScore,
-    decision: heuristic.evidenceScore,
-    specificity: heuristic.evidenceScore,
-    outcome: heuristic.evidenceScore
-  };
   const evaluationScore = Math.round(evaluation.score);
-  const rubricScore = (key: string, fallback: number) => {
-    const item = evaluation.rubricScores.find((score) => score.rubricKey === key);
-    return item ? Math.round(item.score) : fallback;
-  };
   return {
     ...heuristic,
     evidenceScore: evaluationScore,
@@ -479,12 +525,7 @@ function assessedTechnicalAnswer(
     nextStep: evaluation.gaps.length
       ? learnerNextStep(gap)
       : "Keep using this same clear, evidence-based way of answering.",
-    evidenceBreakdown: {
-      ownership: rubricScore("ownership", fallbackBreakdown.ownership),
-      decision: rubricScore("decision", fallbackBreakdown.decision),
-      specificity: rubricScore("specificity", fallbackBreakdown.specificity),
-      outcome: rubricScore("outcome", fallbackBreakdown.outcome)
-    },
+    evidenceBreakdown: evaluatorBreakdown(evaluationScore, evaluation.rubricScores),
     technicalEvaluation: {
       source: evaluation.source,
       score: evaluationScore,

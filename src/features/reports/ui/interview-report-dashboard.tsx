@@ -438,13 +438,21 @@ function ReportQuickRead({
 
       <div className="report-glass-card rounded-2xl px-5 py-4">
         <p className="text-xs font-medium uppercase tracking-[0.13em] text-cream/42">
-          {strongestScore >= 70 ? "Strongest area" : "Clearest area so far"}
+          {strongestScore >= 70
+            ? "Strongest area"
+            : strongestScore >= 20
+              ? "Clearest area so far"
+              : "No clear strength yet"}
         </p>
-        <p className="mt-3 text-lg font-semibold leading-6 text-cream">{strongest}</p>
+        <p className="mt-3 text-lg font-semibold leading-6 text-cream">
+          {strongestScore >= 20 ? strongest : "Nothing stood out this round"}
+        </p>
         <p className="mt-2 text-sm leading-6 text-cream/58">
           {strongestScore >= 70
             ? "Keep using this as the anchor for your answers."
-            : "This was your clearest area, but it still needs stronger evidence."}
+            : strongestScore >= 20
+              ? "This was your clearest area, but it still needs stronger evidence."
+              : "Answer a few questions fully next time and a strength will show here."}
         </p>
       </div>
 
@@ -611,7 +619,7 @@ function buildSignals(report: InterviewReport): Signal[] {
         : undefined;
     const rationale = representative?.score.rationale;
     const evidence = quote
-      ? `${evidenceTurn ? `At ${formatEvidenceTime(evidenceTurn.startMs)}, ` : ""}you said “${quote}”.${rationale ? ` ${rationale}` : ""}`
+      ? `${evidenceTurn ? `At ${formatEvidenceTime(evidenceTurn.startMs)}, you said` : "You said"} “${quote.replace(/[\s.!?,;:]+$/, "")}”.${rationale ? ` ${rationale}` : ""}`
       : rationale;
     const observation =
       parameter.score >= 75
@@ -626,7 +634,13 @@ function buildSignals(report: InterviewReport): Signal[] {
       score: parameter.score,
       icon: icons[index] ?? MessageSquareText,
       observation,
-      evidence: evidence ?? parameter.description,
+      // Without an evaluator note, a weak area gets a plain observation; the
+      // parameter description is a definition, not feedback on this answer.
+      evidence:
+        evidence ??
+        (parameter.score < 45
+          ? "This didn't come through in your answers yet."
+          : parameter.description),
       nextMove: parameter.nextStep
     };
   });

@@ -58,7 +58,7 @@ function sectionHref(href: string, prefix: string): string {
 }
 
 const desktopActionClass =
-  "site-nav-action hidden sm:block [&>*]:inline-flex [&>*]:h-11 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&>*]:tracking-tight [&>*]:outline-none";
+  "site-nav-action hidden sm:block [&>*]:inline-flex [&>*]:h-11 [&>*]:items-center [&>*]:rounded-full [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&>*]:tracking-tight [&>*]:outline-none";
 const mobileActionClass =
   "site-nav-action px-5 pb-5 pt-3 [&>*]:inline-flex [&>*]:h-11 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-xl [&>*]:text-sm [&>*]:font-semibold [&>*]:outline-none";
 
@@ -143,7 +143,10 @@ export function SiteNav({
           <TrailgradMark className="marketing-brand-mark h-8 w-8" />
         </Link>
 
-        <nav aria-label="Sections" className="hidden items-center justify-center gap-9 sm:flex">
+        <nav
+          aria-label="Sections"
+          className="site-nav-links hidden h-11 items-center justify-center gap-1 rounded-full px-1.5 sm:flex"
+        >
           {navLinks.map((link) => {
             const active = activeSection === link.href.slice(1);
             return (
@@ -152,22 +155,20 @@ export function SiteNav({
                 href={sectionHref(link.href, sectionHrefPrefix)}
                 aria-current={active ? "true" : undefined}
                 className={[
-                  "relative text-[0.9rem] font-medium tracking-tight outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-cream/40",
-                  active ? "text-cream" : "text-cream/55 hover:text-cream/90"
+                  "inline-flex h-8 items-center rounded-full px-4 text-[0.875rem] font-medium tracking-tight outline-none transition-[background-color,color] duration-300 focus-visible:ring-2 focus-visible:ring-cream/40",
+                  active
+                    ? "bg-cream/[0.1] text-cream"
+                    : "text-cream/72 hover:bg-cream/[0.06] hover:text-cream"
                 ].join(" ")}
               >
                 {link.label}
-                <span
-                  aria-hidden="true"
-                  className={["site-nav-rule", active ? "is-active" : ""].join(" ")}
-                />
               </a>
             );
           })}
         </nav>
 
-        <div className="col-start-3 flex shrink-0 items-center justify-self-end gap-3">
-          <ThemeToggle />
+        <div className="col-start-3 flex shrink-0 items-center justify-self-end gap-2.5">
+          <ThemeToggle className="site-nav-icon !h-11 !w-11 !rounded-full" size={17} />
           <div className={desktopActionClass}>{action}</div>
           <button
             type="button"

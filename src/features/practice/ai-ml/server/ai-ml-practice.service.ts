@@ -328,7 +328,7 @@ export class AiMlPracticeService {
 
     let totalQuestions = 0;
     let nextUp: CoreTechnicalPracticeAnalytics["nextUp"] = null;
-    for (const track of ["core-technical", "applied-engineering"] as const) {
+    for (const track of definition.offeredTracks) {
       const session = sessions.find((item) => applicationTrack(item.track) === track);
       totalQuestions += storyTrackQuestionTotal(
         profile,

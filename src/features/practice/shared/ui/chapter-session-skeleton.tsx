@@ -6,7 +6,7 @@ function SkeletonLine({ className }: { className: string }) {
 export function ChapterSessionSkeleton() {
   return (
     <main
-      className="min-h-[100svh] w-full bg-black"
+      className="practice-skeleton min-h-[100svh] w-full bg-black"
       aria-busy="true"
       aria-label="Loading practice session"
     >

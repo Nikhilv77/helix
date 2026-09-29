@@ -682,7 +682,7 @@ model PreparationBaselineQuestion {
 model AiMlPracticeSession {
   id                  String                    @id @default(uuid()) @db.Uuid
   ownerId             String
-  /// "ai-ml", "frontend", or "data". Existing AI/ML cohorts default to "ai-ml".
+  /// "ai-ml", "frontend", "data", or "backend". Existing AI/ML cohorts default to "ai-ml".
   discipline          String                    @default("ai-ml") @db.VarChar(16)
   track               AiMlPracticeTrack
   status              AiMlPracticeSessionStatus @default(ACTIVE)
@@ -765,7 +765,7 @@ enum StoryTrackAssessmentStatus {
 model StoryTrackAssessment {
   id            String                     @id @default(uuid()) @db.Uuid
   ownerId       String
-  /// "ai-ml", "frontend", or "data".
+  /// "ai-ml", "frontend", "data", or "backend".
   discipline    String                     @db.VarChar(16)
   track         AiMlPracticeTrack
   pathKey       String

@@ -18,6 +18,17 @@ interface ThemeContextValue {
   resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
+  /** Shows a theme for this page view without saving it as the visitor's choice. */
+  previewTheme: (theme: ResolvedTheme) => void;
+}
+
+/** True when the visitor has picked a theme with the toggle (it is saved). */
+export function hasSavedThemePreference(): boolean {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
 }
 
 const THEME_STORAGE_KEY = "trailgrad-theme";
@@ -104,6 +115,14 @@ export function ThemeProvider({
     [applyTheme]
   );
 
+  const previewTheme = useCallback(
+    (newTheme: ResolvedTheme) => {
+      setThemeState(newTheme);
+      applyTheme(newTheme);
+    },
+    [applyTheme]
+  );
+
   const toggleTheme = useCallback(() => {
     const nextTheme: Theme = resolvedTheme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
@@ -124,9 +143,10 @@ export function ThemeProvider({
       theme,
       resolvedTheme: mounted ? resolvedTheme : "dark",
       setTheme,
-      toggleTheme
+      toggleTheme,
+      previewTheme
     }),
-    [theme, resolvedTheme, mounted, setTheme, toggleTheme]
+    [theme, resolvedTheme, mounted, setTheme, toggleTheme, previewTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -136,7 +156,8 @@ const DEFAULT_THEME_CONTEXT: ThemeContextValue = {
   theme: "dark",
   resolvedTheme: "dark",
   setTheme: () => {},
-  toggleTheme: () => {}
+  toggleTheme: () => {},
+  previewTheme: () => {}
 };
 
 export function useTheme(): ThemeContextValue {

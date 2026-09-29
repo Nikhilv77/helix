@@ -16,7 +16,7 @@ export default function DsaAuditPage() {
   const crossCutting = tags.filter((tag) => tag.phases.length >= 3);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="dsa-audit-page mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <nav className="mb-6 text-xs text-white/45">
         <Link href="/dsa-questions" className="transition hover:text-white">
           ← DSA Question Library

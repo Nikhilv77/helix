@@ -852,7 +852,7 @@ function LearnConfirmationModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="learn-confirmation-title"
-        className="relative w-full max-w-[34rem] overflow-hidden rounded-2xl border border-[#e3a15b]/30 bg-[#171614] shadow-[0_30px_100px_rgba(0,0,0,0.7)]"
+        className="practice-paper relative w-full max-w-[34rem] overflow-hidden rounded-2xl border border-[#e3a15b]/30 bg-[#171614] shadow-[0_30px_100px_rgba(0,0,0,0.7)]"
       >
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e3a15b]/80 to-transparent" />
         <div className="px-5 pb-5 pt-6 sm:px-6 sm:pb-6">
@@ -1278,7 +1278,7 @@ function StoryPracticeReviewModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="story-review-title"
-        className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[58rem] flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.11] bg-[#141719] shadow-[0_32px_120px_rgba(0,0,0,0.68)]"
+        className="practice-paper relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[58rem] flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.11] bg-[#141719] shadow-[0_32px_120px_rgba(0,0,0,0.68)]"
       >
         <header className="relative shrink-0 overflow-hidden border-b border-white/[0.075] bg-[#0c0e0f] px-5 py-4 sm:px-6 sm:py-5">
           <div className="practice-accent-glow pointer-events-none absolute inset-x-[15%] bottom-[-120%] h-[180%] opacity-55" />
@@ -1326,7 +1326,15 @@ function StoryPracticeReviewModal({
               </div>
               <div className="sm:border-l sm:border-white/[0.07] sm:pl-6">
                 <ReviewInsight
-                  label="What went wrong"
+                  label={
+                    score >= 10 &&
+                    question.question.format === "mcq" &&
+                    // Attempts saved before cautions were added hold this line.
+                    attempt.feedback.missingOrIncorrect !==
+                      "Nothing needs correcting for this choice."
+                      ? "Common mistake to avoid"
+                      : "What went wrong"
+                  }
                   value={attempt.feedback.missingOrIncorrect}
                   tone="corrective"
                 />

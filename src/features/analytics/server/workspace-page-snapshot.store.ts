@@ -18,10 +18,10 @@ export interface BuiltWorkspacePage<T> {
 // trailmate 3: overview carries the online-mates count and leaderboard size.
 // interviews 7: System Design no longer resumes an Architecture Practice checkpoint.
 export const WORKSPACE_PAGE_SCHEMA_VERSION: Record<WorkspacePage, number> = {
-  interviews: 7,
+  interviews: 8,
   "resume-roast": 4,
   trailmate: 3,
-  reports: 3
+  reports: 4
 };
 const SCHEMA_VERSION = WORKSPACE_PAGE_SCHEMA_VERSION;
 /**

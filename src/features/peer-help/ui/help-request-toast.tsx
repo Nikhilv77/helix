@@ -101,7 +101,7 @@ export function HelpRequestToast() {
     <aside
       aria-label="New Trailmate request"
       aria-live="polite"
-      className="fixed inset-x-3 top-16 z-[75] ml-auto max-w-[24rem] overflow-hidden rounded-2xl  bg-[#18191c]/[0.98] shadow-[0_24px_80px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:right-5 sm:top-5"
+      className="practice-paper fixed inset-x-3 top-16 z-[75] ml-auto max-w-[24rem] overflow-hidden rounded-2xl  bg-[#18191c]/[0.98] shadow-[0_24px_80px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:right-5 sm:top-5"
     >
       <div className="h-0.5 w-full bg-[var(--workspace-accent)]" />
       <div className="p-4 sm:p-[1.125rem]">

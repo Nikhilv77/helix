@@ -42,7 +42,7 @@ export function HelpFlowNotice({
         aria-modal="true"
         aria-labelledby="help-flow-notice-title"
         aria-describedby="help-flow-notice-message"
-        className="fixed left-1/2 top-1/2 z-[110] w-[min(27rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.5rem] bg-[#18191c]/[0.99] shadow-[0_32px_110px_-28px_rgba(0,0,0,0.98)] backdrop-blur-xl"
+        className="practice-paper fixed left-1/2 top-1/2 z-[110] w-[min(27rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.5rem] bg-[#18191c]/[0.99] shadow-[0_32px_110px_-28px_rgba(0,0,0,0.98)] backdrop-blur-xl"
       >
         <div className="h-0.5 bg-[var(--workspace-accent)]" />
         <div className="relative p-5 sm:p-6">

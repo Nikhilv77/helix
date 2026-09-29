@@ -291,6 +291,62 @@ describe("interview report", () => {
     expect(report.codeExercise?.correctnessScore).toBe(18);
   });
 
+  it("does not let keyword hits outscore the evaluator on a graded answer", () => {
+    // Question 0's answer says "I owned…", which the keyword pass alone reads as
+    // ownership 88. The evaluator graded the answer as vague.
+    const graded: InterviewState = {
+      ...state,
+      questionEvaluations: {
+        "0": {
+          source: "semantic-evaluator",
+          score: 0,
+          verdict: "insufficient-evidence",
+          confidence: 1,
+          summary: "No career story or concrete detail.",
+          strengths: [],
+          gaps: ["No career story or employment history."],
+          rubricScores: [
+            { rubricKey: "claim-credibility", score: 0, rationale: "No verifiable claims." },
+            { rubricKey: "personal-ownership", score: 12, rationale: "Ownership is implied only." }
+          ],
+          answerExcerpts: [],
+          execution: null,
+          evaluatedAt: 13_000
+        }
+      }
+    };
+
+    const report = createInterviewReport({ state: graded, touchedAt: 14_000 }, 20_000);
+
+    expect(report.competencies[0]?.evidenceBreakdown).toEqual({
+      ownership: 12,
+      decision: 0,
+      specificity: 0,
+      outcome: 0
+    });
+
+    // Snapshots saved before this fix held the keyword numbers; reading one
+    // rebuilds the breakdown from the stored rubric scores.
+    const snapshot = createInterviewReportSnapshot({ state: graded, touchedAt: 14_000 }, 14_000);
+    const legacy = {
+      ...snapshot,
+      report: {
+        ...snapshot.report,
+        competencies: snapshot.report.competencies.map((item, index) =>
+          index === 0
+            ? {
+                ...item,
+                evidenceBreakdown: { ownership: 88, decision: 86, specificity: 0, outcome: 26 }
+              }
+            : item
+        )
+      }
+    };
+    expect(
+      readInterviewReportSnapshot(legacy, 14_000, 20_000).competencies[0]?.evidenceBreakdown
+    ).toEqual({ ownership: 12, decision: 0, specificity: 0, outcome: 0 });
+  });
+
   it("calculates the headline from the six visible round parameters", () => {
     const rubricScores = [10, 20, 30, 40, 50, 60].map((score, index) => ({
       rubricKey: [

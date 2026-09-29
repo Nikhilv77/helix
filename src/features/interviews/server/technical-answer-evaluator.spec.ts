@@ -367,7 +367,7 @@ describe("technical answer evaluator", () => {
     const prompt = buildResumeAnswerEvaluationPrompt(resumeInput);
 
     expect(prompt).toContain("Redis caching project");
-    expect(prompt).toContain("personal-ownership: Makes the candidate's own responsibility");
+    expect(prompt).toContain("personal-ownership: Makes personal responsibility");
     expect(prompt).toContain(
       "exactly these keys and no others: claim-credibility, personal-ownership, decision-making"
     );

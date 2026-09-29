@@ -125,7 +125,7 @@ export function MicMeter({
             ref={(element) => {
               barsRef.current[index] = element;
             }}
-            className="w-[3px] rounded-full bg-cream/15 transition-colors duration-75"
+            className="mic-meter-bar w-[3px] rounded-full bg-cream/15 transition-colors duration-75"
             style={{ height }}
           />
         ))}

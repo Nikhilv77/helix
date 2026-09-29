@@ -12,7 +12,8 @@ import {
 import { aiMlStarterPractice } from "@/features/practice/ai-ml/domain/resume-practice-path";
 import {
   storyDiscipline as storyDisciplineDefinition,
-  storyDisciplineForRole
+  storyDisciplineForRole,
+  usesNodePracticeTracks
 } from "@/features/practice/story-tracks/domain/story-disciplines";
 import { getAppContainer } from "@/server/app-container";
 import { nodeTrackAssessmentReports } from "@/features/reports/server/assessment-reports";
@@ -103,9 +104,10 @@ export async function buildCandidateAnalytics(
   const briefing = roadmapPractice?.briefing ?? null;
   const storyDiscipline = storyDisciplineForRole(profile.targetRole);
   // The same tracks the Practice page offers this role: Node.js Core Technical
-  // and Applied Engineering for backend and full-stack, Architecture for those
-  // plus story disciplines that include it.
-  const nodeTracks = storyDiscipline === null;
+  // and Applied Engineering for backend and full-stack (alongside their Backend
+  // Fundamentals story track), Architecture for those plus story disciplines
+  // that include it.
+  const nodeTracks = usesNodePracticeTracks(profile.targetRole);
   const architectureTrack =
     nodeTracks ||
     (storyDiscipline !== null && storyDisciplineDefinition(storyDiscipline).architecture !== null);

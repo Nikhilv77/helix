@@ -260,6 +260,33 @@ describe("PracticePage", () => {
     }
   );
 
+  it.each(["backend", "fullstack"] as const)(
+    "adds Backend Fundamentals next to the Node.js tracks for %s learners",
+    async (role) => {
+      mocks.profileGet.mockResolvedValue(onboardedProfile({ targetRole: role }));
+      mocks.home.mockResolvedValue(practiceRoadmap());
+
+      render(await PracticePage());
+
+      expect(screen.getByRole("heading", { name: "DSA" })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Backend Fundamentals/ })).toHaveAttribute(
+        "href",
+        "/practice/backend/core-technical"
+      );
+      expect(mocks.aiMlSummaries).toHaveBeenCalledWith("owner-1", "backend");
+      expect(mocks.coreTechnicalEligibility).toHaveBeenCalled();
+    }
+  );
+
+  it("warns about a failed roadmap even when other tracks are still listed", async () => {
+    mocks.home.mockRejectedValue(new Error("temporary database error"));
+
+    render(await PracticePage());
+
+    expect(screen.getByRole("link", { name: /Backend Fundamentals/ })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("We couldn’t prepare your practice path");
+  });
+
   it("warns rather than silently claiming zero AI/ML progress when the database read fails", async () => {
     mocks.profileGet.mockResolvedValue(onboardedProfile({ targetRole: "ai-ml" }));
     mocks.home.mockResolvedValue(practiceRoadmap());

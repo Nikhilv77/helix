@@ -39,9 +39,30 @@ export function storyPracticeQuestionMinutes(
   return Math.max(3, Math.round(baseMinutes[format] * (blockMinutes / 45)));
 }
 
+/** Words that read wrong when title-cased from a key ("Sql", "Api", "And"). */
+const KEY_WORDS: Record<string, string> = {
+  ai: "AI",
+  api: "API",
+  css: "CSS",
+  dsa: "DSA",
+  http: "HTTP",
+  jwt: "JWT",
+  llm: "LLM",
+  mcq: "MCQ",
+  ml: "ML",
+  rag: "RAG",
+  sql: "SQL",
+  ui: "UI",
+  and: "and"
+};
+
 export function humanizeStoryPracticeKey(value: string): string {
   return value
     .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .map((part, index) => {
+      const word = KEY_WORDS[part.toLowerCase()];
+      if (word && !(index === 0 && word === "and")) return word;
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
     .join(" ");
 }

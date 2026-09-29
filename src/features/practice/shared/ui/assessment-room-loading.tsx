@@ -6,7 +6,7 @@ export function AssessmentRoomLoading({ label = "Preparing your assessment…" }
     <main
       role="status"
       aria-live="polite"
-      className="fixed inset-0 z-[100] grid place-items-center bg-black text-cream/56"
+      className="practice-paper fixed inset-0 z-[100] grid place-items-center bg-black text-cream/56"
     >
       <span className="flex items-center gap-3 text-[15px]">
         <Loader2

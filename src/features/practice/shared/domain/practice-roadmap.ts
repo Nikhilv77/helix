@@ -1,4 +1,5 @@
 import { interviewRoadmapSessions } from "@/features/interviews/domain/interview-roadmap-sessions";
+import type { StoryDiscipline } from "@/features/practice/story-tracks/domain/story-disciplines";
 import type {
   InterviewSessionKind,
   PersonalizedInterviewPlan
@@ -92,9 +93,9 @@ export interface ArchitectureDesignPracticeEntry {
 }
 
 /** AI/ML uses the shared Practice card shell while its questions stay role-specific. */
-/** A story-practice track card for the AI/ML, frontend, or data discipline. */
+/** A story-practice track card for a story discipline (AI/ML, frontend, data, or backend). */
 export interface StoryPracticeEntry {
-  key: `${"ai-ml" | "frontend" | "data"}-${"core-technical" | "applied-engineering" | "architecture-design"}`;
+  key: `${StoryDiscipline}-${"core-technical" | "applied-engineering" | "architecture-design"}`;
   order: number;
   title: string;
   purpose: string;
@@ -109,7 +110,7 @@ export interface StoryPracticeEntry {
   completedQuestions: number;
   progressPercent: number;
   href:
-    | `/practice/${"ai-ml" | "frontend" | "data"}/${"core-technical" | "applied-engineering"}`
+    | `/practice/${StoryDiscipline}/${"core-technical" | "applied-engineering"}`
     | "/practice/architecture-design"
     | null;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Eraser, Highlighter, PenLine, Pencil, RotateCcw, Trash2, X } from "lucide-react";
+import { useTheme } from "@/lib/theme/theme-context";
 import {
   useCallback,
   useEffect,
@@ -26,6 +27,12 @@ const BRUSHES = {
 } as const;
 
 const COLORS = ["#f4eedf", "#f26e01", "#41d6a3", "#60a5fa", "#c084fc", "#fb7185"];
+/** Cream ink is written for graphite paper; light mode draws it as dark ink. */
+const LIGHT_PAPER_INK: Record<string, string> = { "#f4eedf": "#1f2937" };
+
+function inkFor(color: string, lightPaper: boolean): string {
+  return lightPaper ? (LIGHT_PAPER_INK[color] ?? color) : color;
+}
 
 type Brush = keyof typeof BRUSHES;
 type Tool = Brush | "eraser";
@@ -43,6 +50,7 @@ export function DsaNoteDrawingCanvas({
   maxStrokes?: number;
   maxPoints?: number;
 }) {
+  const lightPaper = useTheme().resolvedTheme === "light";
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState(COLORS[1]!);
   const [drawing, setDrawing] = useState<DsaNoteStroke | null>(null);
@@ -88,9 +96,15 @@ export function DsaNoteDrawingCanvas({
     if (!context) return;
     context.clearRect(0, 0, width, height);
     for (const stroke of drawing ? [...strokes, drawing] : strokes) {
-      paintStroke(context, stroke, width, height, ratio);
+      paintStroke(
+        context,
+        { ...stroke, color: inkFor(stroke.color, lightPaper) },
+        width,
+        height,
+        ratio
+      );
     }
-  }, [drawing, strokes]);
+  }, [drawing, lightPaper, strokes]);
 
   useEffect(() => {
     drawCanvas();
@@ -272,7 +286,7 @@ export function DsaNoteDrawingCanvas({
                 className={`h-3.5 w-3.5 rounded-full ${
                   color === option ? "ring-2 ring-white/60 ring-offset-2 ring-offset-[#111316]" : ""
                 }`}
-                style={{ backgroundColor: option }}
+                style={{ backgroundColor: inkFor(option, lightPaper) }}
               />
             </button>
           ))}

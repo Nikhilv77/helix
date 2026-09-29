@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { Atom, Clock3, CodeXml, Network, Wrench } from "lucide-react";
+import { Atom, Clock3, CodeXml, Network, Server, Wrench } from "lucide-react";
 import { LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
 import { DocumentTitle } from "@/components/document-title";
 import { PracticeWeeklyActivityChart } from "@/components/workspace/shared/practice-weekly-activity-chart";
@@ -80,6 +80,17 @@ export function PracticeSessionsView({
           >
             Your saved practice progress is temporarily unavailable. Your answers are safe; refresh
             to try again.
+          </p>
+        ) : null}
+        {/* With other tracks still listed, the empty-state message never shows, so a
+            failed roadmap (DSA) needs its own notice above the cards. */}
+        {generationFailed && displaySessions.length > 0 ? (
+          <p
+            role="alert"
+            className="mb-5 rounded-xl border border-orange-400/25 bg-orange-400/[0.06] px-4 py-3 text-sm text-cream/75"
+          >
+            We couldn’t prepare your practice path. Your saved progress is safe; refresh to try
+            again.
           </p>
         ) : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-4">
@@ -217,13 +228,16 @@ function PracticeSessionCard({
   dsaRecommendation?: DsaRecommendation | null;
   dsaBlockCompletedQuestions?: number;
 }) {
-  const SessionIcon = session.key.endsWith("core-technical")
-    ? Atom
-    : session.key.endsWith("applied-engineering")
-      ? Wrench
-      : session.key.endsWith("architecture-design")
-        ? Network
-        : CodeXml;
+  const SessionIcon =
+    session.key === "backend-core-technical"
+      ? Server
+      : session.key.endsWith("core-technical")
+        ? Atom
+        : session.key.endsWith("applied-engineering")
+          ? Wrench
+          : session.key.endsWith("architecture-design")
+            ? Network
+            : CodeXml;
   const href = session.href;
   const available = session.availability === "available" && Boolean(href);
   const availabilityLabel = "availabilityLabel" in session ? session.availabilityLabel : null;

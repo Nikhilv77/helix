@@ -52,7 +52,7 @@ export function ActivePeerHelpToast() {
   return (
     <aside
       aria-label={`Active Trailmate session with ${active.peer.label}`}
-      className="fixed bottom-4 left-3 right-3 z-[80] ml-auto max-w-[25rem] overflow-hidden rounded-2xl bg-[#18191c]/[0.98] shadow-[0_24px_80px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:bottom-5 sm:left-auto sm:right-5"
+      className="practice-paper fixed bottom-4 left-3 right-3 z-[80] ml-auto max-w-[25rem] overflow-hidden rounded-2xl bg-[#18191c]/[0.98] shadow-[0_24px_80px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:bottom-5 sm:left-auto sm:right-5"
     >
       <div className="h-0.5 bg-[var(--workspace-accent)]" />
       <div className="flex items-center gap-3 p-3.5">

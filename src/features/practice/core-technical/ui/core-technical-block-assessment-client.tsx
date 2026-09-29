@@ -463,6 +463,7 @@ export function CoreTechnicalBlockAssessmentClient({
       workspaceAccent={workspaceAccent}
       wide
       withinWorkspaceChrome={false}
+      className="practice-paper"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 pb-4">
         <header className="flex min-h-14 items-center justify-between gap-4 rounded-2xl border border-white/[0.075] bg-[#0d0f11] px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:px-5">
@@ -1770,7 +1771,7 @@ function AssessmentState({
   returnHref?: string;
 }) {
   return (
-    <main className="fixed inset-0 z-[100] grid place-items-center bg-black p-6 text-center">
+    <main className="practice-paper fixed inset-0 z-[100] grid place-items-center bg-black p-6 text-center">
       <div>
         <Loader2
           size={22}

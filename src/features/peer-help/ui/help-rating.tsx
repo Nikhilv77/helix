@@ -66,7 +66,7 @@ export function HelpRating({
       />
       <aside
         aria-live="polite"
-        className="fixed left-1/2 top-1/2 z-[100] w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.5rem] bg-[#18191c]/[0.99] shadow-[0_32px_110px_-28px_rgba(0,0,0,0.98)] backdrop-blur-xl"
+        className="practice-paper fixed left-1/2 top-1/2 z-[100] w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.5rem] bg-[#18191c]/[0.99] shadow-[0_32px_110px_-28px_rgba(0,0,0,0.98)] backdrop-blur-xl"
       >
         <div className="h-0.5 w-full bg-[var(--workspace-accent)]" />
         <div className="p-4 sm:p-[1.125rem]">

@@ -208,7 +208,7 @@ const profiles: Record<InterviewReportFamily, InterviewEvaluationProfile> = {
       parameter(
         "personal-ownership",
         "Personal ownership",
-        "Makes the candidate's own responsibility and contribution explicit.",
+        "Makes personal responsibility and contribution explicit.",
         "Separate what you personally did from what the team did.",
         20
       ),
@@ -229,7 +229,7 @@ const profiles: Record<InterviewReportFamily, InterviewEvaluationProfile> = {
       parameter(
         "impact-learning",
         "Impact & learning",
-        "Shows what changed and what the candidate learned afterward.",
+        "Shows what changed and what was learned afterward.",
         "Close with a measured result or a durable change in behavior.",
         20
       ),

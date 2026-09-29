@@ -19,7 +19,7 @@ export function ConnectionRecoveryToast({
         role="alert"
         aria-live="assertive"
         aria-labelledby="connection-recovery-title"
-        className="fixed left-1/2 top-1/2 z-[81] w-[min(27rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/[0.09] bg-[#151619]/[0.98] shadow-[0_32px_110px_-24px_rgba(0,0,0,0.95)] backdrop-blur-2xl"
+        className="practice-paper fixed left-1/2 top-1/2 z-[81] w-[min(27rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/[0.09] bg-[#151619]/[0.98] shadow-[0_32px_110px_-24px_rgba(0,0,0,0.95)] backdrop-blur-2xl"
       >
         <div className="h-0.5 w-full bg-[var(--workspace-accent)]" />
         <div className="p-5 text-center sm:p-6">
