@@ -3,6 +3,35 @@
 What changed, newest first. Each release lists what a deploy needs (migrations, files to commit,
 checks to run) under **Deploy notes**. Add an entry with every release.
 
+## Unreleased: workspace redesign
+
+- **Sidebar:** one column with a highlight that glides to the current page, the Trailgrad mark in
+  the header, quiet "Community" and "Account" headings, a profile row with settings, and a cleaner
+  collapsed rail. "Roastumé" is now "Resume Roast"; "My profile" is "Profile".
+- **Overview:** flat cards, sentence-case labels, consistent heading and body sizes, and lining
+  numerals app-wide (Raleway's old-style "0" no longer looks cut in half). The Overview shows its
+  own four-row skeleton; other routes show a simple spinner; no skeleton has a shadow.
+- **Profile, Manage, Trailmate:** flat cards and sentence-case labels; the profile header is one
+  card; Manage opens on your current teacher and its teacher glow and delete dialog follow your
+  accent; Trailmate's badge and leaderboard dialogs match the delete dialog; all-caps resume
+  names show in title case.
+- **Search, notifications, account menu:** borderless search, compact results, a cleaner unread
+  badge, and a leaner notifications panel with light-background teacher portraits in light mode.
+- **Fixes:** the first-assessment completion line is no longer cut off; the Overview tour no
+  longer shows "Voice unavailable" after a remount; the resume upload panel no longer flashes
+  twice; upload errors are readable in light mode.
+- **Docs:** `docs/10_DESIGN_SYSTEM.md` records the visual language and the pieces not to undo;
+  `AGENTS.md` and `CLAUDE.md` point AI coding agents to it.
+
+**Deploy notes**
+
+- No migrations.
+- New files to commit: `AGENTS.md`, `CLAUDE.md`, `docs/10_DESIGN_SYSTEM.md`,
+  `src/lib/shared/display-name.ts`, `src/lib/shared/display-name.test.ts`.
+- `.playwright-mcp/` is now git-ignored (local browser-check snapshots).
+- Spot checks after deploy: sidebar expanded and collapsed, the Overview in light and dark,
+  `/profile`, `/manage` (switch accents), `/trailmate` dialogs, and the delete-account dialog.
+
 ## Unreleased: Backend Fundamentals, light theme pass, report scoring
 
 - **Backend and full-stack learners get Backend Fundamentals**, a language-independent track on

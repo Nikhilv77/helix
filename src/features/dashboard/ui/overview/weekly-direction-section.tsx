@@ -29,21 +29,19 @@ function WeeklyRhythmCard({ rhythm }: { rhythm: DashboardWeeklyRhythm }) {
       className="grid min-h-[14rem] min-w-0 overflow-hidden rounded-[1.65rem] bg-[#17181b] md:grid-cols-[minmax(16rem,0.88fr)_minmax(24rem,1.12fr)]"
     >
       <div className="flex min-w-0 flex-col p-5">
-        <RowLabel icon={<CalendarDays size={18} strokeWidth={1.8} aria-hidden="true" />}>
+        <CardLabel icon={<CalendarDays size={16} strokeWidth={1.6} aria-hidden="true" />}>
           Weekly rhythm
-        </RowLabel>
+        </CardLabel>
 
-        <h2 className="mt-4 max-w-[28rem] text-[1.4rem] font-semibold leading-tight tracking-[-0.03em] text-cream">
+        <h2 className="mt-4 max-w-[28rem] text-[1.3rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
           {rhythm.title}
         </h2>
-        <p className="mt-1.5 max-w-[31rem] text-[13px] leading-[1.55] text-cream/52">
-          {rhythm.detail}
-        </p>
+        <p className="mt-2 max-w-[31rem] text-[14px] leading-6 text-cream/55">{rhythm.detail}</p>
 
-        <div className="mt-4 flex items-end gap-6">
-          <RhythmMetric label="Solved" value={unavailable ? "—" : String(rhythm.solved)} />
-          <RhythmMetric label="Attempts" value={unavailable ? "—" : String(rhythm.attempts)} />
-          <RhythmMetric label="Active days" value={unavailable ? "—" : `${rhythm.activeDays}/7`} />
+        <div className="mt-5 flex items-end gap-8">
+          <Metric label="Solved" value={unavailable ? "—" : String(rhythm.solved)} />
+          <Metric label="Attempts" value={unavailable ? "—" : String(rhythm.attempts)} />
+          <Metric label="Active days" value={unavailable ? "—" : `${rhythm.activeDays}/7`} />
         </div>
 
         <div className="mt-auto pt-4">
@@ -72,40 +70,34 @@ function NextFocusCard({ focus }: { focus: DashboardNextFocus }) {
       className="flex min-h-[14rem] min-w-0 flex-col rounded-[1.65rem] bg-[#17181b] p-5"
     >
       <div className="flex items-center justify-between gap-4">
-        <RowLabel icon={<Crosshair size={18} strokeWidth={1.8} aria-hidden="true" />}>
+        <CardLabel icon={<Crosshair size={16} strokeWidth={1.6} aria-hidden="true" />}>
           Next focus
-        </RowLabel>
-        <span className="text-right text-[9px] font-semibold uppercase tracking-[0.12em] text-cream/28">
-          {focus.sourceLabel}
-        </span>
+        </CardLabel>
+        <span className="text-right text-[12px] text-cream/40">{focus.sourceLabel}</span>
       </div>
 
-      <h2 className="mt-4 text-[1.4rem] font-semibold leading-tight tracking-[-0.03em] text-cream">
+      <h2 className="mt-4 text-[1.3rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
         {focus.title}
       </h2>
-      <p className="mt-2 text-[13px] leading-[1.55] text-cream/54">{focus.detail}</p>
+      <p className="mt-2 text-[14px] leading-6 text-cream/55">{focus.detail}</p>
 
       {focus.itemLabel ? (
         <div className="mt-4 flex items-end justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/28">
-              Next question
-            </p>
+            <p className="text-[12px] text-cream/42">Next question</p>
             <p className="mt-1 truncate text-[13.5px] font-semibold text-cream/76">
               {focus.itemLabel}
             </p>
           </div>
           {focus.supportingLabel ? (
-            <p className="shrink-0 text-[11px] font-medium text-cream/38">
-              {focus.supportingLabel}
-            </p>
+            <p className="shrink-0 text-[12px] text-cream/42">{focus.supportingLabel}</p>
           ) : null}
         </div>
       ) : null}
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-4 pt-5">
         {!focus.itemLabel && focus.supportingLabel ? (
-          <p className="text-[11px] font-medium text-cream/38">{focus.supportingLabel}</p>
+          <p className="text-[12px] text-cream/42">{focus.supportingLabel}</p>
         ) : null}
         <PrimaryAction href={focus.actionHref} label={focus.actionLabel} />
       </div>
@@ -113,24 +105,23 @@ function NextFocusCard({ focus }: { focus: DashboardNextFocus }) {
   );
 }
 
-function RowLabel({ children, icon }: { children: string; icon: ReactNode }) {
+function CardLabel({ children, icon }: { children: string; icon: ReactNode }) {
+  // A plain icon and a sentence-case name: no tile behind it, no caps.
   return (
-    <div className="flex items-center gap-3">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-cream/[0.055] text-cream/66">
-        {icon}
-      </span>
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.15em] text-cream/40">
-        {children}
-      </p>
+    <div className="flex items-center gap-2 text-cream/50">
+      {icon}
+      <p className="text-[13px] font-medium text-cream/55">{children}</p>
     </div>
   );
 }
 
-function RhythmMetric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-cream/26">{label}</p>
-      <p className="mt-1 font-mono text-[14px] font-semibold text-cream/72">{value}</p>
+    <div className="min-w-0">
+      <p className="text-[12px] text-cream/42">{label}</p>
+      <p className="mt-0.5 truncate text-[1.15rem] font-semibold tabular-nums tracking-[-0.01em] text-cream/85">
+        {value}
+      </p>
     </div>
   );
 }

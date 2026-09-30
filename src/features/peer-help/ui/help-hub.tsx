@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { displayName } from "@/lib/shared/display-name";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -222,30 +223,21 @@ function UserRecognition({
       <div className="relative grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-black shadow-[0_18px_50px_-24px_rgba(0,0,0,0.9)] sm:h-28 sm:w-28">
         <PeerAvatar participant={overview.viewer} className="h-full w-full rounded-full" />
       </div>
-      <p className="mt-4 text-base font-semibold tracking-[-0.01em] text-cream">
-        {overview.viewer.label}
+      <p className="mt-4 text-lg font-semibold tracking-[-0.01em] text-cream">
+        {displayName(overview.viewer.label)}
       </p>
-      <p className="mt-1 text-[12px] text-cream/42">
+      <p className="mt-1 text-[13px] text-cream/45">
         {overview.peopleHelped
           ? `Supported ${overview.peopleHelped} ${overview.peopleHelped === 1 ? "person" : "people"}`
           : "Ready to help"}
       </p>
-      {overview.onlineMates ? (
-        <p className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-cream/52">
-          <span
-            aria-hidden="true"
-            className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--workspace-accent)]"
-          />
-          {overview.onlineMates} {overview.onlineMates === 1 ? "mate" : "mates"} online now
-        </p>
-      ) : null}
       <button
         type="button"
         onClick={onBadgeClick}
         aria-haspopup="dialog"
         className="group mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.2] bg-black px-3.5 py-2 text-[12px] font-semibold text-cream/75 transition hover:border-white/35 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40"
       >
-        <Award size={14} className="text-[#efcf84]" aria-hidden="true" />
+        <Award size={14} strokeWidth={1.8} className="text-white/85" aria-hidden="true" />
         {badge.label}
         <ChevronRight
           size={13}
@@ -257,13 +249,66 @@ function UserRecognition({
   );
 }
 
+/**
+ * The Trailmate dialogs share the delete-account dialog's look: a clean white
+ * card (graphite in dark mode) over a soft dimmed backdrop, an outlined icon
+ * tile, a small accent label, a large title, and plain rows inside. No blur:
+ * blurring the whole page behind a dialog is costly on low-end devices.
+ */
+const MODAL_BACKDROP =
+  "fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center overflow-y-auto bg-[#10141c]/55 px-4 py-6 dark:bg-black/65";
+const MODAL_CARD =
+  "my-auto w-full rounded-[1.5rem] bg-white text-[#20232a] shadow-[0_30px_90px_-24px_rgba(8,12,20,0.4)] outline-none dark:bg-[#202124] dark:text-[#f4f1eb] dark:shadow-[0_32px_100px_-22px_rgba(0,0,0,0.8)]";
+const MODAL_MUTED = "text-[#667085] dark:text-[#b4b4ba]";
+
+function ModalHeader({
+  icon: Icon,
+  label,
+  title,
+  titleId,
+  closeLabel,
+  onClose
+}: {
+  icon: typeof Award;
+  label: string;
+  title: string;
+  titleId: string;
+  closeLabel: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#20232a]/[0.1] text-[#475569] dark:border-white/[0.1] dark:text-[#c2c2c7]">
+          <Icon size={18} strokeWidth={1.6} aria-hidden="true" />
+        </span>
+        <p className="mt-5 text-[13px] font-medium text-[var(--workspace-accent)]">{label}</p>
+        <h2
+          id={titleId}
+          className="mt-1 text-[1.55rem] font-semibold leading-tight tracking-[-0.035em]"
+        >
+          {title}
+        </h2>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={closeLabel}
+        className="-mr-1 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#667085] transition-colors hover:bg-[#f1f3f5] hover:text-[#20232a] dark:text-[#b4b4ba] dark:hover:bg-white/[0.07] dark:hover:text-white"
+      >
+        <X size={17} strokeWidth={1.6} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 function BadgeRankingToast({ overview, onClose }: { overview: HelpOverview; onClose: () => void }) {
   const current = helperBadge(overview.positiveHelps);
   if (typeof document === "undefined") return null;
 
   return createPortal(
     <div
-      className="trailmate-badge-backdrop fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center overflow-y-auto bg-black/[0.82] px-4 py-6"
+      className={MODAL_BACKDROP}
       onMouseDown={(event) => {
         if (event.currentTarget === event.target) onClose();
       }}
@@ -272,66 +317,48 @@ function BadgeRankingToast({ overview, onClose }: { overview: HelpOverview; onCl
         role="dialog"
         aria-modal="true"
         aria-labelledby="badge-ranking-title"
-        className="trailmate-badge-modal my-auto w-full max-w-md rounded-[1.5rem] bg-[rgba(20,21,24,0.94)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_30px_100px_rgba(0,0,0,0.85)] backdrop-blur-2xl sm:p-6"
+        className={`${MODAL_CARD} max-w-[27rem] p-6 sm:p-7`}
       >
-        <div className="flex items-start justify-between gap-5">
-          <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-full border border-[#efcf84]/25 bg-[#efcf84]/[0.07] text-[#efcf84]">
-              <Award size={19} aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/35">
-                Your badge
-              </p>
-              <h2 id="badge-ranking-title" className="mt-1 text-xl font-semibold text-cream">
-                {current.label}
-              </h2>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close badge ranking"
-            className="grid h-9 w-9 place-items-center rounded-full border border-white/[0.09] text-cream/45 transition hover:border-white/20 hover:text-cream"
-          >
-            <X size={15} aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={Award}
+          label="Your badge"
+          title={current.label}
+          titleId="badge-ranking-title"
+          closeLabel="Close badge ranking"
+          onClose={onClose}
+        />
+        <p className={`mt-3 text-[0.9rem] leading-[1.6] ${MODAL_MUTED}`}>{current.detail}</p>
 
-        <p className="mt-5 text-[13px] leading-5 text-cream/52">{current.detail}</p>
-
-        <ol className="mt-5 space-y-1.5">
+        <ol className="mt-6 space-y-1">
           {BADGE_LEVELS.map((level) => {
             const earned = overview.positiveHelps >= level.threshold;
             const active = level.label === current.label;
             return (
               <li
                 key={level.label}
-                className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 ${
-                  active
-                    ? "border-[#efcf84]/25 bg-[#efcf84]/[0.055]"
-                    : "border-white/[0.13] bg-black"
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${
+                  active ? "bg-[var(--workspace-accent-soft)]" : ""
                 }`}
               >
                 <span
-                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[11px] font-semibold ${
+                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-[12px] font-semibold tabular-nums ${
                     earned
-                      ? "border-cream/25 bg-cream text-black"
-                      : "border-white/[0.1] text-cream/35"
+                      ? "bg-[var(--workspace-accent)] text-white"
+                      : "border border-[#20232a]/[0.12] text-[#667085] dark:border-white/[0.12] dark:text-[#b4b4ba]"
                   }`}
                 >
-                  {earned ? <Check size={13} aria-hidden="true" /> : level.threshold}
+                  {earned ? (
+                    <Check size={13} strokeWidth={2.2} aria-hidden="true" />
+                  ) : (
+                    level.threshold
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p
-                    className={`text-[12.5px] font-semibold ${active ? "text-cream" : "text-cream/65"}`}
-                  >
-                    {level.label}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-cream/35">{level.description}</p>
+                  <p className="text-[14px] font-semibold">{level.label}</p>
+                  <p className={`mt-0.5 text-[12.5px] ${MODAL_MUTED}`}>{level.description}</p>
                 </div>
                 {active ? (
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#efcf84]">
+                  <span className="text-[12px] font-medium text-[var(--workspace-accent)]">
                     Current
                   </span>
                 ) : null}
@@ -341,7 +368,7 @@ function BadgeRankingToast({ overview, onClose }: { overview: HelpOverview; onCl
         </ol>
 
         {overview.availabilityCredits ? (
-          <p className="mt-4 border-t border-white/[0.07] pt-4 text-[11px] leading-5 text-cream/35">
+          <p className={`mt-5 text-[12.5px] leading-5 ${MODAL_MUTED}`}>
             You also have {overview.availabilityCredits} waiting credit
             {overview.availabilityCredits === 1 ? "" : "s"} for showing up when a learner did not
             join.
@@ -422,7 +449,7 @@ function TopHelpers({
             return (
               <article
                 key={`${helper.participant.label}-${index}`}
-                className="trailmate-ranking-card group rounded-[1.25rem] bg-[rgba(20,21,24,0.72)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(24,25,28,0.8)] sm:p-5"
+                className="trailmate-ranking-card group rounded-[1.25rem] bg-[#17181b] p-4 transition-colors hover:bg-[#1b1c20] sm:p-5"
               >
                 <div className="flex items-start gap-3.5">
                   <PeerAvatar
@@ -432,15 +459,15 @@ function TopHelpers({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-cream">
-                          {helper.participant.label}
+                        <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-cream">
+                          {displayName(helper.participant.label)}
                         </p>
-                        <p className="mt-1 line-clamp-2 min-h-8 text-[11.5px] leading-4 text-cream/38">
+                        <p className="mt-1 line-clamp-2 min-h-10 text-[13px] leading-5 text-cream/50">
                           {helper.participant.headline ??
                             "A dependable peer in the practice community."}
                         </p>
                       </div>
-                      <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full border border-white/[0.11] px-2 text-[10px] font-semibold text-cream/55">
+                      <span className="shrink-0 pt-0.5 text-[13px] font-semibold tabular-nums text-cream/40">
                         #{index + 1}
                       </span>
                     </div>
@@ -479,8 +506,10 @@ function HelperStat({
 }) {
   return (
     <div className={`text-center ${bordered ? "border-l border-white/[0.13]" : ""}`}>
-      <p className="text-[13px] font-semibold text-cream/78">{value}</p>
-      <p className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-cream/28">{label}</p>
+      <p className="text-[1.1rem] font-semibold tabular-nums tracking-[-0.01em] text-cream/85">
+        {value}
+      </p>
+      <p className="mt-0.5 text-[12px] text-cream/42">{label}</p>
     </div>
   );
 }
@@ -558,28 +587,22 @@ function RelationshipHistory({
 }
 
 function SectionHeading({
-  eyebrow,
   id,
   title,
   description
 }: {
-  eyebrow: string;
+  /** Kept for callers; no longer shown above the heading. */
+  eyebrow?: string;
   id: string;
   title: string;
   description: string;
 }) {
   return (
     <div className="max-w-2xl">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-cream/28">
-        {eyebrow}
-      </p>
-      <h2
-        id={id}
-        className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-cream sm:text-2xl"
-      >
+      <h2 id={id} className="text-2xl font-semibold tracking-[-0.02em] text-cream">
         {title}
       </h2>
-      <p className="mt-1.5 text-[12.5px] leading-5 text-cream/38">{description}</p>
+      <p className="mt-1.5 text-[14px] leading-6 text-cream/55">{description}</p>
     </div>
   );
 }
@@ -596,64 +619,63 @@ function HistoryCard({
   const participantLabel = item.participant?.label ?? "Trailgrad candidate";
   const relationship = side === "given" ? "You supported" : "Supported you";
   return (
-    <article className="trailmate-history-card rounded-[1.25rem] bg-[rgba(16,17,20,0.78)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(20,21,24,0.86)] sm:p-5">
+    <article className="trailmate-history-card rounded-[1.25rem] bg-[#17181b] p-4 transition-colors hover:bg-[#1b1c20] sm:p-5">
       <div className="flex items-start gap-4">
         <ParticipantAvatar item={item} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-cream">
-            {participantLabel}
+            {displayName(participantLabel)}
           </p>
           {item.participant?.headline ? (
-            <p className="mt-1 line-clamp-2 text-[11.5px] leading-4 text-cream/42">
+            <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-cream/50">
               {item.participant.headline}
             </p>
           ) : null}
         </div>
-        <span className="shrink-0 rounded-full border border-white/[0.17] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.11em] text-cream/48">
-          {relationship}
-        </span>
+        <span className="shrink-0 pt-0.5 text-[12px] text-cream/42">{relationship}</span>
       </div>
 
-      <div className="mt-5 rounded-xl border border-white/[0.13] bg-white/[0.018] p-3.5">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-cream/30">
-          Worked through
-        </p>
-        <div className="mt-2 flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="truncate text-[13.5px] font-semibold text-cream/82">
+      {/* The question, set off by a hairline like the stats row above, not a box. */}
+      <div className="mt-4 border-t border-white/[0.13] pt-4">
+        <p className="text-[12px] text-cream/42">Worked through</p>
+        <Link
+          href={item.question.href}
+          aria-label={`Open ${item.question.title}`}
+          className="group/question mt-1 flex items-center justify-between gap-4 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-cream/30"
+        >
+          <span className="min-w-0">
+            <span className="block truncate text-[15px] font-semibold text-cream/88">
               {item.question.title}
-            </p>
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[10.5px] text-cream/36">
+            </span>
+            <span className="mt-1 flex flex-wrap items-center gap-x-3 text-[12px] text-cream/42">
               <span>{item.question.topic}</span>
-              <span aria-hidden="true">·</span>
               <span>{item.language}</span>
-            </p>
-          </div>
-          <Link
-            href={item.question.href}
-            aria-label={`Open ${item.question.title}`}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.18] text-cream/48 transition hover:border-white/35 hover:text-cream"
-          >
-            <ArrowRight size={14} aria-hidden="true" />
-          </Link>
-        </div>
+            </span>
+          </span>
+          <ArrowRight
+            size={16}
+            strokeWidth={1.6}
+            aria-hidden="true"
+            className="shrink-0 text-cream/40 transition group-hover/question:translate-x-0.5 group-hover/question:text-cream"
+          />
+        </Link>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[10.5px] text-cream/38">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[12px] text-cream/42">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span className="inline-flex items-center gap-1.5 text-cream/52">
-            <Check size={11} aria-hidden="true" /> {STATUS_COPY[item.status]}
+            <Check size={12} aria-hidden="true" /> {STATUS_COPY[item.status]}
           </span>
           <span>{formatDate(item.resolvedAt ?? item.askedAt)}</span>
           {item.sessionDurationMs !== null ? (
             <span className="inline-flex items-center gap-1">
-              <Clock3 size={10} aria-hidden="true" /> {formatDuration(item.sessionDurationMs)}
+              <Clock3 size={12} aria-hidden="true" /> {formatDuration(item.sessionDurationMs)}
             </span>
           ) : null}
         </div>
         {item.learnerRating ? (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#efcf84]/[0.08] px-2 py-1 font-semibold text-[#efcf84]">
-            <Star size={10} fill="currentColor" aria-hidden="true" />
+            <Star size={11} fill="currentColor" aria-hidden="true" />
             {side === "given" ? `${item.learnerRating}/5` : "Thanked"}
           </span>
         ) : null}
@@ -715,13 +737,13 @@ function ViewAllTile({ total, onClick }: { total: number; onClick: () => void })
       type="button"
       onClick={onClick}
       aria-haspopup="dialog"
-      className="trailmate-ranking-card group flex min-h-[10.5rem] flex-col items-center justify-center rounded-[1.25rem] bg-[rgba(20,21,24,0.72)] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(24,25,28,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40 sm:p-5"
+      className="trailmate-ranking-card group flex min-h-[10.5rem] flex-col items-center justify-center rounded-[1.25rem] bg-[#17181b] p-4 text-center transition-colors hover:bg-[#1b1c20] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40 sm:p-5"
     >
       <span className="grid h-12 w-12 place-items-center rounded-full border border-white/[0.14] text-cream/60 transition group-hover:border-white/30 group-hover:text-cream">
         <UsersRound size={18} aria-hidden="true" />
       </span>
-      <span className="mt-4 text-sm font-semibold text-cream">View all Top Trailmates</span>
-      <span className="mt-1 inline-flex items-center gap-1 text-[11.5px] text-cream/40">
+      <span className="mt-4 text-[15px] font-semibold text-cream">View all Top Trailmates</span>
+      <span className="mt-1 inline-flex items-center gap-1 text-[13px] text-cream/45">
         See the top {Math.min(total, 100)}
         <ChevronRight
           size={13}
@@ -761,7 +783,7 @@ function LeaderboardModal({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <div
-      className="trailmate-badge-backdrop fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center overflow-y-auto bg-black/[0.82] px-4 py-6"
+      className={MODAL_BACKDROP}
       onMouseDown={(event) => {
         if (event.currentTarget === event.target) onClose();
       }}
@@ -772,38 +794,25 @@ function LeaderboardModal({ onClose }: { onClose: () => void }) {
         aria-labelledby="leaderboard-title"
         tabIndex={-1}
         ref={(node) => node?.focus({ preventScroll: true })}
-        className="trailmate-badge-modal my-auto flex outline-none max-h-[min(44rem,calc(100dvh-3rem))] w-full max-w-2xl flex-col rounded-[1.5rem] bg-[rgba(20,21,24,0.94)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_30px_100px_rgba(0,0,0,0.85)] backdrop-blur-2xl"
+        className={`${MODAL_CARD} flex max-h-[min(42rem,calc(100dvh-3rem))] max-w-xl flex-col`}
       >
-        <header className="flex shrink-0 items-start justify-between gap-5 border-b border-white/[0.08] p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-full border border-[#efcf84]/25 bg-[#efcf84]/[0.07] text-[#efcf84]">
-              <Award size={19} aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/35">
-                Community
-              </p>
-              <h2 id="leaderboard-title" className="mt-1 text-xl font-semibold text-cream">
-                Top Trailmates
-              </h2>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close Top Trailmates"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.09] text-cream/45 transition hover:border-white/20 hover:text-cream"
-          >
-            <X size={15} aria-hidden="true" />
-          </button>
-        </header>
-
-        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6">
-          <p className="text-[12.5px] leading-5 text-cream/45">
+        <div className="shrink-0 px-6 pt-6 sm:px-7 sm:pt-7">
+          <ModalHeader
+            icon={UsersRound}
+            label="Community"
+            title="Top Trailmates"
+            titleId="leaderboard-title"
+            closeLabel="Close Top Trailmates"
+            onClose={onClose}
+          />
+          <p className={`mt-3 text-[0.9rem] leading-[1.6] ${MODAL_MUTED}`}>
             Ranked by how often people thanked them, then by how many they helped.
           </p>
+        </div>
+
+        <div className="thin-scroll mt-4 min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4">
           {state.status === "ready" ? (
-            <ol className="mt-4 space-y-1.5">
+            <ol className="space-y-0.5">
               {state.helpers.map((helper, index) => (
                 <LeaderboardRow
                   key={`${helper.participant.label}-${index}`}
@@ -813,28 +822,25 @@ function LeaderboardModal({ onClose }: { onClose: () => void }) {
               ))}
             </ol>
           ) : state.status === "error" ? (
-            <div className="mt-6 rounded-xl border border-white/[0.13] bg-black px-5 py-8 text-center">
-              <p className="text-[13px] text-cream/60">The leaderboard didn’t load.</p>
+            <div className="px-3 py-10 text-center">
+              <p className={`text-[14px] ${MODAL_MUTED}`}>The leaderboard didn’t load.</p>
               <button
                 type="button"
                 onClick={() => setAttempt((current) => current + 1)}
-                className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.2] bg-black px-3.5 py-2 text-[12px] font-semibold text-cream/75 transition hover:border-white/35 hover:text-cream"
+                className="mt-4 inline-flex h-10 items-center rounded-xl px-4 text-sm font-medium text-[var(--workspace-accent)] transition-colors hover:bg-[var(--workspace-accent-soft)]"
               >
                 Try again
               </button>
             </div>
           ) : (
-            <ol aria-label="Loading Top Trailmates" className="mt-4 space-y-1.5">
+            <ol aria-label="Loading Top Trailmates" className="space-y-0.5">
               {Array.from({ length: 6 }, (_, index) => (
-                <li
-                  key={index}
-                  className="flex items-center gap-3 rounded-xl border border-white/[0.13] bg-black px-3.5 py-3"
-                >
-                  <span className="trailmate-preview-shape h-7 w-7 rounded-full bg-white/[0.07]" />
-                  <span className="trailmate-preview-shape h-9 w-9 rounded-full bg-white/[0.07]" />
-                  <span className="flex-1">
-                    <PreviewBar className="h-2.5 w-32" />
-                    <PreviewBar className="mt-2 h-2 w-48" />
+                <li key={index} className="flex items-center gap-3 px-3 py-2.5">
+                  <span className="skeleton h-4 w-5 !rounded" />
+                  <span className="skeleton h-9 w-9 !rounded-full" />
+                  <span className="flex-1 space-y-2">
+                    <span className="skeleton block h-2.5 w-32" />
+                    <span className="skeleton block h-2 w-48" />
                   </span>
                 </li>
               ))}
@@ -843,9 +849,9 @@ function LeaderboardModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {state.status === "ready" ? (
-          <footer className="shrink-0 border-t border-white/[0.08] px-5 py-3.5 text-[11px] text-cream/35 sm:px-6">
+          <p className={`shrink-0 px-6 pb-5 pt-3 text-[12.5px] sm:px-7 ${MODAL_MUTED}`}>
             Showing the top {state.helpers.length}
-          </footer>
+          </p>
         ) : null}
       </section>
     </div>,
@@ -859,31 +865,24 @@ function LeaderboardRow({ helper, rank }: { helper: TopPeerHelper; rank: number 
     : 0;
   const podium = rank <= 3;
   return (
-    <li
-      className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 ${
-        podium ? "border-[#efcf84]/25 bg-[#efcf84]/[0.055]" : "border-white/[0.13] bg-black"
-      }`}
-    >
+    <li className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f6f8] dark:hover:bg-white/[0.04]">
       <span
-        className={`grid h-7 min-w-7 shrink-0 place-items-center rounded-full border px-1.5 text-[11px] font-semibold tabular-nums ${
-          podium
-            ? "trailmate-podium-rank border-[#efcf84]/40 text-[#efcf84]"
-            : "border-white/[0.1] text-cream/45"
+        className={`w-6 shrink-0 text-center text-[13px] font-semibold tabular-nums ${
+          podium ? "text-[var(--workspace-accent)]" : MODAL_MUTED
         }`}
       >
         {rank}
       </span>
-      <PeerAvatar
-        participant={helper.participant}
-        className="h-9 w-9 rounded-full ring-1 ring-white/10"
-      />
+      <PeerAvatar participant={helper.participant} className="h-9 w-9 rounded-full" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold text-cream">{helper.participant.label}</p>
-        <p className="mt-0.5 hidden truncate text-[11px] text-cream/38 sm:block">
+        <p className="truncate text-[14px] font-semibold">
+          {displayName(helper.participant.label)}
+        </p>
+        <p className={`mt-0.5 hidden truncate text-[12.5px] sm:block ${MODAL_MUTED}`}>
           {helper.participant.headline ?? "A dependable peer in the practice community."}
         </p>
       </div>
-      <dl className="flex shrink-0 items-center gap-3 text-right sm:gap-4">
+      <dl className="flex shrink-0 items-center gap-4 text-right">
         <LeaderboardStat label="People" value={helper.helpedCount} />
         <LeaderboardStat label="Thanks" value={helper.thankedCount} />
         <LeaderboardStat label="Impact" value={`${impact}%`} className="hidden sm:block" />
@@ -902,9 +901,9 @@ function LeaderboardStat({
   className?: string;
 }) {
   return (
-    <div className={`min-w-9 sm:min-w-10 ${className}`}>
-      <dt className="text-[9px] uppercase tracking-[0.12em] text-cream/28">{label}</dt>
-      <dd className="mt-0.5 text-[13px] font-semibold tabular-nums text-cream/78">{value}</dd>
+    <div className={`min-w-10 ${className}`}>
+      <dt className={`text-[11.5px] ${MODAL_MUTED}`}>{label}</dt>
+      <dd className="mt-0.5 text-[14px] font-semibold tabular-nums">{value}</dd>
     </div>
   );
 }

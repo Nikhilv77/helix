@@ -176,8 +176,7 @@ export function ManageAccount({ profile }: { profile: ManageAccountProfile }) {
         </div>
 
         <div className="mt-8 flex w-full flex-col">
-          <p className="blueprint-label text-cream/48">Manage account</p>
-          <h1 className="mt-4 text-[clamp(2.45rem,7vw,5rem)] font-semibold leading-[0.98] tracking-tight text-cream">
+          <h1 className="text-[clamp(2.45rem,7vw,5rem)] font-semibold leading-[0.98] tracking-tight text-cream">
             So far, so good.
           </h1>
 
@@ -196,7 +195,6 @@ export function ManageAccount({ profile }: { profile: ManageAccountProfile }) {
                 icon={LogOut}
                 title="Log out"
                 description="End your current session on this device."
-                accent
                 action={
                   <SignOutButton redirectUrl="/">
                     <button
@@ -212,7 +210,6 @@ export function ManageAccount({ profile }: { profile: ManageAccountProfile }) {
                 icon={Trash2}
                 title="Delete account"
                 description="Permanently delete your account and all data."
-                destructive
                 action={
                   <button
                     type="button"
@@ -318,11 +315,16 @@ function ManageTeacherPicker({
 }) {
   const router = useRouter();
   const initialTeacher = selectableTeacherById(initialTeacherId) ?? MAYA;
+  // Open on the learner's current teacher; the default is only a fallback.
   const [index, setIndex] = useState(() => {
-    const initialIndex = SELECTABLE_TEACHERS.findIndex(
+    const currentIndex = SELECTABLE_TEACHERS.findIndex(
+      (persona) => persona.id === initialTeacher.id
+    );
+    if (currentIndex >= 0) return currentIndex;
+    const defaultIndex = SELECTABLE_TEACHERS.findIndex(
       (persona) => persona.id === DEFAULT_TEACHER_SELECTION_ID
     );
-    return initialIndex < 0 ? 0 : initialIndex;
+    return defaultIndex < 0 ? 0 : defaultIndex;
   });
   const [savedTeacherId, setSavedTeacherId] = useState(initialTeacher.id);
   const [saving, setSaving] = useState(false);
@@ -368,7 +370,7 @@ function ManageTeacherPicker({
             Choose who guides your everyday practice between interviews.
           </p>
         </div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/46">
+        <p className="text-[13px] text-cream/46">
           {savedTeacherId === focused.id ? `${focused.name} is with you` : "Previewing a change"}
         </p>
       </div>
@@ -386,7 +388,7 @@ function ManageTeacherPicker({
         <TeacherSidePreview persona={previous} onClick={() => move(-1)} />
 
         <div className="w-full max-w-[17rem] text-center sm:max-w-[19rem]">
-          <div className="manage-teacher-canvas relative mx-auto h-56 w-full overflow-hidden rounded-[1.35rem] bg-[#121316] shadow-[0_24px_60px_-42px_rgba(0,0,0,0.9)] sm:h-64">
+          <div className="manage-teacher-canvas relative mx-auto h-56 w-full overflow-hidden rounded-[1.35rem] sm:h-64">
             <div
               className="h-full w-full"
               role="img"
@@ -421,7 +423,7 @@ function ManageTeacherPicker({
             </button>
 
             {selected ? (
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--workspace-accent)] px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-[#111214]">
+              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--workspace-accent)] px-2.5 py-1 text-[0.75rem] font-semibold text-white">
                 <Check size={11} strokeWidth={2.6} /> Current
               </span>
             ) : null}
@@ -431,7 +433,7 @@ function ManageTeacherPicker({
             <h3 className="text-[1.55rem] font-semibold leading-none tracking-[-0.03em] text-cream">
               {focused.name}
             </h3>
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+            <p className="mt-2 text-[13px] font-medium text-[var(--workspace-accent)]">
               {focused.tagline}
             </p>
             <p className="mx-auto mt-3 min-h-12 max-w-sm text-sm leading-6 text-cream/54">
@@ -507,28 +509,19 @@ function AccountActionRow({
   icon: Icon,
   title,
   description,
-  action,
-  accent = false,
-  destructive = false
+  action
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
   action: ReactNode;
-  accent?: boolean;
-  destructive?: boolean;
 }) {
-  const tone = destructive
-    ? "border border-red-400/20 bg-red-400/[0.05] text-red-300"
-    : accent
-      ? "border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
-      : "border border-white/[0.1] bg-white/[0.05] text-cream/70";
-
+  // Same quiet tile as the notification rows: a rounded square outline, no fill.
   return (
     <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
       <div className="flex min-w-0 items-center gap-3">
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${tone}`}>
-          <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+        <span className="manage-icon-tile grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-cream/62">
+          <Icon size={17} strokeWidth={1.6} aria-hidden="true" />
         </span>
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-cream">{title}</h3>
@@ -557,8 +550,8 @@ function NotificationPreferenceRow({
 }) {
   return (
     <div className="flex items-center gap-4 py-4 first:pt-2 last:pb-1">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-cream/62">
-        <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+      <span className="manage-icon-tile grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-cream/62">
+        <Icon size={17} strokeWidth={1.6} aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-cream/88">{title}</span>
@@ -752,10 +745,10 @@ function DeleteAccountWarningModal({
           visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-[0.98] opacity-0"
         }`}
       >
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#fce9ed] text-[#ae3e57] dark:bg-[#f0528a]/10 dark:text-[#f18ca5]">
-          <Trash2 size={20} strokeWidth={1.8} aria-hidden="true" />
+        <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#20232a]/[0.1] text-[#475569] dark:border-white/[0.1] dark:text-[#c2c2c7]">
+          <Trash2 size={18} strokeWidth={1.6} aria-hidden="true" />
         </span>
-        <p className="mt-5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#ae3e57] dark:text-[#f18ca5]">
+        <p className="mt-5 text-[13px] font-medium text-[var(--workspace-accent)]">
           Permanent action
         </p>
         <h2
@@ -778,7 +771,7 @@ function DeleteAccountWarningModal({
             onClick={close}
             disabled={deleting}
             autoFocus
-            className="inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-medium text-[#566070] transition-colors hover:bg-[#f1f3f5] hover:text-[#20232a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ae3e57] disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#c2c2c7] dark:hover:bg-white/[0.07] dark:hover:text-white"
+            className="inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-medium text-[#566070] transition-colors hover:bg-[#f1f3f5] hover:text-[#20232a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#c2c2c7] dark:hover:bg-white/[0.07] dark:hover:text-white"
           >
             Cancel
           </button>
@@ -786,7 +779,7 @@ function DeleteAccountWarningModal({
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-[#ae3e57] px-5 text-sm font-semibold text-white transition-[background-color,transform] hover:bg-[#97324b] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ae3e57] disabled:cursor-wait disabled:opacity-60 dark:bg-[#e37a92] dark:text-[#241115] dark:hover:bg-[#f18ca5]"
+            className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-[var(--workspace-accent)] px-5 text-sm font-semibold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] disabled:cursor-wait disabled:opacity-60"
           >
             {deleting ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
             {deleting ? "Deleting…" : "Delete forever"}

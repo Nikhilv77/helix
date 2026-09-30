@@ -7,7 +7,6 @@ import {
   BadgeCheck,
   Bell,
   CheckCheck,
-  ChevronRight,
   Flame,
   FileCheck2,
   HandHelping,
@@ -21,6 +20,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { personaById, type InterviewerPersona } from "@/lib/avatars/personas";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import { useTheme } from "@/lib/theme/theme-context";
 import { ProfileAvatar } from "@/features/profile/ui/profile-avatar";
 import {
   useWorkspaceNotifications,
@@ -141,11 +141,18 @@ function NotificationSource({
   teacher: InterviewerPersona;
   sender: NotificationSender | null;
 }) {
+  const { resolvedTheme } = useTheme();
   const persona = presentation.personaId
     ? personaById(presentation.personaId)
     : presentation.teacher
       ? teacher
       : null;
+  // The standard portraits are shot on black; light mode uses the paper-
+  // background set so the avatar does not sit on a dark square.
+  const portrait =
+    persona && resolvedTheme === "light"
+      ? `/images/teacher-portraits/assessment-headsets/light/${persona.id}.jpg`
+      : persona?.portrait;
 
   if (persona) {
     return (
@@ -155,22 +162,28 @@ function NotificationSource({
             ? `${persona.name}, your teacher`
             : `${persona.name}, ${presentation.personaRole ?? "Resume Roast"}`
         }
-        className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[0.9rem] bg-[#202126] ring-1 ring-inset ring-white/[0.09]"
+        className="notification-source relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[#202126]"
       >
-        <Image src={persona.portrait} alt="" fill sizes="44px" className="object-cover" />
+        <Image
+          src={portrait ?? persona.portrait}
+          alt=""
+          fill
+          sizes="36px"
+          className="object-cover object-[center_22%]"
+        />
       </div>
     );
   }
 
   if (sender) {
     return (
-      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[0.9rem] bg-[#202126] ring-1 ring-inset ring-white/[0.09]">
+      <div className="notification-source relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[#202126]">
         {sender.profileImage ? (
           <Image
             src={sender.profileImage}
             alt={`${sender.label} profile`}
             fill
-            sizes="44px"
+            sizes="36px"
             className="object-cover"
           />
         ) : (
@@ -184,9 +197,9 @@ function NotificationSource({
   return (
     <span
       aria-hidden="true"
-      className="grid h-11 w-11 shrink-0 place-items-center rounded-[0.9rem] bg-cream/[0.055] text-cream/64 ring-1 ring-inset ring-white/[0.075]"
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cream/[0.06] text-cream/60"
     >
-      <Icon size={18} strokeWidth={1.65} />
+      <Icon size={16} strokeWidth={1.6} />
     </span>
   );
 }
@@ -272,8 +285,8 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
         {unread > 0 ? (
           <span
             aria-hidden="true"
-            className="absolute right-1.5 top-1 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold text-[#17181b]"
-            style={{ background: "var(--workspace-accent)" }}
+            key={unread}
+            className="workspace-notification-badge absolute right-1.5 top-1.5 grid h-[1.05rem] min-w-[1.05rem] place-items-center rounded-full px-1 text-[0.62rem] font-semibold leading-none text-white tabular-nums"
           >
             {unread > 9 ? "9+" : unread}
           </span>
@@ -288,150 +301,116 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Notifications"
-                className="workspace-notification-popover pointer-events-auto fixed inset-2 flex flex-col overflow-hidden rounded-[1.5rem] bg-[#151619]/[0.99] shadow-[0_36px_110px_-32px_rgba(0,0,0,0.98),0_12px_38px_-24px_rgba(0,0,0,0.9)] ring-1 ring-inset ring-white/[0.075] backdrop-blur-2xl md:inset-auto md:right-6 md:top-[4.75rem] md:h-[min(42rem,calc(100vh-6rem))] md:w-[32rem] md:rounded-[1.75rem] lg:w-[36rem]"
+                className="workspace-notification-popover notification-pop pointer-events-auto fixed inset-2 flex flex-col overflow-hidden rounded-[1.5rem] bg-[#151619] shadow-[0_28px_80px_-36px_rgba(0,0,0,0.95)] md:inset-auto md:right-6 md:top-[4.75rem] md:max-h-[min(36rem,calc(100vh-6rem))] md:w-[25rem]"
               >
-                <header className="relative flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.065] px-4 pb-4 pt-4 sm:gap-5 sm:px-6 sm:pb-5 sm:pt-6">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2.5">
-                      <h2 className="truncate text-[16px] font-semibold tracking-[-0.015em] text-cream sm:text-[17px]">
-                        Notifications
-                      </h2>
-                      {unread > 0 ? (
-                        <span className="rounded-full bg-cream/[0.065] px-2 py-0.5 text-[10px] font-semibold text-cream/60">
-                          {unread} new
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 truncate text-[11.5px] text-cream/42 sm:text-[12px]">
-                      Interview reports, coaching, resume feedback, and help activity
-                    </p>
+                <header className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-4">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h2 className="truncate text-[15px] font-semibold tracking-[-0.015em] text-cream">
+                      Notifications
+                    </h2>
+                    {unread > 0 ? (
+                      <span className="workspace-notification-count rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums">
+                        {unread} new
+                      </span>
+                    ) : null}
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  <div className="flex shrink-0 items-center gap-0.5">
                     {unread ? (
                       <button
                         type="button"
                         onClick={() => void markAllRead()}
                         aria-label="Mark all notifications as read"
-                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-cream/[0.045] px-2.5 text-[11.5px] font-medium text-cream/58 transition hover:bg-cream/[0.075] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/25 sm:px-3"
+                        title="Mark all as read"
+                        className="grid h-8 w-8 place-items-center rounded-lg text-cream/45 transition hover:bg-cream/[0.06] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/25"
                       >
-                        <CheckCheck size={14} aria-hidden="true" />
-                        <span className="hidden sm:inline">Mark all read</span>
+                        <CheckCheck size={16} strokeWidth={1.6} aria-hidden="true" />
                       </button>
                     ) : null}
                     <button
                       type="button"
                       onClick={() => setOpen(false)}
                       aria-label="Close notifications"
-                      className="grid h-9 w-9 place-items-center rounded-xl text-cream/42 transition hover:bg-cream/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/25"
+                      className="grid h-8 w-8 place-items-center rounded-lg text-cream/45 transition hover:bg-cream/[0.06] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/25"
                     >
-                      <X size={17} aria-hidden="true" />
+                      <X size={16} strokeWidth={1.6} aria-hidden="true" />
                     </button>
                   </div>
                 </header>
 
-                <div className="thin-scroll relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5 pt-4 [scrollbar-gutter:stable] sm:px-4 sm:pb-4 sm:pt-5">
+                <div className="thin-scroll relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2">
                   {items.length === 0 ? (
-                    <div className="grid min-h-64 place-items-center rounded-[1.4rem] bg-cream/[0.022] px-6 py-12 text-center">
-                      <div>
-                        <span aria-hidden="true" className="mx-auto block h-px w-10 bg-cream/20" />
-                        <p className="mt-5 text-[14px] font-semibold text-cream/70">
-                          You’re all caught up
-                        </p>
-                        <p className="mx-auto mt-1 max-w-xs text-[12.5px] leading-5 text-cream/38">
-                          New coaching notes and help activity will appear here.
-                        </p>
-                      </div>
+                    <div className="px-6 py-14 text-center">
+                      <p className="text-[14px] font-semibold text-cream/75">
+                        You’re all caught up
+                      </p>
+                      <p className="mx-auto mt-1 max-w-xs text-[12.5px] leading-5 text-cream/40">
+                        New coaching notes and help activity will appear here.
+                      </p>
                     </div>
                   ) : (
-                    <>
-                      <div className="flex items-center justify-between px-2 pb-3 sm:px-2 sm:pb-3.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/32">
-                          Recent
-                        </p>
-                        <p className="text-[10.5px] text-cream/28">
-                          {items.length} {items.length === 1 ? "update" : "updates"}
-                        </p>
-                      </div>
-
-                      <div className="overflow-hidden rounded-xl bg-cream/[0.018] ring-1 ring-inset ring-white/[0.05]">
-                        {items.map((item, index) => {
-                          const presentation = notificationPresentation(
-                            item.kind,
-                            teacher.name,
-                            item.title
-                          );
-                          const content = (
-                            <div className="relative flex min-w-0 items-start gap-3.5 px-4 py-4 sm:gap-4 sm:px-5 sm:py-[1.125rem]">
-                              {!item.read ? (
-                                <span className="absolute bottom-4 left-0 top-4 w-0.5 rounded-full bg-[var(--workspace-accent)]" />
-                              ) : null}
-                              <NotificationSource
-                                presentation={presentation}
-                                teacher={teacher}
-                                sender={item.sender}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-3 pt-0.5">
-                                  <p
-                                    className={`truncate text-[9.5px] font-semibold uppercase tracking-[0.145em] ${item.read ? "text-cream/34" : "text-cream/62"}`}
-                                  >
-                                    {presentation.label}
-                                  </p>
+                    <div className="space-y-0.5">
+                      {items.map((item) => {
+                        const presentation = notificationPresentation(
+                          item.kind,
+                          teacher.name,
+                          item.title
+                        );
+                        const content = (
+                          <div className="flex min-w-0 items-start gap-3 px-3 py-3">
+                            <NotificationSource
+                              presentation={presentation}
+                              teacher={teacher}
+                              sender={item.sender}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="truncate text-[11.5px] font-medium text-cream/45">
+                                  {presentation.label}
+                                </p>
+                                <span className="flex shrink-0 items-center gap-1.5">
                                   <time
                                     dateTime={new Date(item.createdAt).toISOString()}
-                                    className="shrink-0 text-[10.5px] tabular-nums text-cream/30"
+                                    className="text-[11px] tabular-nums text-cream/35"
                                   >
                                     {relativeTime(item.createdAt)}
                                   </time>
-                                </div>
-                                <div className="mt-1.5 flex items-start gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-[14px] font-semibold leading-5.5 tracking-[-0.01em] text-cream/92">
-                                      {item.title}
-                                    </p>
-                                    <p className="mt-1.5 text-[12.75px] leading-[1.6] text-cream/52">
-                                      {item.body}
-                                    </p>
-                                  </div>
-                                  {item.href ? (
-                                    <ChevronRight
-                                      size={16}
-                                      className="mt-0.5 shrink-0 text-cream/20 transition duration-200 group-hover:translate-x-0.5 group-hover:text-cream/55"
-                                      aria-hidden="true"
+                                  {!item.read ? (
+                                    <span
+                                      aria-label="Unread"
+                                      className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)]"
                                     />
                                   ) : null}
-                                </div>
+                                </span>
                               </div>
+                              <p
+                                className={`mt-0.5 text-[13.5px] font-semibold leading-5 tracking-[-0.01em] ${item.read ? "text-cream/75" : "text-cream"}`}
+                              >
+                                {item.title}
+                              </p>
+                              <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-[1.55] text-cream/48">
+                                {item.body}
+                              </p>
                             </div>
-                          );
+                          </div>
+                        );
 
-                          return item.href ? (
-                            <Link
-                              key={item.id}
-                              href={item.href}
-                              onClick={() => setOpen(false)}
-                              className={`group block outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cream/30 ${index > 0 ? "border-t border-white/[0.055]" : ""} ${
-                                item.read
-                                  ? "hover:bg-cream/[0.035]"
-                                  : "bg-cream/[0.04] hover:bg-cream/[0.06]"
-                              }`}
-                            >
-                              {content}
-                            </Link>
-                          ) : (
-                            <div
-                              key={item.id}
-                              className={`${index > 0 ? "border-t border-white/[0.055]" : ""} ${
-                                item.read ? "" : "bg-cream/[0.04]"
-                              }`}
-                            >
-                              {content}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
+                        return item.href ? (
+                          <Link
+                            key={item.id}
+                            href={item.href}
+                            onClick={() => setOpen(false)}
+                            className="workspace-notification-item group block rounded-xl outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cream/30"
+                          >
+                            {content}
+                          </Link>
+                        ) : (
+                          <div key={item.id} className="rounded-xl">
+                            {content}
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>

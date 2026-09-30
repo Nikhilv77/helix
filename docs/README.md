@@ -21,6 +21,7 @@ thin, and what should come next. Read them in order the first time.
 | 7 | [Operations](07_OPERATIONS.md) | Deploying, migrations, cron, logs to watch, incident notes |
 | 8 | [Known issues](08_KNOWN_ISSUES.md) | Bugs, limits, and technical debt, with severity |
 | 9 | [Future scope](09_FUTURE_SCOPE.md) | Product and engineering roadmap |
+| 10 | [Design system](10_DESIGN_SYSTEM.md) | The visual language, where each pattern lives, and the fragile pieces not to undo |
 
 ## Working documents
 

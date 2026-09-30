@@ -35,6 +35,12 @@ vi.mock("@/lib/avatars/teacher-context", () => ({
   })
 }));
 
+const theme = vi.hoisted(() => ({ resolved: "dark" as "light" | "dark" }));
+
+vi.mock("@/lib/theme/theme-context", () => ({
+  useTheme: () => ({ resolvedTheme: theme.resolved })
+}));
+
 vi.mock("./workspace-notification-polling", () => ({
   useWorkspaceNotifications: () => ({
     items: inbox.items,
@@ -84,6 +90,19 @@ describe("NotificationInbox", () => {
       "/images/teacher-portraits/james.jpg"
     );
     expect(source).not.toHaveAccessibleName("Claire, your teacher");
+  });
+
+  it("uses the light-background portrait in light mode", () => {
+    theme.resolved = "light";
+    render(<NotificationInbox />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Notifications, 1 unread" }));
+
+    expect(screen.getByLabelText("James, Resume Roast").querySelector("img")).toHaveAttribute(
+      "src",
+      "/images/teacher-portraits/assessment-headsets/light/james.jpg"
+    );
+    theme.resolved = "dark";
   });
 
   it("presents a completed interview as a report-ready notification", () => {

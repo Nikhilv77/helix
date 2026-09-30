@@ -50,7 +50,7 @@ export function DashboardSkeleton() {
           <div className="grid min-h-[14rem] overflow-hidden rounded-[1.65rem] bg-[#17181b] md:grid-cols-[minmax(16rem,0.88fr)_minmax(24rem,1.12fr)]">
             <div className="flex flex-col p-5">
               <div className="flex items-center gap-3">
-                <div className="skeleton h-9 w-9 !rounded-xl" />
+                <div className="skeleton h-4 w-4 !rounded" />
                 <Line className="w-24" />
               </div>
               <div className="skeleton mt-4 h-6 w-4/5" />
@@ -86,7 +86,7 @@ export function DashboardSkeleton() {
           <div className="flex min-h-[14rem] flex-col rounded-[1.65rem] bg-[#17181b] p-5">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="skeleton h-9 w-9 !rounded-xl" />
+                <div className="skeleton h-4 w-4 !rounded" />
                 <Line className="w-20" />
               </div>
               <Line className="w-24" />
@@ -121,7 +121,7 @@ export function DashboardSkeleton() {
             >
               <div className="flex flex-col p-5">
                 <div className="flex items-center gap-3">
-                  <div className="skeleton h-9 w-9 !rounded-xl" />
+                  <div className="skeleton h-4 w-4 !rounded" />
                   <Line className="w-20" />
                 </div>
                 <div className="skeleton mt-4 h-6 w-3/5" />
@@ -133,7 +133,7 @@ export function DashboardSkeleton() {
                   <div className="skeleton h-10 w-36 !rounded-xl" />
                 </div>
               </div>
-              <div className="m-2.5 mt-0 grid min-h-[11rem] place-items-center rounded-[1.3rem] bg-black/20 sm:ml-0 sm:mt-2.5">
+              <div className="grid min-h-[11rem] place-items-center px-5 pb-5 sm:pl-0 sm:pt-5">
                 {index === 0 ? (
                   <div className="w-44 space-y-3">
                     <Line className="w-24" />
@@ -168,7 +168,7 @@ export function DashboardSkeleton() {
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="skeleton h-8 w-8 !rounded-lg" />
+                  <div className="skeleton h-4 w-4 !rounded" />
                   <Line className="w-16" />
                 </div>
                 <Line className="w-20" />

@@ -27,3 +27,6 @@ scratch/
 # Local resume exports — contain real candidate CV data.
 resume-analysis-backup.json
 *.dump
+
+# Browser snapshots and logs from AI browser checks
+.playwright-mcp/

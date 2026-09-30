@@ -39,27 +39,27 @@ function ProgressSummaryCard({ progress }: { progress: DashboardProgressSummary 
       className="flex min-h-[13.25rem] min-w-0 flex-col rounded-[1.5rem] bg-[#17181b] p-5"
     >
       <div className="flex items-center justify-between gap-4">
-        <SummaryLabel icon={<Activity size={17} strokeWidth={1.8} aria-hidden="true" />}>
+        <CardLabel icon={<Activity size={16} strokeWidth={1.6} aria-hidden="true" />}>
           Progress
-        </SummaryLabel>
+        </CardLabel>
         <StatusPill>{status}</StatusPill>
       </div>
 
-      <h2 className="mt-4 text-[1.2rem] font-semibold leading-tight tracking-[-0.02em] text-cream">
+      <h2 className="mt-4 text-[1.3rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
         {progress.title}
       </h2>
-      <p className="mt-2 max-w-[29rem] text-[13.5px] leading-5 text-cream/54">{progress.detail}</p>
+      <p className="mt-2 max-w-[29rem] text-[14px] leading-6 text-cream/55">{progress.detail}</p>
 
       <div className="mt-auto pt-4">
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[11.5px] font-medium text-cream/46">Practice path</span>
-          <span className="font-mono text-[12.5px] font-semibold text-cream/68">
+          <span className="text-[12px] text-cream/45">Practice path</span>
+          <span className="text-[14px] font-semibold tabular-nums text-cream/80">
             {progress.state === "unavailable" ? "—" : `${progressPercent}%`}
           </span>
         </div>
         <div className="dashboard-progress-track mt-2 h-1.5 overflow-hidden rounded-full bg-cream/[0.06]">
           <span
-            className="block h-full rounded-full bg-cream/45"
+            className="block h-full rounded-full bg-[var(--workspace-accent)]"
             style={{ width: `${progress.state === "unavailable" ? 0 : progressPercent}%` }}
           />
         </div>
@@ -79,9 +79,9 @@ function ReportsSummaryCard({ reports }: { reports: DashboardReportsSummary }) {
       className="flex min-h-[13.25rem] min-w-0 flex-col rounded-[1.5rem] bg-[#17181b] p-5"
     >
       <div className="flex items-center justify-between gap-4">
-        <SummaryLabel icon={<FileText size={17} strokeWidth={1.8} aria-hidden="true" />}>
+        <CardLabel icon={<FileText size={16} strokeWidth={1.6} aria-hidden="true" />}>
           Reports
-        </SummaryLabel>
+        </CardLabel>
         <StatusPill>
           {reports.state === "available"
             ? "Report ready"
@@ -91,18 +91,18 @@ function ReportsSummaryCard({ reports }: { reports: DashboardReportsSummary }) {
         </StatusPill>
       </div>
 
-      <h2 className="mt-4 text-[1.2rem] font-semibold leading-tight tracking-[-0.02em] text-cream">
+      <h2 className="mt-4 text-[1.3rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
         {reports.title}
       </h2>
-      <p className="mt-2 text-[13.5px] leading-5 text-cream/54">{reports.detail}</p>
+      <p className="mt-2 text-[14px] leading-6 text-cream/55">{reports.detail}</p>
 
       <div className="mt-auto flex items-end justify-between gap-4 pt-4">
-        <div className="flex min-w-0 items-end gap-6">
-          <SummaryMetric
+        <div className="flex min-w-0 items-end gap-8">
+          <Metric
             label="Latest signal"
             value={reports.latestScore === null ? "Waiting" : `${reports.latestScore}%`}
           />
-          <SummaryMetric
+          <Metric
             label="Scored rounds"
             value={reports.completedRounds > 0 ? String(reports.completedRounds) : "None yet"}
           />
@@ -120,11 +120,11 @@ function TrailmateSummaryCard({ trailmate }: { trailmate: DashboardTrailmateSumm
       className="flex min-h-[13.25rem] min-w-0 flex-col rounded-[1.5rem] bg-[#17181b] p-5"
     >
       <div className="flex items-center justify-between gap-4">
-        <SummaryLabel icon={<HandHelping size={17} strokeWidth={1.8} aria-hidden="true" />}>
+        <CardLabel icon={<HandHelping size={16} strokeWidth={1.6} aria-hidden="true" />}>
           Trailmate
-        </SummaryLabel>
+        </CardLabel>
         {trailmate.state === "active" ? (
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[var(--workspace-accent)]">
+          <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--workspace-accent)]">
             <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
             Active
           </span>
@@ -139,20 +139,20 @@ function TrailmateSummaryCard({ trailmate }: { trailmate: DashboardTrailmateSumm
         )}
       </div>
 
-      <h2 className="mt-4 text-[1.2rem] font-semibold leading-tight tracking-[-0.02em] text-cream">
+      <h2 className="mt-4 text-[1.3rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
         {trailmate.title}
       </h2>
-      <p className="mt-2 text-[13.5px] leading-5 text-cream/54">{trailmate.detail}</p>
+      <p className="mt-2 text-[14px] leading-6 text-cream/55">{trailmate.detail}</p>
 
       <div className="mt-auto flex items-end justify-between gap-4 pt-4">
-        <div className="flex min-w-0 items-end gap-6">
+        <div className="flex min-w-0 items-end gap-8">
           {trailmate.peopleHelped > 0 || trailmate.helpReceived > 0 ? (
             <>
-              <SummaryMetric label="Helped" value={String(trailmate.peopleHelped)} />
-              <SummaryMetric label="Supported by" value={String(trailmate.helpReceived)} />
+              <Metric label="Helped" value={String(trailmate.peopleHelped)} />
+              <Metric label="Supported by" value={String(trailmate.helpReceived)} />
             </>
           ) : (
-            <SummaryMetric label="Peer support" value="Ready when you are" />
+            <Metric label="Peer support" value="Ready when you are" />
           )}
         </div>
         <SummaryAction href={trailmate.actionHref} label={trailmate.actionLabel} />
@@ -161,32 +161,27 @@ function TrailmateSummaryCard({ trailmate }: { trailmate: DashboardTrailmateSumm
   );
 }
 
-function SummaryLabel({ children, icon }: { children: string; icon: ReactNode }) {
+function CardLabel({ children, icon }: { children: string; icon: ReactNode }) {
+  // A plain icon and a sentence-case name: no tile behind it, no caps.
   return (
-    <div className="flex items-center gap-2.5">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-cream/[0.055] text-cream/58">
-        {icon}
-      </span>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cream/40">
-        {children}
-      </p>
+    <div className="flex items-center gap-2 text-cream/50">
+      {icon}
+      <p className="text-[13px] font-medium text-cream/55">{children}</p>
     </div>
   );
 }
 
 function StatusPill({ children }: { children: string }) {
-  return (
-    <span className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-cream/30">
-      {children}
-    </span>
-  );
+  return <span className="shrink-0 text-right text-[12px] text-cream/40">{children}</span>;
 }
 
-function SummaryMetric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-cream/28">{label}</p>
-      <p className="mt-1 truncate text-[12.5px] font-semibold text-cream/72">{value}</p>
+      <p className="text-[12px] text-cream/42">{label}</p>
+      <p className="mt-0.5 truncate text-[1.15rem] font-semibold tabular-nums tracking-[-0.01em] text-cream/85">
+        {value}
+      </p>
     </div>
   );
 }
@@ -200,7 +195,7 @@ function ActivityDots({ values, activeDays }: { values: number[]; activeDays: nu
       aria-label="Activity over the last seven days"
       className="flex min-w-0 items-center gap-2"
     >
-      <span className="shrink-0 text-[10.5px] font-medium text-cream/38">
+      <span className="shrink-0 text-[12px] text-cream/42">
         {activeDays > 0
           ? `${activeDays} active ${activeDays === 1 ? "day" : "days"}`
           : "No activity yet"}

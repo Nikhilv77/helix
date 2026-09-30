@@ -3,10 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLinkStatus } from "next/link";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { UpgradeCard, UpgradeRailButton } from "@/components/workspace/chrome/upgrade-card";
+import { TrailgradMark } from "@/components/trailgrad-mark";
 import { NotificationInbox } from "@/features/notifications/ui/notification-inbox";
 import { WorkspaceNotificationPollingProvider } from "@/features/notifications/ui/workspace-notification-polling";
 import {
@@ -53,7 +54,7 @@ const navGroups = [
       { label: "Home", href: "/", icon: House },
       { label: "Practice", href: "/practice", icon: Braces },
       { label: "Interviews", href: "/interviews", icon: Mic },
-      { label: "Roastumé", href: "/resume-roast", icon: Flame },
+      { label: "Resume Roast", href: "/resume-roast", icon: Flame },
       { label: "Progress", href: "/progress", icon: ChartNoAxesCombined },
       { label: "Reports", href: "/reports", icon: ClipboardList }
     ]
@@ -64,7 +65,7 @@ const navGroups = [
   },
   {
     label: "Account",
-    items: [{ label: "My profile", href: "/profile", icon: UserRound }]
+    items: [{ label: "Profile", href: "/profile", icon: UserRound }]
   }
 ];
 
@@ -304,6 +305,22 @@ export function WorkspaceShell({
   // Progress and Reports used to be hash links into other pages, matched here
   // against a `hash` state that no longer has anything to match — every row is
   // its own route now, so a plain path comparison is the whole rule.
+  // Where the gliding highlight sits: the current page's row, measured.
+  const navRef = useRef<HTMLElement>(null);
+  const [glide, setGlide] = useState<{ top: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const measure = () => {
+      const row = nav.querySelector<HTMLElement>('[data-nav-active="true"]');
+      setGlide(row ? { top: row.offsetTop, height: row.offsetHeight } : null);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [pathname, collapsed, menuOpen]);
+
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     if (href === "/practice") {
@@ -355,7 +372,7 @@ export function WorkspaceShell({
             // Rail + panel, the way dense product consoles are built: a narrow
             // always-visible icon column, and a wider labelled panel that is what
             // actually collapses.
-            "workspace-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(15rem,calc(100vw-1rem))] border-r border-white/[0.07] bg-[#111214] shadow-[18px_0_50px_-38px_rgba(0,0,0,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-3 md:left-3 md:rounded-2xl md:border",
+            "workspace-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(15rem,calc(100vw-1rem))] bg-[#111214] shadow-[18px_0_50px_-38px_rgba(0,0,0,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-3 md:left-3 md:rounded-2xl",
             menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
             collapsed ? "md:w-[5rem]" : "md:w-[15rem]"
           ].join(" ")}
@@ -365,26 +382,23 @@ export function WorkspaceShell({
             className={[
               // Expanded, the rail is the darker of two columns. Collapsed, it is
               // the whole sidebar, so it uses the panel surface consistently.
-              "workspace-icon-rail flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-l-2xl bg-[#0d0e10] py-3 text-cream shadow-[inset_-1px_0_0_rgba(241,234,216,0.07)] transition-colors duration-300",
-              collapsed ? "md:w-20 md:gap-2 md:rounded-2xl md:py-4" : ""
+              "workspace-icon-rail w-16 shrink-0 flex-col items-center gap-1.5 rounded-l-2xl bg-[#0d0e10] py-3 text-cream shadow-[inset_-1px_0_0_rgba(241,234,216,0.07)] transition-colors duration-300",
+              // Only the collapsed sidebar is a rail; expanded is one column.
+              collapsed
+                ? "workspace-icon-rail--collapsed hidden md:flex md:w-20 md:gap-2 md:rounded-2xl md:py-4"
+                : "hidden"
             ].join(" ")}
           >
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={[
-                "mb-2 hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-cream/62 outline-none transition-colors duration-300 ease-out hover:bg-white/[0.07] hover:text-cream focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] md:grid",
-                collapsed ? "md:h-12 md:w-12 md:rounded-xl" : ""
-              ].join(" ")}
+            {/* The mark on top, as in the expanded header. */}
+            <Link
+              href="/"
+              aria-label="Trailgrad home"
+              title="Home"
+              onClick={() => setMenuOpen(false)}
+              className="mb-4 grid h-12 w-12 shrink-0 place-items-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
             >
-              <PanelLeftClose
-                size={collapsed ? 23 : 21}
-                className={collapsed ? "rotate-180" : ""}
-                aria-hidden="true"
-              />
-            </button>
+              <TrailgradMark className="workspace-brand-mark h-7 w-7" sizes="28px" />
+            </Link>
 
             {navGroups
               .flatMap((group) => group.items)
@@ -400,52 +414,71 @@ export function WorkspaceShell({
                     aria-current={active ? "page" : undefined}
                     onClick={() => setMenuOpen(false)}
                     className={[
-                      "group relative grid h-10 w-10 shrink-0 place-items-center rounded-lg outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-[#F26E01]/45",
-                      collapsed ? "md:h-12 md:w-12" : "",
-                      active ? "bg-[#F26E01]/[0.1] text-cream" : "text-cream/58 hover:text-cream"
+                      "group relative grid h-11 w-11 shrink-0 place-items-center rounded-xl outline-none transition-[background,color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]",
+                      active
+                        ? "workspace-rail-active text-cream"
+                        : "text-cream/58 hover:bg-white/[0.06] hover:text-cream"
                     ].join(" ")}
                   >
-                    {active ? (
-                      <span
-                        aria-hidden="true"
-                        className="workspace-accent-dot absolute right-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
-                      />
-                    ) : null}
-                    <Icon
-                      size={collapsed ? 23 : 20}
-                      strokeWidth={active ? 2.1 : 1.7}
-                      aria-hidden="true"
-                    />
+                    <Icon size={20} strokeWidth={active ? 1.8 : 1.5} aria-hidden="true" />
                   </Link>
                 );
               })}
 
             <span className="flex-1" />
 
-            {/* Only when the panel is collapsed: expanded, the panel already
-              carries the full card and two of them would shout. */}
-            {collapsed ? <UpgradeRailButton onNavigate={() => setMenuOpen(false)} /> : null}
+            <UpgradeRailButton onNavigate={() => setMenuOpen(false)} />
 
             <Link
               href="/manage"
               aria-label="Settings"
               title="Settings"
-              className={[
-                "mt-1 hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-cream/58 outline-none transition-colors hover:bg-white/[0.06] hover:text-cream focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] md:grid",
-                collapsed ? "md:h-12 md:w-12 md:rounded-xl" : ""
-              ].join(" ")}
+              className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-xl text-cream/58 outline-none transition-[color,transform] duration-300 hover:rotate-45 hover:text-cream focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
             >
-              <Settings size={collapsed ? 22 : 20} strokeWidth={1.75} aria-hidden="true" />
+              <Settings size={19} strokeWidth={1.5} aria-hidden="true" />
             </Link>
+
+            {/* Expand sits at the foot of the collapsed rail, out of the way. */}
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+              className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-xl text-cream/50 outline-none transition-colors duration-200 hover:bg-white/[0.06] hover:text-cream focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+            >
+              <PanelLeftClose size={19} strokeWidth={1.5} className="rotate-180" aria-hidden="true" />
+            </button>
           </div>
 
           {/* Labelled panel — this is what collapses away. */}
           <div
             className={[
-              "workspace-nav-panel flex min-w-0 flex-1 flex-col overflow-x-hidden rounded-r-2xl bg-[#151619] px-3.5 pb-20 pt-3.5 md:py-3.5",
+              "workspace-nav-panel flex min-w-0 flex-1 flex-col overflow-x-hidden rounded-2xl bg-[#151619] px-3.5 pb-20 pt-3.5 md:py-3.5",
               collapsed ? "md:hidden" : ""
             ].join(" ")}
           >
+            <div className="hidden items-center justify-between gap-2 px-1.5 pt-1 md:flex">
+              <Link
+                href="/"
+                aria-label="Trailgrad home"
+                className="flex min-w-0 items-center gap-1.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+              >
+                <TrailgradMark className="workspace-brand-mark h-7 w-7 shrink-0" sizes="28px" />
+                <span className="truncate text-[1.05rem] font-semibold tracking-[-0.02em] text-cream">
+                  Trailgrad
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/50 outline-none transition-colors duration-200 hover:bg-white/[0.07] hover:text-cream focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+              >
+                <PanelLeftClose size={19} strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            </div>
+
             <div className="flex justify-end md:hidden">
               <button
                 type="button"
@@ -458,17 +491,34 @@ export function WorkspaceShell({
             </div>
 
             <nav
+              ref={navRef}
               aria-label="Trail navigation"
-              className="thin-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden md:mt-4"
+              className="thin-scroll relative min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden md:mt-7"
             >
-              {navGroups.map((group) => {
+              {/* One highlight that glides to the current page instead of each
+                  row lighting up on its own. */}
+              <span
+                aria-hidden="true"
+                className="workspace-nav-glide"
+                data-ready={glide ? "true" : "false"}
+                style={
+                  glide
+                    ? { transform: `translateY(${glide.top}px)`, height: glide.height }
+                    : undefined
+                }
+              />
+              {navGroups.map((group, groupIndex) => {
                 return (
-                  <div key={group.label}>
-                    <p className="px-2 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-cream/48">
-                      {group.label}
-                    </p>
-
-                    <div className="mt-1 space-y-0.5">
+                  // The main pages are one unlabelled list; each later group
+                  // gets a small, quiet sentence-case heading, the way most
+                  // product sidebars mark sections without shouting.
+                  <div key={group.label} role="group" aria-label={group.label}>
+                    {groupIndex > 0 ? (
+                      <p className="workspace-nav-heading px-3 pb-1.5 pt-5 text-[12px] font-medium text-cream/40">
+                        {group.label}
+                      </p>
+                    ) : null}
+                    <div className="space-y-0.5">
                       {group.items.map((item) => {
                         const Icon = item.icon;
                         const active = isActive(item.href);
@@ -478,26 +528,19 @@ export function WorkspaceShell({
                             key={item.href}
                             href={item.href}
                             aria-current={active ? "page" : undefined}
+                            data-nav-active={active ? "true" : undefined}
                             // Hash links keep the same pathname, so the route
                             // effect never fires and the drawer would stay open.
                             onClick={() => setMenuOpen(false)}
                             className={[
-                              "group relative flex h-11 items-center gap-3 rounded-lg px-3 text-[0.95rem] font-medium outline-none transition-colors duration-200 ease-out hover:bg-white/[0.07]",
-                              active
-                                ? "bg-[#F26E01]/[0.1] text-cream"
-                                : "text-cream/62 hover:text-cream focus-visible:ring-2 focus-visible:ring-[#F26E01]/40"
+                              "workspace-nav-link group relative z-10 flex h-11 items-center gap-3 rounded-lg px-3 text-[0.95rem] font-medium outline-none transition-colors duration-200 ease-out focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]",
+                              active ? "text-cream" : "text-cream/62 hover:bg-white/[0.05] hover:text-cream"
                             ].join(" ")}
                           >
-                            {active ? (
-                              <span
-                                aria-hidden="true"
-                                className="workspace-accent-indicator absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full"
-                              />
-                            ) : null}
                             <NavPending />
                             <Icon
                               size={18}
-                              strokeWidth={active ? 2.1 : 1.7}
+                              strokeWidth={active ? 1.8 : 1.5}
                               className="shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
                               aria-hidden="true"
                             />
@@ -513,23 +556,34 @@ export function WorkspaceShell({
 
             <UpgradeCard onNavigate={() => setMenuOpen(false)} />
 
-            <div className="workspace-profile-summary mt-3 hidden shrink-0 items-center rounded-xl bg-black/15 px-3 py-3 md:flex">
+            {/* You, and your settings, in one quiet row. */}
+            <div className="workspace-profile-row mt-3 hidden shrink-0 items-center gap-1 md:flex">
               <Link
                 href="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="group -mx-3 -my-3 block min-w-0 rounded-xl px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+                className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 outline-none transition-colors hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
               >
-                <span className="block truncate text-[0.92rem] font-medium text-cream/88 transition-colors group-hover:text-cream">
-                  {userName || "Your account"}
+                <PlainAvatar profileImage={profileImage} name={userName} size="compact" />
+                <span className="min-w-0">
+                  <span className="block truncate text-[0.9rem] font-medium text-cream/88 transition-colors group-hover:text-cream">
+                    {userName || "Your account"}
+                  </span>
+                  <span className="block truncate text-[0.78rem] text-cream/48">View profile</span>
                 </span>
-                <span className="mt-0.5 block truncate text-[0.8rem] text-cream/48 transition-colors group-hover:text-cream/65">
-                  Profile
-                </span>
+              </Link>
+              <Link
+                href="/manage"
+                aria-label="Settings"
+                title="Settings"
+                onClick={() => setMenuOpen(false)}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/50 outline-none transition-[color,transform] duration-300 hover:rotate-45 hover:text-cream focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+              >
+                <Settings size={18} strokeWidth={1.5} aria-hidden="true" />
               </Link>
             </div>
           </div>
 
-          <div className="workspace-mobile-bottom absolute inset-x-0 bottom-0 flex h-16 items-center gap-2 border-t border-white/[0.07] bg-[#151619] px-3 md:hidden">
+          <div className="workspace-mobile-bottom absolute inset-x-0 bottom-0 flex h-16 items-center gap-2 bg-[#151619] px-3 md:hidden">
             <AvatarMenu
               profileImage={profileImage}
               name={userName}
@@ -554,7 +608,8 @@ export function WorkspaceShell({
           aria-hidden="true"
           className={[
             "workspace-accent-rail pointer-events-none fixed top-[5%] z-40 hidden h-[90vh] w-[2px] rounded-full transition-[left,opacity] duration-300 md:block",
-            collapsed ? "left-[5.5rem] opacity-90" : "left-[15.75rem] opacity-100"
+            // The accent edge belongs to the expanded sidebar; collapsed, it fades out.
+            collapsed ? "left-[5.5rem] opacity-0" : "left-[15.75rem] opacity-100"
           ].join(" ")}
         />
 
@@ -656,45 +711,29 @@ function AvatarMenu({
       {open ? (
         <div
           className={[
-            "account-menu-pop workspace-account-menu absolute z-[60] w-44 overflow-hidden rounded-lg border border-white/[0.14] bg-[#1b1d20] p-1.5 text-cream shadow-[0_24px_58px_-30px_rgba(0,0,0,0.96)]",
+            "account-menu-pop workspace-account-menu absolute z-[60] w-52 overflow-hidden rounded-xl bg-[#1b1d20] p-1.5 text-cream shadow-[0_20px_50px_-24px_rgba(0,0,0,0.95)]",
             placement === "sidebar"
               ? "bottom-[calc(100%+0.6rem)] left-0"
               : "right-0 top-[calc(100%+0.6rem)]"
           ].join(" ")}
         >
-          <Link
-            href="/profile"
-            onClick={() => setOpen(false)}
-            className="group flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[0.9rem] font-medium text-cream/86 outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-cream/[0.09] hover:text-cream focus-visible:bg-cream/[0.09]"
-          >
-            <UserRound size={16} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
+          <Link href="/profile" onClick={() => setOpen(false)} className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[0.875rem] font-medium text-cream/80 outline-none transition-colors duration-200 hover:bg-cream/[0.07] hover:text-cream focus-visible:bg-cream/[0.07]">
+            <UserRound size={16} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
             Profile
           </Link>
-          <Link
-            href="/manage"
-            onClick={() => setOpen(false)}
-            className="group flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[0.9rem] font-medium text-cream/86 outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-cream/[0.09] hover:text-cream focus-visible:bg-cream/[0.09]"
-          >
+          <Link href="/manage" onClick={() => setOpen(false)} className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[0.875rem] font-medium text-cream/80 outline-none transition-colors duration-200 hover:bg-cream/[0.07] hover:text-cream focus-visible:bg-cream/[0.07]">
             <Settings
               size={16}
-              strokeWidth={1.8}
-              className="shrink-0 transition-transform duration-200 ease-out group-hover:rotate-[-8deg]"
+              strokeWidth={1.5}
+              className="shrink-0 transition-transform duration-300 group-hover:rotate-45"
               aria-hidden="true"
             />
             Manage
           </Link>
           <SignOutButton redirectUrl="/">
-            <button
-              type="button"
-              className="group flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-[0.9rem] font-medium text-cream/86 outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-cream/[0.09] hover:text-cream focus-visible:bg-cream/[0.09]"
-            >
-              <LogOut
-                size={16}
-                strokeWidth={1.8}
-                className="shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
-                aria-hidden="true"
-              />
-              Logout
+            <button type="button" className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[0.875rem] font-medium text-cream/80 outline-none transition-colors duration-200 hover:bg-cream/[0.07] hover:text-cream focus-visible:bg-cream/[0.07]">
+              <LogOut size={16} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
+              Log out
             </button>
           </SignOutButton>
         </div>
@@ -710,18 +749,19 @@ function PlainAvatar({
 }: {
   profileImage?: string | null;
   name: string;
-  size: "small" | "large";
+  size: "compact" | "small" | "large";
 }) {
-  const dimension = size === "large" ? "h-11 w-11" : "h-10 w-10";
+  const dimension = size === "large" ? "h-11 w-11" : size === "compact" ? "h-8 w-8" : "h-10 w-10";
+  const pixels = size === "large" ? 44 : size === "compact" ? 32 : 40;
 
   if (profileImage) {
     return (
       <Image
         src={profileImage}
         alt={name ? `${name} avatar` : "Account avatar"}
-        width={size === "large" ? 44 : 40}
-        height={size === "large" ? 44 : 40}
-        sizes={size === "large" ? "44px" : "40px"}
+        width={pixels}
+        height={pixels}
+        sizes={`${pixels}px`}
         quality={72}
         className={`${dimension} rounded-full object-cover`}
       />

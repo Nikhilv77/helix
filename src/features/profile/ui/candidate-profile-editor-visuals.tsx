@@ -220,9 +220,7 @@ export function SignatureStoryCard({ story }: { story?: CandidateStory }) {
           <p className="max-w-5xl text-base leading-7 text-cream/82 sm:text-[17px] sm:leading-8">
             {story.outcome || story.situation}
           </p>
-          <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/42">
-            {story.title}
-          </p>
+          <p className="mt-2 text-[13px] text-cream/42">{story.title}</p>
         </div>
       </div>
     </section>

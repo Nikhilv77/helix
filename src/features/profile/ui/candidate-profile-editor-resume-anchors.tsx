@@ -88,20 +88,17 @@ export function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["res
 
   return (
     <section
-      className="profile-soft-reveal mt-14 w-full max-w-6xl text-left"
+      className="profile-soft-reveal mt-14 w-full text-left"
       style={{ "--profile-reveal-delay": "520ms" } as CSSProperties}
     >
       <div className="flex flex-col items-center text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cream/38">
-          Interview evidence
-        </p>
-        <h2 className="mt-2 text-2xl font-medium tracking-tight text-cream">Resume anchors</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-cream/58 sm:text-[15px]">
+        <h2 className="text-2xl font-semibold tracking-tight text-cream">Resume anchors</h2>
+        <p className="mt-2 max-w-2xl text-[15px] leading-6 text-cream/55">
           Your teacher found the parts of your resume that can become interview questions.
         </p>
       </div>
 
-      <div className="mx-auto mt-6 grid w-full grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-x-7 gap-y-2">
         {summaryCards.map((card, index) => (
           <ResumeSummaryTile
             key={card.label}
@@ -137,16 +134,15 @@ function ResumeSummaryTile({
   index: number;
 }) {
   return (
-    <article
-      className="profile-glass profile-soft-reveal flex items-center gap-3 rounded-xl px-4 py-4 text-left"
+    // One quiet inline count per group, not a box each.
+    <p
+      className="profile-soft-reveal flex items-center gap-2 text-[14px] text-cream/55"
       style={{ "--profile-reveal-delay": `${570 + index * 35}ms` } as CSSProperties}
     >
-      <Icon size={23} strokeWidth={1.55} className="shrink-0 text-[var(--workspace-accent)]" />
-      <div className="min-w-0">
-        <h3 className="text-sm font-medium leading-none text-cream sm:text-base">{label}</h3>
-        <p className="mt-2 text-xs text-cream/48 sm:text-[13px]">{count}</p>
-      </div>
-    </article>
+      <Icon size={16} strokeWidth={1.5} className="shrink-0 text-[var(--workspace-accent)]" />
+      <span className="sr-only">{label}: </span>
+      <span className="tabular-nums">{count}</span>
+    </p>
   );
 }
 
@@ -159,9 +155,7 @@ function ResumeAnchorGroup({ title, cards }: { title: string; cards: ProfileResu
       className="profile-soft-reveal relative"
       style={{ "--profile-reveal-delay": `${groupDelay}ms` } as CSSProperties}
     >
-      <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream/42">
-        {title}
-      </h3>
+      <h3 className="mb-3 text-[15px] font-semibold text-cream/80">{title}</h3>
 
       <div className="grid gap-3">
         {cards.map((card, index) => (
@@ -184,9 +178,7 @@ function ResumeWorkTimeline({ cards }: { cards: ProfileResumeAnchor[] }) {
       className="profile-soft-reveal"
       style={{ "--profile-reveal-delay": "660ms" } as CSSProperties}
     >
-      <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream/42">
-        Work experience
-      </h3>
+      <h3 className="mb-3 text-[15px] font-semibold text-cream/80">Work experience</h3>
       <div className="grid gap-3 lg:grid-cols-2">
         {cards.map((card, index) => (
           <ProfileResumeAnchorCard key={card.id} card={card} index={index} groupDelay={660} />
@@ -209,7 +201,7 @@ function ProfileResumeAnchorCard({
 
   return (
     <article
-      className="profile-glass profile-soft-reveal relative flex flex-col overflow-hidden rounded-2xl p-5 text-left transition-colors hover:bg-white/[0.035]"
+      className="profile-glass profile-soft-reveal relative flex flex-col overflow-hidden rounded-2xl p-5 text-left"
       style={
         {
           "--profile-reveal-delay": `${groupDelay + 45 + Math.min(index, 4) * 30}ms`
@@ -217,25 +209,23 @@ function ProfileResumeAnchorCard({
       }
     >
       <div className="flex items-start justify-between gap-4">
-        <Icon size={25} strokeWidth={1.6} className="shrink-0 text-[var(--workspace-accent)]" />
-        <span className="rounded-full border border-white/[0.1] px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-cream/52">
-          {card.badge}
-        </span>
+        <Icon size={20} strokeWidth={1.5} className="shrink-0 text-[var(--workspace-accent)]" />
+        <span className="text-[12px] tabular-nums text-cream/42">{card.badge}</span>
       </div>
 
-      <div className="mt-5">
-        <h3 className="text-lg font-medium leading-tight text-cream sm:text-xl">{card.title}</h3>
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold leading-tight tracking-[-0.01em] text-cream">
+          {card.title}
+        </h3>
         {card.meta ? (
-          <p className="mt-2.5 text-sm font-medium leading-6 text-cream/68">{card.meta}</p>
+          <p className="mt-1.5 text-[14px] leading-6 text-cream/55">{card.meta}</p>
         ) : null}
       </div>
 
-      {card.body ? (
-        <p className="mt-4 text-sm leading-6 text-cream/62 sm:text-[15px]">{card.body}</p>
-      ) : null}
+      {card.body ? <p className="mt-3 text-[14px] leading-6 text-cream/62">{card.body}</p> : null}
 
       {card.bullets?.length ? (
-        <ul className="mt-4 space-y-2.5 text-sm leading-6 text-cream/58">
+        <ul className="mt-3 space-y-2 text-[14px] leading-6 text-cream/58">
           {card.bullets.map((bullet) => (
             <li key={bullet} className="grid grid-cols-[0.375rem_minmax(0,1fr)] gap-2.5">
               <span className="mt-[0.68em] h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] opacity-80" />
@@ -250,7 +240,7 @@ function ProfileResumeAnchorCard({
           {card.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1 text-xs font-medium text-cream/58"
+              className="profile-tag rounded-full bg-cream/[0.06] px-2.5 py-1 text-[12px] font-medium text-cream/60"
             >
               {tag}
             </span>

@@ -164,7 +164,7 @@ export function WorkspaceSearch({ mobile = false }: { mobile?: boolean }) {
             results[activeIndex] ? `${resultsId}-${results[activeIndex].id}` : undefined
           }
           className={[
-            "workspace-search-input w-full border border-white/[0.12] bg-[#17181b] pl-9 pr-3 text-cream outline-none placeholder:text-cream/38 transition hover:border-white/[0.18] hover:bg-[#1b1c20] focus:border-white/[0.12] focus:bg-[#17181b] focus:outline-none focus-visible:outline-none focus-visible:ring-0",
+            "workspace-search-input w-full border-0 bg-white/[0.06] pl-9 pr-3 text-cream outline-none placeholder:text-cream/38 transition-[background-color,box-shadow] duration-200 hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus-visible:outline-none",
             mobile ? "h-9 rounded-lg text-[0.8rem]" : "h-10 rounded-xl text-[0.84rem]"
           ].join(" ")}
         />
@@ -176,8 +176,8 @@ export function WorkspaceSearch({ mobile = false }: { mobile?: boolean }) {
           role="listbox"
           aria-label="Workspace search results"
           className={[
-            "workspace-search-results thin-scroll absolute top-[calc(100%+0.55rem)] z-50 max-h-[min(31rem,calc(100vh-5rem))] overflow-y-auto rounded-2xl border border-white/[0.1] bg-[#17181b] p-2 shadow-[0_28px_72px_-34px_rgba(0,0,0,0.98)]",
-            mobile ? "left-0 w-[min(22rem,calc(100vw-4.5rem))]" : "left-0 w-[26rem]"
+            "workspace-search-results thin-scroll absolute top-[calc(100%+0.5rem)] z-50 max-h-[min(28rem,calc(100vh-5rem))] overflow-y-auto rounded-2xl bg-[#17181b] p-1.5 shadow-[0_24px_60px_-28px_rgba(0,0,0,0.95)]",
+            mobile ? "left-0 w-[min(22rem,calc(100vw-4.5rem))]" : "left-0 w-[24rem]"
           ].join(" ")}
         >
           {loading && results.length === 0 ? (
@@ -196,7 +196,7 @@ export function WorkspaceSearch({ mobile = false }: { mobile?: boolean }) {
 
               return (
                 <section key={group} aria-label={group} className="mb-1 last:mb-0">
-                  <p className="px-3 pb-1 pt-2 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-cream/30">
+                  <p className="px-2.5 pb-1 pt-2 text-[0.72rem] font-medium text-cream/38">
                     {group}
                   </p>
                   {groupResults.map((result) => {
@@ -216,25 +216,28 @@ export function WorkspaceSearch({ mobile = false }: { mobile?: boolean }) {
                           chooseResult(result);
                         }}
                         className={[
-                          "group flex items-start gap-3 rounded-xl px-3 py-2.5 outline-none transition",
-                          active ? "bg-white/[0.07]" : "hover:bg-white/[0.045]"
+                          "workspace-search-option group flex items-center gap-2.5 rounded-lg px-2.5 py-2 outline-none transition-colors",
+                          active ? "workspace-search-option--active" : ""
                         ].join(" ")}
                       >
-                        <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/[0.045] text-cream/52 transition group-hover:text-cream/75">
-                          <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
-                        </span>
+                        <Icon
+                          size={15}
+                          strokeWidth={1.6}
+                          aria-hidden="true"
+                          className="shrink-0 text-cream/45 transition-colors group-hover:text-cream/70"
+                        />
                         <span className="min-w-0 flex-1">
-                          <span className="flex items-center justify-between gap-3">
-                            <span className="truncate text-[0.84rem] font-semibold text-cream/82">
+                          <span className="flex items-baseline justify-between gap-3">
+                            <span className="truncate text-[0.84rem] font-medium text-cream/85">
                               {result.title}
                             </span>
                             {result.badge ? (
-                              <span className="shrink-0 text-[9.5px] text-cream/30">
+                              <span className="shrink-0 text-[0.68rem] text-cream/35">
                                 {result.badge}
                               </span>
                             ) : null}
                           </span>
-                          <span className="mt-0.5 line-clamp-1 block text-[0.72rem] leading-5 text-cream/38">
+                          <span className="block truncate text-[0.72rem] leading-5 text-cream/40">
                             {result.description}
                           </span>
                         </span>

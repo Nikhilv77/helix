@@ -92,7 +92,7 @@ describe("peer support hub", () => {
     );
 
     expect(screen.getByText("Ready to help")).toBeTruthy();
-    expect(screen.getByText("4 mates online now")).toBeTruthy();
+    expect(screen.queryByText(/mates? online now/)).toBeNull();
     expect(screen.getByText("Nobody’s on the board yet")).toBeTruthy();
     expect(screen.getByText("The people you support will appear here")).toBeTruthy();
     expect(screen.getByText("The people who support you will appear here")).toBeTruthy();

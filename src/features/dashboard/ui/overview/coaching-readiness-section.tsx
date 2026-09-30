@@ -88,7 +88,7 @@ export function CoachingReadinessSection({
     >
       <article
         aria-label="Teacher coaching"
-        className="dashboard-overview-card relative min-h-[21rem] min-w-0 overflow-hidden rounded-[1.65rem] bg-[#17181b] shadow-[0_24px_80px_-58px_rgba(0,0,0,0.95)]"
+        className="dashboard-overview-card relative min-h-[21rem] min-w-0 overflow-hidden rounded-[1.65rem] bg-[#17181b]"
       >
         <div className="relative grid h-full min-h-[21rem] md:grid-cols-[minmax(14rem,0.82fr)_minmax(0,1.18fr)]">
           <div className="relative min-h-[17rem] overflow-hidden bg-black/10 md:min-h-[21rem]">
@@ -206,9 +206,7 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
       className="dashboard-overview-card relative flex min-h-[24rem] min-w-0 flex-col items-center overflow-hidden rounded-[1.65rem] bg-[#151619] px-6 py-5 text-center"
     >
       <div className="relative flex w-full items-start justify-between gap-3 text-left">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-cream/40">
-          Interview readiness
-        </p>
+        <p className="text-[13px] font-medium text-cream/55">Interview readiness</p>
         <ReadinessDelta delta={readiness.delta} />
       </div>
       <h2 className="relative mt-2 text-lg font-semibold text-cream">{readiness.label}</h2>
@@ -220,14 +218,13 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
         valueClassName="text-[2rem]"
       />
 
-      <div className="dashboard-readiness-insight relative mt-3 w-full rounded-2xl bg-black/20 px-4 py-3 text-left">
-        <p className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-cream/34">
-          What this means
-        </p>
-        <p className="mt-1.5 text-[12.5px] font-medium leading-[1.5] text-cream/74">
+      {/* Straight on the card, under the ring: no box around it. */}
+      <div className="relative mt-4 w-full max-w-[20rem]">
+        <p className="text-[12px] text-cream/42">What this means</p>
+        <p className="mt-1 text-[14px] font-medium leading-[1.55] text-cream/80">
           {readinessSummary(score)}
         </p>
-        <p className="mt-1.5 text-[11px] leading-[1.5] text-cream/42">{readiness.detail}</p>
+        <p className="mt-1.5 text-[12px] leading-[1.5] text-cream/42">{readiness.detail}</p>
       </div>
     </article>
   );
@@ -246,13 +243,9 @@ function readinessSummary(score: number): string {
 }
 
 function ReadinessDelta({ delta }: { delta: number | null }) {
-  if (delta === null) {
-    return (
-      <span className="dashboard-readiness-chip rounded-full border border-cream/[0.07] bg-cream/[0.035] px-2.5 py-1 text-[10px] font-semibold text-cream/42">
-        Baseline
-      </span>
-    );
-  }
+  // A first score has nothing to compare against; say nothing rather than
+  // label it.
+  if (delta === null) return null;
 
   if (delta === 0) {
     return (

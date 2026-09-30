@@ -160,8 +160,10 @@ export function ResumeStep({
                 : file
                   ? "bg-cream/[0.06]"
                   : "bg-cream/[0.032] hover:bg-cream/[0.052]",
-            compact ? "" : "lg:hover:-translate-y-1 lg:backdrop-blur-sm",
-            uploading && !compact ? "opacity-80" : ""
+            // No dimming while the resume is read: it landed ~220ms after the
+            // selected-file change and made the panel flash twice. The
+            // progress line under the panel already shows the upload.
+            compact ? "" : "lg:hover:-translate-y-1 lg:backdrop-blur-sm"
           ].join(" ")}
           style={
             {
@@ -277,7 +279,7 @@ export function ResumeStep({
           {compact && error ? (
             <div
               role="alert"
-              className="absolute inset-x-4 bottom-4 rounded-xl border border-[#f6b0b0]/35 bg-[#4b1f36]/80 px-3 py-2 text-center text-sm font-medium leading-5 text-[#ffd3d3] sm:inset-x-6 sm:bottom-5"
+              className="resume-upload-error absolute inset-x-4 bottom-4 rounded-xl border border-[#f6b0b0]/35 bg-[#4b1f36]/80 px-3 py-2 text-center text-sm font-medium leading-5 text-[#ffd3d3] sm:inset-x-6 sm:bottom-5"
             >
               {error}
             </div>
@@ -287,7 +289,7 @@ export function ResumeStep({
         {error && !compact ? (
           <div
             role="alert"
-            className="onboarding-card-reveal mt-4 rounded-[1.15rem] border border-[#f6b0b0]/35 bg-[#4b1f36]/30 px-4 py-3 text-base font-medium leading-relaxed text-[#ffd3d3] lg:backdrop-blur-sm"
+            className="resume-upload-error onboarding-card-reveal mt-4 rounded-[1.15rem] border border-[#f6b0b0]/35 bg-[#4b1f36]/30 px-4 py-3 text-base font-medium leading-relaxed text-[#ffd3d3] lg:backdrop-blur-sm"
             style={
               {
                 "--card-delay": "80ms"
