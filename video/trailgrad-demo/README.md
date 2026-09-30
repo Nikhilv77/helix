@@ -1,5 +1,8 @@
 # Trailgrad product films
 
+The full guide, including the exact style and how to make a new film, is
+[docs/11_PRODUCT_FILMS.md](../../docs/11_PRODUCT_FILMS.md).
+
 Two silent 1920 × 1080, 60 fps Remotion compositions on a white background:
 `TrailgradDemo` (27 s, the hero: teachers, a follow-up, a score) and
 `TrailgradRounds` (24 s, the second section: resume to report). Everything is rendered from React and three.js: no screen

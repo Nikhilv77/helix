@@ -21,6 +21,11 @@ The rules, in short:
 When fixing one thing, change only that thing. Do not "tidy" nearby styling, restore removed
 labels or borders, or reformat files that were not already formatted.
 
+## Before you make or change a marketing film
+
+Read [docs/11_PRODUCT_FILMS.md](docs/11_PRODUCT_FILMS.md). The films are Remotion code in
+`video/trailgrad-demo`; new films reuse `src/kit.tsx` so they match the existing ones exactly.
+
 ## Working rules
 
 - Do not commit, push, or deploy. The owner does that.

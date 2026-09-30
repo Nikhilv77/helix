@@ -22,6 +22,7 @@ thin, and what should come next. Read them in order the first time.
 | 8 | [Known issues](08_KNOWN_ISSUES.md) | Bugs, limits, and technical debt, with severity |
 | 9 | [Future scope](09_FUTURE_SCOPE.md) | Product and engineering roadmap |
 | 10 | [Design system](10_DESIGN_SYSTEM.md) | The visual language, where each pattern lives, and the fragile pieces not to undo |
+| 11 | [Product films](11_PRODUCT_FILMS.md) | How the marketing films are made, their exact style, and how to make new ones |
 
 ## Working documents
 

@@ -122,7 +122,7 @@ bearing.
    desktop, 1080p30 on touch screens, a 4:5 portrait cut on phones, and only the poster for data
    saver, 2G/3G, or low-memory devices. No `src` is rendered, so nothing downloads until the film
    is seen. Keep phone encodes at 1080 (720p makes the text break up). After re-rendering, bump
-   the `?v=` query. Sources live in `video/trailgrad-demo`.
+   the `?v=` query. Sources live in `video/trailgrad-demo`; see [Product films](11_PRODUCT_FILMS.md).
 9. **Voice playback** (`src/infrastructure/realtime/use-maya-voice.ts`). An interrupted or
    replaced `play()` returns `"interrupted"`, not `"unavailable"`, and must not stop a newer line.
    The Overview tour effect intentionally has no "already started" ref (React Strict Mode).
