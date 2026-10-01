@@ -46,6 +46,7 @@ import type {
   InterviewSetup,
   InterviewStage,
   Phase,
+  SessionResponse,
   Turn
 } from "@/lib/shared/types";
 import { MayaAside } from "./components/maya-aside";
@@ -147,10 +148,16 @@ function stopMediaStream(stream: MediaStream | null) {
 export function VoiceInterviewClient({
   sessionId,
   workspaceAccent,
-  resume
+  resume,
+  initialSession = null
 }: {
   /** Server-resolved durable session identity for this room. */
   sessionId: string;
+  /**
+   * The session as the server read it while rendering this page, so the room
+   * does not wait for a second fetch after hydration. Null falls back to it.
+   */
+  initialSession?: SessionResponse | null;
   workspaceAccent: WorkspaceAccent;
   /** Backs the resume round's document preview. Null for other rounds. */
   resume?: CandidateResume | null;
@@ -366,59 +373,63 @@ export function VoiceInterviewClient({
 
   // The saved session is authoritative. Gemini's live transcript is only the
   // immediate preview until a completed turn has been persisted.
+  const applySession = useCallback((session: SessionResponse) => {
+    // A Practice checkpoint reached through an old link belongs in its own room.
+    const room = sessionRoomHref(sessionId, session.setup);
+    if (room !== interviewRoomHref(sessionId)) {
+      stopPollingRef.current = true;
+      window.location.replace(room);
+      return;
+    }
+    if (queuedSessionRefreshRef.current) return;
+    turnsRef.current = session.turns;
+    setTurns(session.turns);
+    setOptimisticUserTurn((pending) =>
+      pending &&
+      session.turns.some(
+        (turn) => turn.speaker === "user" && turn.text.trim() === pending.text.trim()
+      )
+        ? null
+        : pending
+    );
+    setPhase(session.phase);
+    setSetup(session.setup);
+    setCurrentQuestion(session.currentQuestion);
+    setPlanStages(session.stages ?? []);
+    setSkippedQuestionIndexes(session.skippedQuestionIndexes ?? []);
+    setAnsweredConcept(session.answeredConcept ?? null);
+    setHardCapMs(session.hardCapMs ?? DEFAULT_HARD_CAP_MS);
+    setStartedAt(session.startedAt);
+    startedAtRef.current = session.startedAt;
+    setSessionLoadError(null);
+    sessionCheckedRef.current = true;
+    setSessionChecked(true);
+    setProgress({
+      index: session.questionIndex,
+      count: session.questionCount,
+      followUps: session.followUpCount
+    });
+    if (session.phase === "done") {
+      if (!reportNotificationRef.current) {
+        reportNotificationRef.current = true;
+        notifyWorkspaceNotificationsChanged();
+      }
+      sessionCompleteRef.current = true;
+      stopPollingRef.current = true;
+      setError(null);
+      // The server finishes before the provider finishes playing James's
+      // closing line. Keep the Live component mounted until that audio ends.
+      if (!liveTurnPendingRef.current) setStatus("ended");
+    }
+  }, [sessionId]);
+
   const readSession = useCallback(async () => {
     if (!sessionId || stopPollingRef.current) return;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), SESSION_READ_TIMEOUT_MS);
     try {
       const session = await getSession(sessionId, controller.signal);
-      // A Practice checkpoint reached through an old link belongs in its own room.
-      const room = sessionRoomHref(sessionId, session.setup);
-      if (room !== interviewRoomHref(sessionId)) {
-        stopPollingRef.current = true;
-        window.location.replace(room);
-        return;
-      }
-      if (queuedSessionRefreshRef.current) return;
-      turnsRef.current = session.turns;
-      setTurns(session.turns);
-      setOptimisticUserTurn((pending) =>
-        pending &&
-        session.turns.some(
-          (turn) => turn.speaker === "user" && turn.text.trim() === pending.text.trim()
-        )
-          ? null
-          : pending
-      );
-      setPhase(session.phase);
-      setSetup(session.setup);
-      setCurrentQuestion(session.currentQuestion);
-      setPlanStages(session.stages ?? []);
-      setSkippedQuestionIndexes(session.skippedQuestionIndexes ?? []);
-      setAnsweredConcept(session.answeredConcept ?? null);
-      setHardCapMs(session.hardCapMs ?? DEFAULT_HARD_CAP_MS);
-      setStartedAt(session.startedAt);
-      startedAtRef.current = session.startedAt;
-      setSessionLoadError(null);
-      sessionCheckedRef.current = true;
-      setSessionChecked(true);
-      setProgress({
-        index: session.questionIndex,
-        count: session.questionCount,
-        followUps: session.followUpCount
-      });
-      if (session.phase === "done") {
-        if (!reportNotificationRef.current) {
-          reportNotificationRef.current = true;
-          notifyWorkspaceNotificationsChanged();
-        }
-        sessionCompleteRef.current = true;
-        stopPollingRef.current = true;
-        setError(null);
-        // The server finishes before the provider finishes playing James's
-        // closing line. Keep the Live component mounted until that audio ends.
-        if (!liveTurnPendingRef.current) setStatus("ended");
-      }
+      applySession(session);
     } catch (caught) {
       if (queuedSessionRefreshRef.current) return;
       if (caught instanceof ApiClientError && caught.code === "SESSION_NOT_FOUND") {
@@ -441,7 +452,7 @@ export function VoiceInterviewClient({
     } finally {
       window.clearTimeout(timeout);
     }
-  }, [sessionId]);
+  }, [applySession, sessionId]);
 
   // Coalesce fallback checks, but queue one fresh read when a saved answer
   // arrives during an older request. The older response must not win the race.
@@ -480,9 +491,16 @@ export function VoiceInterviewClient({
     if (agentState === "speaking") revealLatestAgentTurn();
   }, [agentState, revealLatestAgentTurn, turns]);
 
+  const initialSessionAppliedRef = useRef(false);
   useEffect(() => {
+    if (initialSession && !initialSessionAppliedRef.current) {
+      initialSessionAppliedRef.current = true;
+      applySession(initialSession);
+      return;
+    }
+    if (initialSessionAppliedRef.current) return;
     if (document.visibilityState === "visible" && navigator.onLine !== false) void poll();
-  }, [poll]);
+  }, [applySession, initialSession, poll]);
 
   useEffect(() => {
     const recoveryDelay = !sessionChecked
@@ -505,6 +523,9 @@ export function VoiceInterviewClient({
         stopPollingRef.current ||
         status === "ended" ||
         sessionUnavailable ||
+        // Nothing changes server-side while the learner checks their
+        // microphone, so the setup screen does not poll the session.
+        (sessionChecked && !mediaSetupComplete) ||
         document.visibilityState !== "visible" ||
         navigator.onLine === false
       )
@@ -527,7 +548,9 @@ export function VoiceInterviewClient({
         clearTimer();
         return;
       }
-      if (Date.now() - lastWakeAt > 1_000) {
+      // Permission prompts move focus away and back during setup; that is
+      // not a reason to re-read a session that cannot have changed.
+      if (!(sessionChecked && !mediaSetupComplete) && Date.now() - lastWakeAt > 1_000) {
         lastWakeAt = Date.now();
         void poll();
       }
@@ -547,7 +570,7 @@ export function VoiceInterviewClient({
       window.removeEventListener("offline", clearTimer);
       document.removeEventListener("visibilitychange", refreshOnReturn);
     };
-  }, [poll, sessionChecked, sessionUnavailable, status]);
+  }, [mediaSetupComplete, poll, sessionChecked, sessionUnavailable, status]);
 
   useEffect(() => {
     if (!typedSending) return;
@@ -1198,7 +1221,7 @@ export function VoiceInterviewClient({
 
   if (!mediaSetupComplete) {
     return (
-      <VoiceShell workspaceAccent={workspaceAccent} wide>
+      <VoiceShell workspaceAccent={workspaceAccent} wide ambient={false}>
         <MediaPermissionGate
           cameraOptional
           interviewerName={persona.name}
@@ -1291,7 +1314,7 @@ export function VoiceInterviewClient({
           onReconnect={() => void reconnect()}
         />
       ) : null}
-      <header className="interview-live-header interview-live-glass mb-3 flex shrink-0 flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
+      <header className="interview-live-header interview-live-glass mb-3 flex shrink-0 flex-col gap-2 rounded-2xl bg-[#17181b] px-3 py-2 sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-5">
         <div className="thin-scroll w-full min-w-0 overflow-x-auto py-1 sm:flex-1">
           <PathRail
             phase={phase}
@@ -1350,7 +1373,7 @@ export function VoiceInterviewClient({
           </div>
 
           <span
-            className={`interview-live-timer rounded-xl bg-black/20 px-3 py-2.5 font-mono text-sm tabular-nums ${
+            className={`interview-live-timer px-2 py-2.5 text-sm font-medium tabular-nums ${
               overCap ? "text-[var(--workspace-accent)]" : "text-cream/72"
             }`}
           >
@@ -1360,7 +1383,7 @@ export function VoiceInterviewClient({
           <button
             type="button"
             onClick={() => void stop()}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/[0.045] px-3 text-sm font-semibold text-cream/65 transition hover:bg-white/[0.08] hover:text-cream"
+            className="interview-live-end inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-sm font-semibold text-cream/65 transition-colors hover:text-cream"
           >
             <Square size={11} aria-hidden="true" />
             <span className="hidden sm:inline">{isAnyBlockAssessment ? "Save & exit" : "End"}</span>

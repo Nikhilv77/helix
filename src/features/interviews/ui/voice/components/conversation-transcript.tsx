@@ -88,7 +88,7 @@ export function ConversationTranscript({
     <section className="msg-in flex min-h-0 flex-col">
       {!hideHeader ? (
         <div className="flex flex-wrap items-center gap-3 px-1 pb-4">
-          <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-cream/62">
+          <span className="flex items-center gap-2 text-xs font-semibold text-cream/62">
             {isCode ? (
               <Code2 size={12} aria-hidden="true" />
             ) : (
@@ -145,13 +145,13 @@ export function ConversationTranscript({
                     }
                   >
                     <span
-                      className={`font-mono text-[9px] uppercase tracking-[0.18em] ${
-                        isAgent ? "text-cream/60" : "text-cream/38"
+                      className={`text-xs font-semibold ${
+                        isAgent ? "text-[var(--workspace-accent)]" : "text-cream/48"
                       }`}
                     >
                       {isAgent ? (teacherName ?? teacher.name) : "You"}
                     </span>
-                    <span className="font-mono text-[9px] text-cream/25">
+                    <span className="text-xs tabular-nums text-cream/36">
                       {formatClock(turn.startMs)}
                     </span>
                   </div>

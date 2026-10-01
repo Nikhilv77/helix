@@ -21,6 +21,7 @@ export function VoiceShell({
   workspaceAccent,
   wide = false,
   withinWorkspaceChrome = false,
+  ambient = true,
   className = ""
 }: {
   children: React.ReactNode;
@@ -28,6 +29,8 @@ export function VoiceShell({
   workspaceAccent?: WorkspaceAccent;
   wide?: boolean;
   withinWorkspaceChrome?: boolean;
+  /** The accent glow behind the live room. Loading and setup stay plain. */
+  ambient?: boolean;
   /** Extra scope classes, such as `practice-paper` for Practice assessments. */
   className?: string;
 }) {
@@ -39,18 +42,22 @@ export function VoiceShell({
           ? (workspaceAccentCssVariables(workspaceAccent) as CSSProperties)
           : undefined
       }
-      className={`interview-workspace-page workspace-black relative overflow-hidden bg-black px-4 text-cream sm:px-8 ${className} ${
+      className={`interview-workspace-page workspace-black relative overflow-hidden bg-black px-4 text-cream sm:px-8 ${ambient ? "" : "interview-plain-canvas"} ${className} ${
         withinWorkspaceChrome ? "h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4.25rem)]" : "h-[100dvh]"
       }`}
     >
-      <span
-        aria-hidden="true"
-        className="interview-room-ambient pointer-events-none absolute left-1/2 top-[46%] h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-45 blur-[140px]"
-      />
-      <span
-        aria-hidden="true"
-        className="interview-room-ambient pointer-events-none absolute -bottom-52 -right-40 h-[34rem] w-[34rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-20 blur-[150px]"
-      />
+      {ambient ? (
+        <>
+          <span
+            aria-hidden="true"
+            className="interview-room-ambient pointer-events-none absolute left-1/2 top-[46%] h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-45 blur-[140px]"
+          />
+          <span
+            aria-hidden="true"
+            className="interview-room-ambient pointer-events-none absolute -bottom-52 -right-40 h-[34rem] w-[34rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-20 blur-[150px]"
+          />
+        </>
+      ) : null}
       <div
         className={`relative z-10 mx-auto flex h-full w-full flex-col pt-4 sm:pt-5 ${
           wide ? "max-w-[96rem]" : "max-w-7xl"
@@ -73,17 +80,13 @@ export function SessionLoadingScreen({
 }) {
   const teacher = useWorkspaceTeacher();
   return (
-    <VoiceShell workspaceAccent={workspaceAccent}>
+    <VoiceShell workspaceAccent={workspaceAccent} ambient={false}>
       <section
         className="flex flex-1 items-center justify-center py-12"
         role="status"
         aria-live="polite"
       >
         <div className="relative w-full max-w-md text-center">
-          <span
-            aria-hidden="true"
-            className="interview-room-ambient pointer-events-none absolute left-1/2 top-[42%] h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-45 blur-[90px]"
-          />
           {error ? (
             <WifiOff
               size={23}
@@ -95,7 +98,7 @@ export function SessionLoadingScreen({
             <Loader2
               size={24}
               strokeWidth={1.5}
-              className="relative mx-auto animate-spin text-[var(--workspace-accent)] drop-shadow-[0_0_12px_var(--workspace-accent)]"
+              className="relative mx-auto animate-spin text-[var(--workspace-accent)]"
               aria-hidden="true"
             />
           )}
@@ -153,7 +156,6 @@ export function SessionStateScreen({
   evaluationParameters?: string[];
   interviewerName?: string;
 }) {
-  const teacher = useWorkspaceTeacher();
   const complete = kind === "complete";
   // A round closed before any answer has nothing to grade and no report, so
   // it gets its own honest ending instead of the report hand-off.
@@ -166,40 +168,12 @@ export function SessionStateScreen({
 
   if (answeredNothing) {
     return (
-      <VoiceShell workspaceAccent={workspaceAccent}>
-        <section className="flex flex-1 items-center justify-center py-12">
-          <div className="w-full max-w-2xl text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.09] bg-white/[0.035] text-[var(--workspace-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl">
-              <Clock3 size={24} aria-hidden="true" />
-            </span>
-            <p className="mt-7 text-sm font-mono uppercase tracking-[0.2em] text-cream/38">
-              Session closed
-            </p>
-            <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-cream sm:text-5xl">
-              No report for this round
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-cream/64 sm:text-base">
-              You ended before answering a question, so there is nothing for {interviewerName} to
-              score and it will not appear in Reports. Start it again whenever you are ready.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/interviews"
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#10131a] transition hover:bg-white"
-              >
-                Back to interviews
-                <ArrowRight size={15} aria-hidden="true" />
-              </Link>
-              <Link
-                href="/"
-                className="inline-flex min-h-11 items-center rounded-lg border border-cream/15 px-5 text-sm font-semibold text-cream/60 transition hover:border-cream/35 hover:text-cream"
-              >
-                Return to Trailgrad
-              </Link>
-            </div>
-          </div>
-        </section>
-      </VoiceShell>
+      <ClosedRoundScreen
+        workspaceAccent={workspaceAccent}
+        title="No report for this round"
+        body={`This round closed before you answered a question, so there is nothing for ${interviewerName} to score and it will not appear in Reports. Start it again whenever you are ready.`}
+        primaryLabel="Back to interviews"
+      />
     );
   }
 
@@ -219,33 +193,58 @@ export function SessionStateScreen({
   }
 
   return (
-    <VoiceShell workspaceAccent={workspaceAccent}>
+    <ClosedRoundScreen
+      workspaceAccent={workspaceAccent}
+      title="This interview has expired"
+      // The session is gone, so who ran it is unknown; name nobody.
+      body="Interview rooms close after their session window. Start a fresh round whenever you are ready."
+      primaryLabel="Start a new interview"
+    />
+  );
+}
+
+/** The quiet ending for a round that closed without a report. */
+function ClosedRoundScreen({
+  workspaceAccent,
+  title,
+  body,
+  primaryLabel
+}: {
+  workspaceAccent: WorkspaceAccent;
+  title: string;
+  body: string;
+  primaryLabel: string;
+}) {
+  return (
+    <VoiceShell workspaceAccent={workspaceAccent} ambient={false}>
       <section className="flex flex-1 items-center justify-center py-12">
-        <div className="w-full max-w-2xl text-center">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.09] bg-white/[0.035] text-[var(--workspace-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl">
-            <Clock3 size={24} aria-hidden="true" />
+        <div className="identity-stage-in w-full max-w-xl text-center">
+          <span className="interview-media-icon mx-auto grid h-12 w-12 place-items-center rounded-xl border border-white/[0.1] text-cream/72">
+            <Clock3 size={20} strokeWidth={1.5} aria-hidden="true" />
           </span>
-          <p className="mt-7 text-sm font-mono uppercase tracking-[0.2em] text-cream/38">
+          <p className="mt-6 text-[13px] font-medium text-[var(--workspace-accent)]">
             Session closed
           </p>
-          <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-cream sm:text-5xl">
-            This interview has expired
+          <h1 className="mt-2 font-display text-[1.9rem] font-semibold leading-tight tracking-[-0.03em] text-cream sm:text-[2.4rem]">
+            {title}
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-cream/64 sm:text-base">
-            Interview rooms close after their session window. Start a fresh round to reconnect with
-            {` ${teacher.name}.`}
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <p className="mx-auto mt-4 max-w-lg text-[15px] leading-7 text-cream/62">{body}</p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
             <Link
               href="/interviews"
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#10131a] transition hover:bg-white"
+              className="group inline-flex min-h-11 items-center gap-2 rounded-full bg-cream px-5 text-sm font-semibold text-[#10131a] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none"
             >
-              Start a new interview
-              <ArrowRight size={15} aria-hidden="true" />
+              {primaryLabel}
+              <ArrowRight
+                size={16}
+                strokeWidth={1.8}
+                aria-hidden="true"
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
             </Link>
             <Link
               href="/"
-              className="inline-flex min-h-11 items-center rounded-lg border border-cream/15 px-5 text-sm font-semibold text-cream/60 transition hover:border-cream/35 hover:text-cream"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-cream/58 transition-colors hover:text-cream"
             >
               Return to Trailgrad
             </Link>

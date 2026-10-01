@@ -4,7 +4,7 @@ import { pickLine } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { Loader2, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, Loader2, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
@@ -125,6 +125,8 @@ export function InterviewLaunchStage({
   const briefingFinishedRef = useRef(false);
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
+  const awaitingGestureRef = useRef(awaitingGesture);
+  awaitingGestureRef.current = awaitingGesture;
   const scriptLines = useMemo(
     () =>
       copy.spokenVariants?.length
@@ -206,7 +208,10 @@ export function InterviewLaunchStage({
           pendingSessionIdRef.current = payload.sessionId;
           setPendingSessionId(payload.sessionId);
           setStarting(false);
-          if (briefingFinishedRef.current) enterInterview(payload.sessionId);
+          // A blocked intro never finishes, so it must not hold the room back.
+          if (briefingFinishedRef.current || awaitingGestureRef.current) {
+            enterInterview(payload.sessionId);
+          }
         } else {
           window.location.replace(`/interview/voice?session=${payload.sessionId}`);
         }
@@ -264,6 +269,12 @@ export function InterviewLaunchStage({
     };
   }, [awaitingGesture, playBriefing, script, stop]);
 
+  // The browser blocked the intro. Once the round exists, go straight in
+  // rather than waiting on a tap the learner may never make.
+  useEffect(() => {
+    if (awaitingGesture && pendingSessionId) enterInterview(pendingSessionId);
+  }, [awaitingGesture, enterInterview, pendingSessionId]);
+
   useEffect(() => {
     if (!awaitingGesture) return;
     const unlock = () => setAwaitingGesture(false);
@@ -276,9 +287,10 @@ export function InterviewLaunchStage({
   }, [awaitingGesture, setAwaitingGesture]);
 
   function toggleMayaVoice() {
+    // The voice button only controls the voice; "Continue to interview" is
+    // the one way in once the round is ready.
     if (state === "speaking" || state === "loading") {
       stop();
-      if (pendingSessionId) continueToInterview();
       return;
     }
 
@@ -317,9 +329,7 @@ export function InterviewLaunchStage({
         </div>
 
         <div className="identity-stage-in flex flex-col justify-center py-8 lg:py-12">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cream/52">
-            {copy.eyebrow}
-          </p>
+          <p className="text-[13px] font-medium text-[var(--workspace-accent)]">{copy.eyebrow}</p>
           <h1 className="mt-4 max-w-3xl font-display text-xl font-semibold leading-[1.08] tracking-tight text-cream sm:text-2xl lg:text-3xl">
             {copy.headline}
           </h1>
@@ -362,7 +372,25 @@ export function InterviewLaunchStage({
             </div>
           ) : null}
 
-          <div className="mt-9 flex flex-wrap items-center gap-4 border-t border-cream/10 pt-5">
+          <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
+            {pendingSessionId ? (
+              <button
+                type="button"
+                onClick={() => {
+                  stop();
+                  continueToInterview();
+                }}
+                className="interview-launch-primary group inline-flex items-center gap-2 rounded-full bg-cream px-5 py-2.5 text-sm font-semibold text-[#101113] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none"
+              >
+                Continue to interview
+                <ArrowRight
+                  size={16}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-hover:translate-x-0.5"
+                />
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={toggleMayaVoice}
@@ -381,9 +409,7 @@ export function InterviewLaunchStage({
               ) : (
                 <Volume2 size={16} className="text-[var(--workspace-accent)]" aria-hidden="true" />
               )}
-              {pendingSessionId && (state === "loading" || state === "speaking")
-                ? "Skip intro"
-                : state === "loading"
+              {state === "loading"
                   ? `Starting ${teacher.name}`
                   : state === "speaking"
                     ? `Stop ${teacher.name}`
@@ -391,21 +417,6 @@ export function InterviewLaunchStage({
                       ? "Voice unavailable"
                       : `Hear ${teacher.name}`}
             </button>
-            {pendingSessionId ? (
-              <button
-                type="button"
-                onClick={() => {
-                  stop();
-                  continueToInterview();
-                }}
-                className="rounded-full bg-cream px-5 py-2.5 text-sm font-semibold text-[#101113] transition hover:bg-cream-soft"
-              >
-                Continue to interview
-              </button>
-            ) : null}
-            {awaitingGesture ? (
-              <span className="text-xs text-cream/42">Tap to hear {teacher.name}</span>
-            ) : null}
           </div>
         </div>
       </section>

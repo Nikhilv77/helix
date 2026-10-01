@@ -231,6 +231,24 @@ describe("interview report", () => {
     expect(history.durationMs).toBe(12_000);
   });
 
+  it("marks a recently touched room expired once the round's own time limit has passed", () => {
+    // Opened from a launch screen and left: touched minutes ago, but the
+    // 15-minute round clock ran out, so the room can never be entered again.
+    const startedAt = 1_000;
+    const now = startedAt + 15 * 60 * 1000 + 1;
+    const history = createHistoryItem(
+      { state: { ...state, phase: "intro", startedAt, turns: [] }, touchedAt: now - 60_000 },
+      now
+    );
+    const snapshot = createInterviewReportSnapshot(
+      { state: { ...state, phase: "intro", startedAt, turns: [] }, touchedAt: now - 60_000 },
+      now
+    );
+
+    expect(history.status).toBe("expired");
+    expect(readInterviewReportSnapshot(snapshot, now - 60_000, now).status).toBe("expired");
+  });
+
   it("rehydrates a compact report snapshot without exposing its transcript", () => {
     const active = { ...state, phase: "questioning" as const };
     const snapshot = createInterviewReportSnapshot({ state: active, touchedAt: 14_000 }, 14_000);

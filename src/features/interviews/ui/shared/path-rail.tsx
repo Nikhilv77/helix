@@ -1,6 +1,5 @@
 "use client";
 
-import { Check } from "lucide-react";
 import type { Phase } from "@/lib/shared/types";
 
 interface PathRailProps {
@@ -38,66 +37,53 @@ export function PathRail({
   }
 
   const wrapState: NodeState = finished ? "done" : phase === "wrap" ? "active" : "upcoming";
+  const label = finished
+    ? "Interview complete"
+    : phase === "wrap"
+      ? "Wrapping up"
+      : `Question ${Math.min(questionIndex + 1, questionCount)} of ${questionCount}`;
+  const doneCount = finished || phase === "wrap" ? questionCount : Math.min(questionIndex, questionCount);
 
   return (
-    <div className="flex items-center gap-2.5">
-      {Array.from({ length: questionCount }, (_, index) => {
-        const state = stateFor(index);
-
-        return (
-          <div key={index} className="flex items-center gap-2.5">
-            <Node state={state} label={String(index + 1)} />
-            {state === "active" ? (
-              <FollowUpPips used={followUpCount} maximum={maxFollowUps} />
-            ) : null}
-            {index < questionCount - 1 ? <Connector filled={state === "done"} /> : null}
-          </div>
-        );
-      })}
-
-      <Connector filled={phase === "wrap" || finished} />
-      <Node state={wrapState} label="W" title="Wrap" />
+    <div className="flex min-w-[15rem] items-center gap-4">
+      <p className="shrink-0 text-[13px] font-semibold text-cream">
+        {label}
+        {!finished && phase !== "wrap" && followUpCount > 0 ? (
+          <span className="font-medium text-cream/48">
+            {" "}
+            · Follow-up {Math.min(followUpCount, maxFollowUps)} of {maxFollowUps}
+          </span>
+        ) : null}
+      </p>
+      <div
+        className="flex min-w-[8rem] flex-1 items-center gap-1"
+        role="progressbar"
+        aria-label="Interview progress"
+        aria-valuemin={0}
+        aria-valuemax={questionCount}
+        aria-valuenow={doneCount}
+      >
+        {Array.from({ length: questionCount }, (_, index) => (
+          <Segment key={index} state={stateFor(index)} />
+        ))}
+        <Segment state={wrapState} short title="Wrap-up" />
+      </div>
     </div>
   );
 }
 
-function Node({ state, label, title }: { state: NodeState; label: string; title?: string }) {
-  const styles =
-    state === "done"
-      ? "border-cream/70 bg-cream/70 text-blueprint"
-      : state === "active"
-        ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent)] text-black shadow-[0_0_0_4px_var(--workspace-accent-soft)]"
-        : "border-cream/25 text-cream/35";
-
+/** One question's slice of the bar: filled when done, half-filled when current. */
+function Segment({ state, short = false, title }: { state: NodeState; short?: boolean; title?: string }) {
   return (
     <span
       title={title}
-      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] transition-all duration-300 ${styles}`}
+      className={`path-rail-track relative h-1 overflow-hidden rounded-full ${short ? "w-5 shrink-0" : "flex-1"}`}
     >
-      {state === "done" ? <Check size={11} aria-hidden="true" /> : label}
-    </span>
-  );
-}
-
-function Connector({ filled }: { filled: boolean }) {
-  return (
-    <span
-      className={`h-px w-4 shrink-0 transition-colors duration-300 ${filled ? "bg-cream/50" : "bg-cream/15"}`}
-    />
-  );
-}
-
-/** How much of the follow-up budget this question has burned. */
-function FollowUpPips({ used, maximum }: { used: number; maximum: number }) {
-  if (maximum <= 0) return null;
-  return (
-    <span className="flex items-center gap-1" title={`${used} of ${maximum} follow-ups`}>
-      {Array.from({ length: maximum }, (_, index) => (
-        <span
-          key={index}
-          className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${index < used ? "bg-[var(--workspace-accent)]" : "bg-cream/20"}`}
-        />
-      ))}
+      <span
+        className={`absolute inset-0 origin-left rounded-full bg-[var(--workspace-accent)] transition-transform duration-500 motion-reduce:transition-none ${
+          state === "done" ? "scale-x-100" : state === "active" ? "scale-x-50" : "scale-x-0"
+        }`}
+      />
     </span>
   );
 }

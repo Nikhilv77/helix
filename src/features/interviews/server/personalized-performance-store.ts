@@ -19,10 +19,22 @@ export class PersonalizedPerformanceStore {
   constructor(private readonly prisma: PrismaService) {}
 
   async refresh(ownerId: string, now = Date.now()): Promise<CandidatePerformanceProfile | null> {
-    const records = await this.prisma.interviewSession.findMany({
+    // Same window as before (the latest 100 sessions), but only finished ones
+    // load their full state; open and expired rooms can never count, and their
+    // transcripts were most of what this read used to transfer.
+    const recent = await this.prisma.interviewSession.findMany({
       where: { ownerId },
       orderBy: { startedAt: "desc" },
       take: 100,
+      select: { id: true }
+    });
+    const records = await this.prisma.interviewSession.findMany({
+      where: {
+        ownerId,
+        id: { in: recent.map((row) => row.id) },
+        state: { path: ["phase"], equals: "done" }
+      },
+      orderBy: { startedAt: "desc" },
       select: { state: true, touchedAt: true }
     });
     const sessions = completedAdaptiveSessions(

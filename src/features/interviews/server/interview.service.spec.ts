@@ -2698,3 +2698,28 @@ describe("InterviewService conversation", () => {
     });
   });
 });
+
+describe("InterviewService active round reuse", () => {
+  it("does not reuse a round whose own time limit has passed", async () => {
+    const { service } = harness();
+    const started = await service.start(
+      { ...setup, templateId: "technical-deep-dive" },
+      "user-1",
+      1_000,
+      questions
+    );
+
+    expect(
+      (await service.findOwnedActiveByTemplate("user-1", "technical-deep-dive", 1_000 + 60_000))?.id
+    ).toBe(started.state.id);
+    // Default rounds have a 15-minute limit; after it the room cannot be
+    // entered, so launching again must start a fresh round.
+    expect(
+      await service.findOwnedActiveByTemplate(
+        "user-1",
+        "technical-deep-dive",
+        1_000 + 15 * 60_000 + 1
+      )
+    ).toBeNull();
+  });
+});

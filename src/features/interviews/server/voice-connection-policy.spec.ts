@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { voiceConnectionLifetimeMs } from "./voice-connection-policy";
+import { roundTimeExpired, voiceConnectionLifetimeMs } from "./voice-connection-policy";
 import type { InterviewSetup } from "./types";
 
 const setup: InterviewSetup = {
@@ -60,5 +60,12 @@ describe("voice connection lifetime", () => {
         1_000 + 3 * 60 * 60_000
       )
     ).toBe(30 * 60_000);
+  });
+
+  it("treats only unfinished rounds past their limit as expired", () => {
+    const late = 1_000 + 15 * 60_000 + 1;
+    expect(roundTimeExpired({ phase: "questioning", setup, startedAt: 1_000 }, late)).toBe(true);
+    expect(roundTimeExpired({ phase: "done", setup, startedAt: 1_000 }, late)).toBe(false);
+    expect(roundTimeExpired({ phase: "intro", setup, startedAt: 1_000 }, 2_000)).toBe(false);
   });
 });

@@ -89,6 +89,7 @@ import { interviewerNameForSetup } from "../domain/interviewer-persona";
 import { isTechnicalProjectsRound } from "../domain/technical-deep-dive";
 import { technicalProjectsMoveOnUtterance } from "./technical-projects-dialogue";
 import { SESSION_TTL_MS } from "./session-constants";
+import { roundTimeExpired, roundTimeLimitAt } from "./voice-connection-policy";
 
 /** At most this many pages are read to find a full page of interview rounds. */
 const INTERVIEW_ROUND_PAGE_LIMIT = 4;
@@ -265,7 +266,10 @@ export class InterviewService {
     templateId: string,
     now = Date.now()
   ): Promise<InterviewState | null> {
-    return this.store.findActiveByTemplate(ownerId, templateId, now - SESSION_TTL_MS);
+    const active = await this.store.findActiveByTemplate(ownerId, templateId, now - SESSION_TTL_MS);
+    // A round past its time limit cannot be entered; start a fresh one instead
+    // of sending the learner into a room that closes on arrival.
+    return active && !roundTimeExpired(active, now) ? active : null;
   }
 
   /** Claims sessions created by the same browser before Clerk auth was resolved. */
@@ -329,7 +333,9 @@ export class InterviewService {
     const nextExpiryAt =
       combined
         .filter((report) => report.status === "in_progress")
-        .map((report) => report.updatedAt + SESSION_TTL_MS)
+        .map((report) =>
+          Math.min(report.updatedAt + SESSION_TTL_MS, roundTimeLimitAt(report) ?? Infinity)
+        )
         .filter((expiry) => expiry > now)
         .sort((left, right) => left - right)[0] ?? null;
     return { ...createReportsOverview(combined, now), nextExpiryAt };

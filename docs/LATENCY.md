@@ -1,6 +1,6 @@
 # Latency
 
-Last updated: September 28, 2026
+Last updated: October 1, 2026
 
 How to measure latency in Trailgrad, the production baseline to fill in, what is still open, and
 the lessons from the work so far. The history of each change is in [CHANGELOG.md](CHANGELOG.md).
@@ -69,7 +69,8 @@ Measured during the September work, before the production baseline.
 
 | Item | Why | Status |
 | --- | --- | --- |
-| Audit live voice interviews | The most latency-sensitive and expensive feature; turn latency, reconnects, and cost per session are not measured | Next |
+| Audit live voice interviews | The most latency-sensitive and expensive feature; turn latency, reconnects, and cost per session are not measured. Entry and setup were audited on October 1 (see below); the live turns still need a real-microphone run | In progress |
+| Starting a new DSA round | About 7 s on dev from Mumbai: several sequential reads (open-round check, lease, profile, solved questions, performance profile) before the session is written. Measure on production before restructuring | Todo |
 | Instrument voice turns | No timing log covers speech-end → decision → first audio | With the audit |
 | Stream or show progress for AI-graded answers | Written grading and DSA feedback still show a silent wait of about 2 s (longer when hedged) | Todo |
 | Overview and Progress rebuild after every answer | The rebuild runs after the response and is coalesced per user, so learners do not wait. Revisit with a queue if `*_rebuild_slow` or database load grows | Watching |
@@ -91,5 +92,10 @@ Measured during the September work, before the production baseline.
   nothing per play.
 - **Reply from the row you already read.** Re-reading after a write cost a round trip on every
   click.
+- **Do not poll what cannot change.** The interview room re-read the whole session every 10 s
+  and on every window focus while the learner was still on the microphone setup screen. It now
+  reads once (on the server, in parallel with the profile) and starts polling only after setup.
+- **A blocked sound must never block a flow.** The interview launch waited for the teacher's
+  intro to finish before entering the room; with autoplay blocked it waited for a tap forever.
 - **Measure before rewriting.** Judge0 already answered in under a second, so an async
   submit-and-poll rewrite would have made it slower.

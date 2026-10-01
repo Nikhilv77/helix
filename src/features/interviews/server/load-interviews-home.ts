@@ -3,6 +3,7 @@ import { isResumableBlockAssessment } from "@/features/interviews/server/types";
 import type { InterviewsHomeData } from "@/features/interviews/contracts/interviews-home";
 import { interviewRoadmapSessions } from "@/features/interviews/domain/interview-roadmap-sessions";
 import { SESSION_TTL_MS } from "@/features/interviews/server/session-constants";
+import { roundTimeLimitAt } from "@/features/interviews/server/voice-connection-policy";
 import { cachedPersonalizedPlan } from "@/features/interviews/server/cached-personalized-plan";
 import { getAppContainer } from "@/server/app-container";
 import type { BuiltWorkspacePage } from "@/features/analytics/server/workspace-page-snapshot.store";
@@ -45,7 +46,9 @@ export async function buildInterviewsHome(
   const now = Date.now();
   const nextRoomExpiry = sessions
     .filter((session) => session.status === "in_progress")
-    .map((session) => session.updatedAt + SESSION_TTL_MS)
+    .map((session) =>
+      Math.min(session.updatedAt + SESSION_TTL_MS, roundTimeLimitAt(session) ?? Infinity)
+    )
     .filter((expiry) => expiry > now)
     .sort((left, right) => left - right)[0];
   const firstName = displayFirstName(profile.resume?.fullName);

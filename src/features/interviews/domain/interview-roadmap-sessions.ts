@@ -373,8 +373,12 @@ function sessionProgress(
   | "resumeSessionId"
   | "updatedPracticeAvailable"
 > {
+  // A round that closed before any answer (timed out, or left at once) has no
+  // report; on the roadmap it is a saved attempt to start again, not a pass.
+  const status =
+    latest?.status === "completed" && latest.questionsCovered === 0 ? "expired" : latest?.status;
   const completedQuestions = latest
-    ? latest.status === "completed"
+    ? status === "completed"
       ? totalQuestions
       : Math.min(totalQuestions, latest.questionsCovered)
     : 0;
@@ -383,7 +387,7 @@ function sessionProgress(
     totalQuestions,
     completedQuestions,
     progressPercent: totalQuestions ? Math.round((completedQuestions / totalQuestions) * 100) : 0,
-    attemptStatus: latest?.status ?? "not_started",
+    attemptStatus: status ?? "not_started",
     resumeSessionId: latest?.status === "in_progress" ? latest.sessionId : null,
     updatedPracticeAvailable: false
   };

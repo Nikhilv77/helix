@@ -90,6 +90,14 @@ a {
   color: #f1ead8;
 }
 
+/* Selected text on paper: dark ink on a soft accent tint, never cream on
+   white (which made a selected word all but disappear in light mode). */
+html.light ::selection,
+html[data-theme="light"] ::selection {
+  background: color-mix(in srgb, var(--workspace-accent, #f26e01) 22%, transparent);
+  color: #0f172a;
+}
+
 html.light .marketing-theme ::selection,
 html[data-theme="light"] .marketing-theme ::selection {
   background: rgba(242, 110, 1, 0.2);
@@ -1910,6 +1918,12 @@ html[data-theme="light"] .workspace-black {
   --workspace-card-hover: #f3f4f6;
   --workspace-accent-soft: color-mix(in srgb, var(--workspace-accent) 10%, transparent);
   --workspace-accent-border: color-mix(in srgb, var(--workspace-accent) 34%, transparent);
+}
+
+/* Interview loading and setup screens sit on plain paper, without the glow. */
+html.light .workspace-black.interview-plain-canvas,
+html[data-theme="light"] .workspace-black.interview-plain-canvas {
+  background: #f8f7f5 !important;
 }
 
 html.light .workspace-sidebar,
@@ -6708,8 +6722,13 @@ html[data-theme="light"] .practice-code-viewer {
 /* Interview routes use the live-room palette in a few different entry points.
    Keep the paper treatment scoped here so other black workspace canvases retain
    their intentional dark appearance. */
+/* The launch skeleton is plain paper: no glow before the page arrives. */
 html.light .interview-setup-skeleton,
-html[data-theme="light"] .interview-setup-skeleton,
+html[data-theme="light"] .interview-setup-skeleton {
+  background: #f8f7f5 !important;
+  color: #1f2937;
+}
+
 html.light .interview-workspace-skeleton,
 html[data-theme="light"] .interview-workspace-skeleton {
   background:
@@ -6812,6 +6831,152 @@ html[data-theme="light"] .interview-workspace-page .interview-live-glass {
   border-color: rgba(15, 23, 42, 0.09) !important;
   background: rgba(255, 255, 255, 0.9) !important;
   box-shadow: 0 16px 38px -30px rgba(15, 23, 42, 0.28) !important;
+}
+
+.interview-media-preview {
+  background: #121316;
+}
+
+/* Live interview room: flat panels and quiet chrome, matching Resume Roast.
+   Practice assessment rooms (.practice-paper) keep their own recipe. */
+.path-rail-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+html.light .path-rail-track,
+html[data-theme="light"] .path-rail-track {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.interview-workspace-page:not(.practice-paper) .interview-panel-shell {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+html.light .interview-workspace-page:not(.practice-paper) .interview-panel-shell,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .interview-panel-shell,
+html.light .interview-workspace-page .interview-live-header,
+html[data-theme="light"] .interview-workspace-page .interview-live-header {
+  border-color: transparent !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html.light .interview-workspace-page .interview-live-end:hover,
+html[data-theme="light"] .interview-workspace-page .interview-live-end:hover {
+  background: rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Room dialogs dim the room without blurring it. */
+.interview-dialog-backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+html.light .interview-dialog-backdrop,
+html[data-theme="light"] .interview-dialog-backdrop {
+  background: rgba(15, 23, 42, 0.18) !important;
+}
+
+html.light .interview-mic-dialog,
+html[data-theme="light"] .interview-mic-dialog {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.interview-soft-rule {
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 70%, transparent) 1;
+}
+
+html.light .interview-soft-rule,
+html[data-theme="light"] .interview-soft-rule {
+  border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 70%, transparent) 1;
+}
+
+.interview-answer-input {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+html.light .interview-workspace-page .interview-answer-input,
+html[data-theme="light"] .interview-workspace-page .interview-answer-input {
+  background: #ffffff !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .interview-workspace-page .interview-answer-input:focus,
+html[data-theme="light"] .interview-workspace-page .interview-answer-input:focus {
+  box-shadow: inset 0 0 0 1px var(--workspace-accent-border) !important;
+}
+
+html.light .interview-workspace-page .interview-stage-rail,
+html[data-theme="light"] .interview-workspace-page .interview-stage-rail,
+html.light .interview-workspace-page .interview-stage-cell,
+html[data-theme="light"] .interview-workspace-page .interview-stage-cell,
+html.light .interview-workspace-page .interview-stage-cell[aria-current="step"],
+html[data-theme="light"] .interview-workspace-page .interview-stage-cell[aria-current="step"] {
+  background: transparent !important;
+}
+
+html.light .interview-workspace-page .interview-teacher-chip,
+html[data-theme="light"] .interview-workspace-page .interview-teacher-chip {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html.light .interview-workspace-page .interview-panel-shell .interview-stage-rail,
+html[data-theme="light"] .interview-workspace-page .interview-panel-shell .interview-stage-rail,
+html.light .interview-workspace-page .interview-panel-shell .interview-stage-rail .interview-stage-cell,
+html[data-theme="light"] .interview-workspace-page .interview-panel-shell .interview-stage-rail .interview-stage-cell,
+html.light .interview-workspace-page .interview-stage-rail .interview-stage-cell,
+html[data-theme="light"] .interview-workspace-page .interview-stage-rail .interview-stage-cell,
+html.light .interview-workspace-page .interview-live-header .interview-live-timer,
+html[data-theme="light"] .interview-workspace-page .interview-live-header .interview-live-timer {
+  background: transparent !important;
+}
+
+html.light .interview-workspace-page .interview-answer-input::placeholder,
+html[data-theme="light"] .interview-workspace-page .interview-answer-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Media setup: one flat card, device rows split by a single faded hairline,
+   and the microphone check sitting directly in the card (no grey boxes). */
+html.light .interview-workspace-page .interview-media-dialog,
+html[data-theme="light"] .interview-workspace-page .interview-media-dialog {
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.interview-media-dialog {
+  box-shadow: none !important;
+}
+
+.interview-media-rows .interview-media-row + .interview-media-row,
+.interview-media-rule {
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 75%, transparent) 1;
+}
+
+html.light .interview-media-rows .interview-media-row + .interview-media-row,
+html[data-theme="light"] .interview-media-rows .interview-media-row + .interview-media-row,
+html.light .interview-media-rule,
+html[data-theme="light"] .interview-media-rule {
+  border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 75%, transparent) 1;
+}
+
+html.light .interview-workspace-page .interview-media-permissions.interview-media-rows,
+html[data-theme="light"] .interview-workspace-page .interview-media-permissions.interview-media-rows {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* Launch screen primary action: cream on dark, ink on paper. */
+html.light .interview-launch-page .interview-launch-primary,
+html[data-theme="light"] .interview-launch-page .interview-launch-primary {
+  background: #111827 !important;
+  color: #ffffff !important;
 }
 
 /* The live room is one paper workspace in light mode.  These names are kept
@@ -6934,7 +7099,8 @@ html[data-theme="light"] .interview-workspace-page .interview-camera-control {
    granted. */
 html.light .interview-workspace-page .interview-media-preview,
 html[data-theme="light"] .interview-workspace-page .interview-media-preview {
-  background: rgba(15, 23, 42, 0.045) !important;
+  background:
+    #faf9f7 !important;
 }
 
 html.light .interview-workspace-page .interview-media-preview-scrim,
@@ -6944,10 +7110,10 @@ html[data-theme="light"] .interview-workspace-page .interview-media-preview-scri
 
 html.light .interview-workspace-page .interview-media-privacy-chip,
 html[data-theme="light"] .interview-workspace-page .interview-media-privacy-chip {
-  border: 1px solid rgba(15, 23, 42, 0.09);
-  background: rgba(255, 255, 255, 0.9) !important;
+  border: 0;
+  background: rgba(255, 255, 255, 0.92) !important;
   color: #64748b !important;
-  box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.22);
+  box-shadow: none;
 }
 
 html.light .interview-workspace-page .interview-media-permissions,
@@ -8740,14 +8906,14 @@ html[data-theme="light"] .resume-roast-page .resume-roast-soft-rule {
   border-image: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.1) 16%, rgba(15, 23, 42, 0.1) 84%, transparent) 1 !important;
 }
 
-/* In Resume Roast the resume is read straight off its panel: no grey canvas
-   and no floating sheet (a box inside a box). Interview rooms keep the sheet. */
-.resume-roast-page.interview-workspace-page .resume-preview-canvas,
-.resume-roast-page.interview-workspace-page .resume-sheet,
-html.light .resume-roast-page.interview-workspace-page .resume-preview-canvas,
-html[data-theme="light"] .resume-roast-page.interview-workspace-page .resume-preview-canvas,
-html.light .resume-roast-page.interview-workspace-page .resume-sheet,
-html[data-theme="light"] .resume-roast-page.interview-workspace-page .resume-sheet {
+/* The resume is read straight off its panel in Resume Roast and the live
+   interview room: no grey canvas and no floating sheet (a box inside a box). */
+.interview-workspace-page:not(.practice-paper) .resume-preview-canvas,
+.interview-workspace-page:not(.practice-paper) .resume-sheet,
+html.light .interview-workspace-page:not(.practice-paper) .resume-preview-canvas,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .resume-preview-canvas,
+html.light .interview-workspace-page:not(.practice-paper) .resume-sheet,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .resume-sheet {
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;

@@ -19,6 +19,23 @@ export type MediaSetupResult = {
   microphoneDeviceId: string;
 };
 
+/** Storage can be blocked (private windows); a remembered device is only a hint. */
+function readPreferredMicrophone(): string {
+  try {
+    return window.localStorage.getItem(MIC_DEVICE_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function rememberMicrophone(deviceId: string) {
+  try {
+    window.localStorage.setItem(MIC_DEVICE_STORAGE_KEY, deviceId);
+  } catch {
+    // Not remembering the choice is fine; the picker still works.
+  }
+}
+
 function stopStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop());
 }
@@ -67,6 +84,7 @@ export function MediaPermissionGate({
   const [selectedMicrophoneId, setSelectedMicrophoneId] = useState("");
   const [heardVoice, setHeardVoice] = useState(false);
   const [switchingMicrophone, setSwitchingMicrophone] = useState(false);
+  const [cameraLooksDark, setCameraLooksDark] = useState(false);
 
   const releaseMicrophone = useCallback(() => {
     stopStream(microphoneStreamRef.current);
@@ -80,9 +98,21 @@ export function MediaPermissionGate({
     setAudioInputs(devices.filter((device) => device.kind === "audioinput"));
   }, []);
 
+  /** Set below; called when the microphone in use disappears. */
+  const recoverMicrophoneRef = useRef<() => void>(() => undefined);
+
   const adoptMicrophoneStream = useCallback((stream: MediaStream) => {
     microphoneStreamRef.current = stream;
     const track = stream.getAudioTracks()[0] ?? null;
+    // Unplugging a headset or a Bluetooth drop ends the track without any
+    // error; without this the meter just goes flat and nothing recovers.
+    track?.addEventListener(
+      "ended",
+      () => {
+        if (microphoneStreamRef.current === stream) recoverMicrophoneRef.current();
+      },
+      { once: true }
+    );
     setMicrophoneTrack(track);
     setMicrophoneLabel(track?.label || "Microphone ready");
     setSelectedMicrophoneId(track?.getSettings().deviceId ?? "");
@@ -101,7 +131,7 @@ export function MediaPermissionGate({
         });
         stopStream(microphoneStreamRef.current);
         adoptMicrophoneStream(stream);
-        window.localStorage.setItem(MIC_DEVICE_STORAGE_KEY, deviceId);
+        rememberMicrophone(deviceId);
       } catch (caught) {
         setError(permissionError(caught, "microphone"));
       } finally {
@@ -172,7 +202,7 @@ export function MediaPermissionGate({
 
       try {
         // Start from the microphone this learner chose last time, if it is still here.
-        const preferred = window.localStorage.getItem(MIC_DEVICE_STORAGE_KEY) ?? "";
+        const preferred = readPreferredMicrophone();
         const microphoneStream = await navigator.mediaDevices
           .getUserMedia({
             audio: preferred
@@ -224,11 +254,58 @@ export function MediaPermissionGate({
     onComplete({ cameraStream: preparedCamera, microphoneDeviceId });
   }, [cameraState, microphoneState, onComplete, releaseMicrophone]);
 
+  // Fall back to the default microphone when the chosen one goes away. If no
+  // microphone is left, return to the permission step instead of a dead meter.
+  useEffect(() => {
+    recoverMicrophoneRef.current = () => {
+      setError(null);
+      navigator.mediaDevices
+        .getUserMedia({ audio: MICROPHONE_CONSTRAINTS, video: false })
+        .then((stream) => {
+          stopStream(microphoneStreamRef.current);
+          adoptMicrophoneStream(stream);
+          void refreshAudioInputs();
+        })
+        .catch((caught) => {
+          releaseMicrophone();
+          setMicrophoneState("error");
+          setMicrophoneLabel("Microphone disconnected");
+          setError(permissionError(caught, "microphone"));
+        });
+    };
+  }, [adoptMicrophoneStream, refreshAudioInputs, releaseMicrophone]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !cameraStream) return;
     video.srcObject = cameraStream;
     void video.play().catch(() => undefined);
+  }, [cameraStream]);
+
+  // A closed privacy shutter or a covered lens still delivers a "working"
+  // stream, just black frames. Sample a tiny copy of the picture and say so
+  // instead of leaving a black panel with no explanation.
+  useEffect(() => {
+    setCameraLooksDark(false);
+    if (!cameraStream) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 18;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    let darkSamples = 0;
+    const timer = window.setInterval(() => {
+      const video = videoRef.current;
+      if (!context || !video || video.readyState < 2) return;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let brightest = 0;
+      for (let index = 0; index < pixels.length; index += 4) {
+        brightest = Math.max(brightest, pixels[index]!, pixels[index + 1]!, pixels[index + 2]!);
+      }
+      darkSamples = brightest < 16 ? darkSamples + 1 : 0;
+      setCameraLooksDark(darkSamples >= 2);
+    }, 1_000);
+    return () => window.clearInterval(timer);
   }, [cameraStream]);
 
   useEffect(
@@ -250,15 +327,14 @@ export function MediaPermissionGate({
 
   return (
     <div className="interview-media-gate relative flex min-h-0 w-full flex-1 items-start justify-center overflow-x-hidden overflow-y-auto overscroll-contain px-0 py-3 [scrollbar-gutter:stable] sm:px-5 sm:py-8 md:items-center">
-      <div className="interview-ambient-glow pointer-events-none absolute left-1/2 top-1/2 h-[32rem] w-[42rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent)] opacity-[0.075] blur-[130px]" />
 
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="media-setup-title"
-        className="interview-media-dialog interview-mobile-glass relative mx-auto grid w-full min-w-0 max-w-[calc(100vw-2rem)] shrink-0 overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[rgba(18,19,22,0.78)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_32px_100px_rgba(0,0,0,0.46)] backdrop-blur-2xl sm:max-w-5xl sm:rounded-[1.75rem] lg:grid-cols-[minmax(17rem,0.78fr)_minmax(0,1.22fr)]"
+        className="interview-media-dialog interview-mobile-glass relative mx-auto grid w-full min-w-0 max-w-[calc(100vw-2rem)] shrink-0 overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#17181b] sm:max-w-5xl sm:rounded-[1.75rem] lg:grid-cols-[minmax(17rem,0.78fr)_minmax(0,1.22fr)]"
       >
-        <div className="interview-media-preview relative aspect-[16/9] min-h-0 overflow-hidden bg-black/25 sm:min-h-64 lg:aspect-auto lg:min-h-[32rem]">
+        <div className="interview-media-preview relative aspect-[16/9] min-h-0 overflow-hidden sm:min-h-64 lg:aspect-auto lg:min-h-[32rem]">
           {cameraStream ? (
             <video
               ref={videoRef}
@@ -277,17 +353,20 @@ export function MediaPermissionGate({
                   aria-hidden="true"
                 />
               ) : (
-                <div className="flex items-center gap-4 text-cream/72">
-                  <Mic size={32} strokeWidth={1.5} aria-hidden="true" />
-                  <span className="h-8 w-px bg-white/10" />
-                  {cameraOptional ? (
-                    <Camera size={36} strokeWidth={1.5} aria-hidden="true" />
-                  ) : (
-                    <ShieldCheck size={36} strokeWidth={1.5} aria-hidden="true" />
-                  )}
+                <div className="flex items-center gap-3 text-cream/72">
+                  <span className="interview-media-icon grid h-12 w-12 place-items-center rounded-2xl border border-white/[0.1]">
+                    <Mic size={20} strokeWidth={1.5} aria-hidden="true" />
+                  </span>
+                  <span className="interview-media-icon grid h-12 w-12 place-items-center rounded-2xl border border-white/[0.1]">
+                    {cameraOptional ? (
+                      <Camera size={20} strokeWidth={1.5} aria-hidden="true" />
+                    ) : (
+                      <ShieldCheck size={20} strokeWidth={1.5} aria-hidden="true" />
+                    )}
+                  </span>
                 </div>
               )}
-              <p className="mt-6 max-w-xs text-base leading-7 text-cream/52">
+              <p className="mt-5 max-w-[16rem] text-sm leading-6 text-cream/52">
                 {requesting
                   ? "Your browser may ask you to confirm access now."
                   : cameraOptional
@@ -296,7 +375,19 @@ export function MediaPermissionGate({
               </p>
             </div>
           )}
-          <div className="interview-media-preview-scrim pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/15" />
+          {/* Only a live picture needs darkening for the chip to stay legible. */}
+          {cameraStream ? (
+            <div className="interview-media-preview-scrim pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/15" />
+          ) : null}
+          {cameraStream && cameraLooksDark ? (
+            <p
+              role="status"
+              className="absolute inset-x-6 top-1/2 -translate-y-1/2 text-center text-sm leading-6 text-white/80"
+            >
+              Your camera is sending a black picture. Check its privacy shutter or lighting, or
+              turn the camera off. It is optional.
+            </p>
+          ) : null}
           <div className="interview-media-privacy-chip interview-live-chip absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-sm text-cream/72 backdrop-blur-xl sm:bottom-4 sm:left-4">
             <ShieldCheck size={14} aria-hidden="true" />
             Not recorded
@@ -304,7 +395,7 @@ export function MediaPermissionGate({
         </div>
 
         <div className="flex min-w-0 flex-col p-5 sm:p-8 lg:p-10">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cream/42">
+          <p className="text-[13px] font-medium text-[var(--workspace-accent)]">
             Before {interviewerName} joins
           </p>
           <h1
@@ -319,9 +410,9 @@ export function MediaPermissionGate({
               : `Your microphone is required for the conversation. We’ll check it here before ${interviewerName} joins.`}
           </p>
 
-          <div className="interview-media-permissions mt-5 min-w-0 overflow-hidden rounded-2xl bg-black/15 sm:mt-7">
+          <div className="interview-media-permissions interview-media-rows mt-5 min-w-0 sm:mt-7">
             <PermissionRow
-              icon={<Mic size={20} aria-hidden="true" />}
+              icon={<Mic size={18} strokeWidth={1.5} aria-hidden="true" />}
               label="Microphone"
               detail={microphoneLabel}
               required
@@ -330,9 +421,9 @@ export function MediaPermissionGate({
             <PermissionRow
               icon={
                 cameraState === "skipped" ? (
-                  <CameraOff size={20} aria-hidden="true" />
+                  <CameraOff size={18} strokeWidth={1.5} aria-hidden="true" />
                 ) : (
-                  <Camera size={20} aria-hidden="true" />
+                  <Camera size={18} strokeWidth={1.5} aria-hidden="true" />
                 )
               }
               label="Camera"
@@ -342,14 +433,12 @@ export function MediaPermissionGate({
           </div>
 
           {microphoneReady ? (
-            <div className="interview-mic-check mt-4 rounded-2xl bg-black/15 px-4 py-4">
+            <div className="interview-mic-check interview-media-rule mt-1 pt-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-cream/88">Check your microphone</p>
-                <span
-                  className={`text-sm ${heardVoice ? "text-[var(--workspace-accent)]" : "text-cream/42"}`}
-                  aria-live="polite"
-                >
-                  {heardVoice ? `${interviewerName} will hear you` : "Say something"}
+                <p className="text-sm font-semibold text-cream">Check your microphone</p>
+                {/* The meter below already says "Say something"; this only confirms. */}
+                <span className="text-sm text-[var(--workspace-accent)]" aria-live="polite">
+                  {heardVoice ? `${interviewerName} will hear you` : null}
                 </span>
               </div>
               <p className="mt-1 text-sm leading-6 text-cream/52">
@@ -461,14 +550,16 @@ function PermissionRow({
   required?: boolean;
 }) {
   return (
-    <div className="flex min-h-[4.25rem] min-w-0 items-center gap-3 px-3 py-2.5 sm:min-h-[4.75rem] sm:px-4 sm:py-3">
-      <span className="shrink-0 text-[var(--workspace-accent)]">{icon}</span>
+    <div className="interview-media-row flex min-h-[4.25rem] min-w-0 items-center gap-3.5 py-3 sm:min-h-[4.5rem]">
+      <span className="interview-media-icon grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.1] text-cream/72">
+        {icon}
+      </span>
       <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-cream/88">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-cream">
           {label}
-          {required ? <span className="font-normal text-cream/36">Required</span> : null}
+          {required ? <span className="text-xs font-normal text-cream/42">Required</span> : null}
         </span>
-        <span className="mt-0.5 block truncate text-sm text-cream/42">{detail}</span>
+        <span className="mt-0.5 block truncate text-[13px] text-cream/48">{detail}</span>
       </span>
       <span className="flex h-7 w-7 shrink-0 items-center justify-center text-[var(--workspace-accent)]">
         {state === "requesting" ? (
@@ -476,10 +567,7 @@ function PermissionRow({
         ) : state === "ready" ? (
           <Check size={18} aria-label="Ready" />
         ) : state === "error" ? (
-          <span
-            className="h-2 w-2 rounded-full bg-[#ff8f8f] shadow-[0_0_10px_#ff8f8f]"
-            aria-label="Needs attention"
-          />
+          <span className="h-2 w-2 rounded-full bg-[#ef4444]" aria-label="Needs attention" />
         ) : state === "skipped" ? (
           <span className="h-1.5 w-1.5 rounded-full bg-cream/25" aria-label="Skipped" />
         ) : (

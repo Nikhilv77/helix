@@ -236,9 +236,7 @@ export function InterviewQuestionPanel({
 
             {showExpectations && question.expects?.length && format !== "mcq" ? (
               <div className="mt-6">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/38">
-                  A strong answer covers
-                </p>
+                <p className="text-[13px] font-semibold text-cream/58">A strong answer covers</p>
                 <ul className="mt-2.5 space-y-1.5">
                   {question.expects.map((item) => (
                     <li key={item} className="flex gap-2.5 text-sm leading-6 text-cream/56">
@@ -307,12 +305,12 @@ export function InterviewQuestionPanel({
             ) : null}
 
             {format === "spoken" && !question.codeTask ? (
-              <div className={`${INTERVIEW_PANEL_CARD} mt-7 p-4`}>
+              <div className="interview-listening interview-soft-rule mt-8 pt-5">
                 <div className="flex items-center gap-2.5">
                   <span
                     className={`h-2 w-2 rounded-full ${
                       micOn
-                        ? "animate-pulse bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]"
+                        ? "animate-pulse bg-[var(--workspace-accent)]"
                         : "bg-cream/28"
                     }`}
                     aria-hidden="true"
@@ -354,7 +352,7 @@ export function InterviewQuestionPanel({
 
       {question && format !== "mcq" ? (
         <div
-          className={`interview-answer-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3.5 sm:px-5`}
+          className={`interview-answer-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} px-4 py-3.5 sm:px-5`}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <label htmlFor="resume-answer" className="text-sm font-semibold text-cream/80">
@@ -386,13 +384,13 @@ export function InterviewQuestionPanel({
               minHeight={76}
               maxHeight={148}
               containerClassName="min-w-0 flex-1"
-              textareaClassName="rounded-xl border-0 bg-black/20 px-3.5 py-2.5 font-sans text-sm leading-6 text-cream outline-none ring-1 ring-inset ring-white/[0.045] transition placeholder:text-cream/26 focus:bg-black/30 focus:ring-white/[0.1]"
+              textareaClassName="interview-answer-input rounded-xl border-0 px-3.5 py-2.5 font-sans text-sm leading-6 text-cream outline-none ring-1 ring-inset ring-white/[0.08] transition placeholder:text-cream/30 focus:ring-[var(--workspace-accent-border)]"
             />
             <button
               type="button"
               onClick={onSubmit}
               disabled={sending || !(question.codeTask ? draft.trim() : draft.trim().length >= 2)}
-              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
             >
               {sending ? (
                 <Loader2 size={15} className="animate-spin" aria-hidden="true" />
@@ -430,7 +428,7 @@ function StageRail({
 }) {
   return (
     <div
-      className={`interview-stage-rail grid shrink-0 gap-px border-b ${INTERVIEW_PANEL_RULE} bg-white/[0.04]`}
+      className={`interview-stage-rail grid shrink-0 border-b ${INTERVIEW_PANEL_RULE}`}
       style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}
     >
       {stages.map((stage) => {
@@ -442,18 +440,14 @@ function StageRail({
           <div
             key={stage.id}
             aria-current={active ? "step" : undefined}
-            className={`interview-stage-cell relative px-4 py-3 transition ${
-              active
-                ? "bg-[color-mix(in_srgb,var(--workspace-accent)_9%,rgba(17,18,21,0.9))]"
-                : "bg-[rgba(17,18,21,0.9)]"
-            }`}
+            className="interview-stage-cell relative px-4 py-3.5 transition"
           >
             <div className="flex items-center gap-2">
               <span
                 aria-hidden="true"
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                   active
-                    ? "bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]"
+                    ? "bg-[var(--workspace-accent)]"
                     : complete
                       ? "bg-[var(--workspace-accent)]/55"
                       : "bg-cream/22"
@@ -467,7 +461,7 @@ function StageRail({
                 {stage.label}
               </p>
               {total > 0 ? (
-                <span className="interview-stage-count ml-auto shrink-0 text-[11px] tabular-nums text-cream/34">
+                <span className="interview-stage-count ml-auto shrink-0 text-xs tabular-nums text-cream/40">
                   {Math.min(done, total)}/{total}
                 </span>
               ) : null}
@@ -475,7 +469,7 @@ function StageRail({
             {active ? (
               <span
                 aria-hidden="true"
-                className="absolute inset-x-0 bottom-0 h-px bg-[var(--workspace-accent)]"
+                className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[var(--workspace-accent)]"
               />
             ) : null}
           </div>

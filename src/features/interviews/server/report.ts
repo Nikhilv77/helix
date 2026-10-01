@@ -7,6 +7,7 @@ import type {
   WorkspaceInsights
 } from "@/lib/shared/types";
 import { SESSION_TTL_MS } from "./session-constants";
+import { roundTimeExpired } from "./voice-connection-policy";
 import { learnerNextStep } from "@/features/interviews/domain/learner-next-step";
 import type { StoredInterviewSession } from "./session-store";
 import { isResumableBlockAssessment, roundCaps, type QuestionEvaluation } from "./types";
@@ -38,7 +39,7 @@ export function createHistoryItem(
 
   return {
     sessionId: state.id,
-    status: getStatus(state.phase, touchedAt, now),
+    status: getStatus(state, touchedAt, now),
     setup: state.setup,
     startedAt: state.startedAt,
     updatedAt: touchedAt,
@@ -227,7 +228,15 @@ export function readInterviewReportSnapshot(
   touchedAt: number,
   now = Date.now()
 ): InterviewReport {
-  const status = getStatus(snapshot.phase, touchedAt, now);
+  const status = getStatus(
+    {
+      phase: snapshot.phase,
+      setup: snapshot.report.setup,
+      startedAt: snapshot.report.startedAt
+    },
+    touchedAt,
+    now
+  );
   const durationMs =
     snapshot.phase === "done" || status === "expired"
       ? snapshot.lastTurnEndMs
@@ -361,12 +370,15 @@ export function createWorkspaceInsightsFromReports(
 }
 
 function getStatus(
-  phase: StoredInterviewSession["state"]["phase"],
+  state: Pick<StoredInterviewSession["state"], "phase" | "setup" | "startedAt">,
   touchedAt: number,
   now: number
 ): InterviewHistoryStatus {
-  if (phase === "done") return "completed";
-  return now - touchedAt > SESSION_TTL_MS ? "expired" : "in_progress";
+  if (state.phase === "done") return "completed";
+  // Idle for an hour, or past the round's own time limit: either way the room
+  // cannot be entered again, so it is a saved attempt, not one in progress.
+  if (now - touchedAt > SESSION_TTL_MS || roundTimeExpired(state, now)) return "expired";
+  return "in_progress";
 }
 
 function getDurationMs(session: StoredInterviewSession, now: number): number {

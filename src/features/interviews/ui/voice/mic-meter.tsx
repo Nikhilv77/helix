@@ -133,7 +133,7 @@ export function MicMeter({
 
       <span
         ref={statusRef}
-        className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/40"
+        className="text-xs font-medium text-cream/48"
       >
         {muted ? "Muted" : "Say something"}
       </span>
