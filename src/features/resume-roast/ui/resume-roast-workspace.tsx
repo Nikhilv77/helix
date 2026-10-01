@@ -14,10 +14,10 @@ import {
   type ReactNode
 } from "react";
 import {
+  Check,
   CircleAlert,
   FileText,
   Flame,
-  Gauge,
   ListChecks,
   PenLine,
   ThumbsUp,
@@ -809,27 +809,20 @@ function JamesChat({
         className={`flex shrink-0 items-center justify-between gap-4 border-b ${INTERVIEW_PANEL_RULE} px-5 py-3.5`}
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
-            Resume Roast
+          <h1 className="text-base font-semibold text-cream">Resume Roast</h1>
+          <p className="mt-0.5 text-[13px] text-cream/48">
+            {loading ? "Analysing" : roastComplete ? "Your review" : "Set the target"}
           </p>
-          <h1 className="mt-1 text-base font-semibold text-cream">
-            {roastComplete ? "Your review" : "Set the target"}
-          </h1>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {onUpdateResume && !loading ? (
-            <button
-              type="button"
-              onClick={onUpdateResume}
-              className="rounded-full border border-white/[0.12] bg-white/[0.035] px-3 py-1.5 text-xs font-semibold text-cream/76 transition hover:border-[var(--workspace-accent-border)] hover:bg-[var(--workspace-accent-soft)] hover:text-cream"
-            >
-              Update resume
-            </button>
-          ) : null}
-          <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-xs font-medium text-cream/48">
-            {loading ? "Analysing" : roastComplete ? "Complete" : "With James"}
-          </span>
-        </div>
+        {onUpdateResume && !loading ? (
+          <button
+            type="button"
+            onClick={onUpdateResume}
+            className="-mr-2 shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-[var(--workspace-accent)] transition hover:bg-[var(--workspace-accent-soft)]"
+          >
+            Update resume
+          </button>
+        ) : null}
       </header>
       <div
         ref={scrollRef}
@@ -870,7 +863,7 @@ function JamesChat({
                 <button
                   type="button"
                   onClick={() => onReuseTarget(lastTarget)}
-                  className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] px-4 py-3 text-left transition hover:bg-white/[0.08]"
+                  className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-[var(--workspace-accent-soft)] px-4 py-3 text-left transition hover:brightness-[0.98]"
                 >
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-cream">
@@ -880,7 +873,7 @@ function JamesChat({
                       {targetLabel(lastTarget)}
                     </span>
                   </span>
-                  <span className="shrink-0 text-xs font-semibold text-cream/70">Roast it</span>
+                  <span className="shrink-0 text-xs font-semibold text-[var(--workspace-accent)]">Roast it</span>
                 </button>
               ) : null}
             </Question>
@@ -912,15 +905,7 @@ function JamesChat({
           ) : null}
 
           {target.level && loading && !roastComplete ? (
-            <div>
-              <JamesLine text={resumeRoastProgressMessage(analysisElapsedSeconds)} />
-              <p
-                aria-hidden="true"
-                className="mt-2 pl-11 text-xs font-medium tabular-nums text-cream/48"
-              >
-                Analysing · {analysisElapsedSeconds}s
-              </p>
-            </div>
+            <AnalysisProgress elapsedSeconds={analysisElapsedSeconds} />
           ) : null}
 
           {roastComplete ? <RoastCards events={events} target={target} /> : null}
@@ -929,14 +914,14 @@ function JamesChat({
             <button
               type="button"
               onClick={onChangeTarget}
-              className="rounded-full border border-white/[0.12] bg-white/[0.035] px-3.5 py-2 text-xs font-semibold text-cream/76 transition hover:border-[var(--workspace-accent-border)] hover:bg-[var(--workspace-accent-soft)] hover:text-cream"
+              className="-ml-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-[var(--workspace-accent)] transition hover:bg-[var(--workspace-accent-soft)]"
             >
               {showingPrevious ? "Start a fresh analysis" : "Analyse another target"}
             </button>
           ) : null}
 
           {history.length ? (
-            <details className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
+            <details className="resume-roast-soft-rule border-t border-white/[0.08] pt-5">
               <summary className="cursor-pointer text-sm font-semibold text-cream/68">
                 Resume Roast history ({history.length})
               </summary>
@@ -945,7 +930,15 @@ function JamesChat({
                   <button
                     key={roast.id}
                     type="button"
-                    onClick={() => onShowHistory(roast)}
+                    onClick={() => {
+                      onShowHistory(roast);
+                      // The saved review may already be the one on screen, so
+                      // always bring the reader back to its beginning.
+                      window.requestAnimationFrame(() => {
+                        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+                        scrollRef.current?.scrollTo?.({ top: 0, behavior: reduce ? "auto" : "smooth" });
+                      });
+                    }}
                     className="rounded-xl bg-white/[0.035] px-3.5 py-2.5 text-left text-sm text-cream/68 transition hover:bg-white/[0.07] hover:text-cream"
                   >
                     <span className="flex items-baseline justify-between gap-3">
@@ -1056,25 +1049,25 @@ function JamesAside({
         ref={scrollRef}
         data-testid="resume-roast-transcript"
         aria-label="James transcript"
-        className="interview-transcript thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-3.5"
+        className="interview-transcript thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5"
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           {transcript.map((entry) => {
             const james = entry.speaker === "James";
             return (
               <article
                 key={entry.id}
-                className={`rounded-xl px-3 py-2.5 ${james ? "bg-white/[0.035]" : "bg-black/15"}`}
+                className="px-1"
               >
                 <p
-                  className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                    james ? "text-[var(--workspace-accent)]" : "text-cream/34"
+                  className={`text-xs font-semibold ${
+                    james ? "text-[var(--workspace-accent)]" : "text-cream/42"
                   }`}
                 >
                   {entry.speaker}
                 </p>
                 <p
-                  className={`mt-1.5 text-sm leading-6 ${james ? "text-cream/82" : "text-cream/62"}`}
+                  className={`mt-1 text-sm leading-6 ${james ? "text-cream/82" : "text-cream/62"}`}
                 >
                   {entry.text}
                 </p>
@@ -1181,15 +1174,15 @@ function Question<T extends string>({
               key={option.value}
               type="button"
               onClick={() => onChoose(option.value)}
-              className={`rounded-full border px-3.5 py-2 text-left text-xs font-medium transition hover:border-[var(--workspace-accent-border)] hover:bg-[var(--workspace-accent-soft)] hover:text-cream ${
+              className={`rounded-full px-3.5 py-2 text-left text-xs font-medium transition hover:bg-[var(--workspace-accent-soft)] hover:text-cream ${
                 option.value === suggested
-                  ? "border-[var(--workspace-accent-border)] bg-white/[0.035] text-cream"
-                  : "border-white/[0.12] bg-white/[0.035] text-cream/76"
+                  ? "bg-[var(--workspace-accent-soft)] text-cream"
+                  : "bg-white/[0.035] text-cream/76"
               }`}
             >
               {option.label}
               {option.value === suggested ? (
-                <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cream/48">
+                <span className="ml-1.5 text-xs font-medium text-cream/48">
                   From profile
                 </span>
               ) : null}
@@ -1197,6 +1190,63 @@ function Question<T extends string>({
           ))}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+const ANALYSIS_STEPS = [
+  "Read your resume",
+  "Score it against your target",
+  "Write the roast and the fixes"
+] as const;
+
+/** The three stages James works through, lit up as the analysis runs. */
+function AnalysisProgress({ elapsedSeconds }: { elapsedSeconds: number }) {
+  const active = elapsedSeconds < 3 ? 0 : elapsedSeconds < 7 ? 1 : 2;
+  return (
+    <div className="identity-stage-in">
+      <JamesLine text={resumeRoastProgressMessage(elapsedSeconds)} />
+      <ol className="mt-6 space-y-3.5" aria-hidden="true">
+        {ANALYSIS_STEPS.map((label, index) => {
+          const done = index < active;
+          const current = index === active;
+          return (
+            <li key={label} className="flex items-center gap-3">
+              <span className="grid h-5 w-5 shrink-0 place-items-center">
+                {done ? (
+                  <Check
+                    size={16}
+                    strokeWidth={1.8}
+                    className="text-[var(--workspace-accent)]"
+                  />
+                ) : current ? (
+                  <span className="flex h-4 items-center gap-[3px]">
+                    {[55, 100, 70].map((height, bar) => (
+                      <span
+                        key={bar}
+                        className="wave-bar w-[3px] rounded-full bg-[var(--workspace-accent)]"
+                        style={{ height: `${height}%`, animationDelay: `${bar * 140}ms` }}
+                      />
+                    ))}
+                  </span>
+                ) : (
+                  <span className="h-2 w-2 rounded-full border border-white/[0.25]" />
+                )}
+              </span>
+              <span
+                className={`text-sm transition-colors duration-300 ${
+                  done ? "text-cream/58" : current ? "font-medium text-cream" : "text-cream/38"
+                }`}
+              >
+                {label}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <p aria-hidden="true" className="mt-5 text-xs font-medium tabular-nums text-cream/48">
+        Analysing · {elapsedSeconds}s
+      </p>
     </div>
   );
 }
@@ -1261,11 +1311,11 @@ function RoastCards({
   let step = 0;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       {opening ? (
         <p
           {...reveal(step++)}
-          className="identity-stage-in text-lg font-bold leading-8 text-cream sm:text-xl sm:leading-9"
+          className="identity-stage-in text-lg font-semibold leading-8 tracking-[-0.01em] text-cream sm:text-xl sm:leading-9"
         >
           {opening.openingRoast}
         </p>
@@ -1283,25 +1333,13 @@ function RoastCards({
         <section
           {...reveal(step++)}
           aria-label={`Target fit score: ${verdict.verdict.targetFitScore} out of 100`}
-          className="identity-stage-in border-y border-white/[0.1] bg-gradient-to-r from-[var(--workspace-accent-soft)] via-transparent to-transparent py-6 pl-5 pr-1"
+          className="identity-stage-in"
         >
-          <div className="flex items-center justify-between gap-5">
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-cream/48">
-                Target fit
-              </p>
-              <p className="mt-2 text-4xl font-black tracking-tight text-cream">
-                {verdict.verdict.targetFitScore}
-                <span className="text-lg font-semibold text-cream/45">/100</span>
-              </p>
-            </div>
-            <Gauge
-              size={38}
-              strokeWidth={1.7}
-              className="shrink-0 text-[var(--workspace-accent)]"
-              aria-hidden="true"
-            />
-          </div>
+          <p className="text-[13px] font-medium text-cream/48">Target fit</p>
+          <p className="mt-1.5 text-5xl font-semibold tracking-tight text-cream">
+            {verdict.verdict.targetFitScore}
+            <span className="ml-0.5 text-lg font-medium text-cream/45">/100</span>
+          </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-cream/68">
             {verdict.verdict.explanation}
           </p>
@@ -1312,23 +1350,23 @@ function RoastCards({
       ) : null}
 
       <section aria-labelledby="roast-weak-points">
-        <SectionHeading id="roast-weak-points" icon={Flame} tone="text-orange-100">
+        <SectionHeading id="roast-weak-points" icon={Flame}>
           What&rsquo;s costing you
         </SectionHeading>
-        <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
+        <div className="space-y-9">
           {problems.length ? (
             problems.map((event, index) => (
               <article
                 key={`${event.problem.evidenceAnchors.join("-")}-${index}`}
                 {...reveal(step++)}
-                className="identity-stage-in relative py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-red-300/60"
+                className="identity-stage-in"
               >
                 {event.problem.dimension ? (
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/42">
+                  <p className="text-[13px] font-medium text-[var(--workspace-accent)]">
                     {DIMENSION_LABELS[event.problem.dimension]}
                   </p>
                 ) : null}
-                <p className="mt-1 text-base font-bold leading-7 text-cream">
+                <p className="mt-1.5 text-base font-semibold leading-7 text-cream">
                   {event.problem.joke}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-cream/78">{event.problem.issue}</p>
@@ -1336,18 +1374,18 @@ function RoastCards({
                   {event.problem.recruiterImpact}
                 </p>
                 {event.problem.quote ? (
-                  <blockquote className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3.5 py-2.5 text-sm italic leading-6 text-cream/60">
+                  <blockquote className="mt-3 border-l-2 border-white/[0.12] pl-3.5 text-sm italic leading-6 text-cream/60">
                     &ldquo;{event.problem.quote}&rdquo;
                   </blockquote>
                 ) : null}
-                <div className="mt-3 flex gap-2.5 rounded-xl bg-[var(--workspace-accent-soft)] px-3.5 py-3">
+                <div className="mt-3 flex gap-2.5">
                   <Wrench
                     size={16}
-                    strokeWidth={1.9}
+                    strokeWidth={1.6}
                     aria-hidden="true"
                     className="mt-1 shrink-0 text-[var(--workspace-accent)]"
                   />
-                  <p className="text-sm font-semibold leading-6 text-cream">
+                  <p className="text-sm font-medium leading-6 text-cream">
                     <span className="sr-only">Fix: </span>
                     {event.problem.improvement}
                   </p>
@@ -1357,9 +1395,9 @@ function RoastCards({
           ) : (
             <article
               {...reveal(step++)}
-              className="identity-stage-in relative py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-emerald-300/60"
+              className="identity-stage-in"
             >
-              <p className="font-bold text-emerald-100">Annoyingly hard to roast.</p>
+              <p className="font-semibold text-emerald-100">Annoyingly hard to roast.</p>
               <p className="mt-2 text-sm leading-6 text-cream/65">
                 The resume gives James very little nonsense to work with.
               </p>
@@ -1373,8 +1411,8 @@ function RoastCards({
           <SectionHeading id="roast-strength" icon={ThumbsUp} tone="text-emerald-100">
             What&rsquo;s working
           </SectionHeading>
-          <div className="relative border-y border-white/[0.08] py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-emerald-300/60">
-            <p className="text-base font-bold leading-7 text-cream">
+          <div>
+            <p className="text-base font-semibold leading-7 text-cream">
               {strength.strength.headline}
             </p>
             <p className="mt-2 text-sm leading-6 text-cream/72">
@@ -1389,7 +1427,7 @@ function RoastCards({
           <SectionHeading id="roast-rewrite" icon={PenLine}>
             Rewrite this
           </SectionHeading>
-          <div className="border-y border-white/[0.08] py-5 pr-1">
+          <div>
             <p className="text-sm leading-6 text-cream/45 line-through decoration-orange-300/50">
               {rewrite.rewrite.before}
             </p>
@@ -1411,7 +1449,7 @@ function RoastCards({
           <SectionHeading id="roast-fixes" icon={ListChecks}>
             Before you send it
           </SectionHeading>
-          <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
+          <div className="space-y-5">
             {actionPlan.map((item) => (
               <FixCard
                 key={`action-${item.priority}`}
@@ -1439,9 +1477,9 @@ function SectionHeading({
   children: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-center gap-2">
-      <Icon size={19} className={tone} aria-hidden="true" />
-      <h2 id={id} className="text-lg font-bold text-cream">
+    <div className="mb-5 flex items-center gap-2">
+      <Icon size={18} strokeWidth={1.6} className={tone} aria-hidden="true" />
+      <h2 id={id} className="text-lg font-semibold tracking-[-0.01em] text-cream">
         {children}
       </h2>
     </div>
@@ -1481,28 +1519,15 @@ function ScorecardPanel({
   return (
     <section
       aria-label={`James's score: ${scorecard.overall} out of 10, ${meaning.label}`}
-      className="border-y border-white/[0.1] bg-gradient-to-r from-[var(--workspace-accent-soft)] via-transparent to-transparent py-6 pl-5 pr-1"
     >
-      <div className="flex items-start justify-between gap-5">
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-cream/48">
-            James&rsquo;s score
-          </p>
-          <p className="mt-2 text-4xl font-black tracking-tight text-cream">
-            {scorecard.overall}
-            <span className="text-lg font-semibold text-cream/45">/10</span>
-            <span className="ml-3 align-middle text-base font-bold tracking-normal text-cream/80">
-              {meaning.label}
-            </span>
-          </p>
-        </div>
-        <Gauge
-          size={38}
-          strokeWidth={1.7}
-          className="shrink-0 text-[var(--workspace-accent)]"
-          aria-hidden="true"
-        />
-      </div>
+      <p className="text-[13px] font-medium text-cream/48">James&rsquo;s score</p>
+      <p className="mt-1.5 text-5xl font-semibold tracking-tight text-cream">
+        {scorecard.overall}
+        <span className="ml-0.5 text-lg font-medium text-cream/45">/10</span>
+        <span className="ml-3 align-middle text-base font-semibold tracking-normal text-cream/80">
+          {meaning.label}
+        </span>
+      </p>
       <p className="mt-4 max-w-xl text-sm leading-6 text-cream/72">{explanation}</p>
       {target ? (
         <p className="mt-2 text-xs leading-5 text-cream/42">For {targetLabel(target)}</p>
@@ -1564,8 +1589,8 @@ function ScorecardPanel({
 
 function FixCard({ number, text, detail }: { number: number; text: string; detail?: string }) {
   return (
-    <article className="flex gap-4 py-5 pr-1">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--workspace-accent-soft)] text-sm font-black text-[var(--workspace-accent)]">
+    <article className="flex gap-3">
+      <span className="w-5 shrink-0 text-base font-semibold leading-7 tabular-nums text-[var(--workspace-accent)]">
         {number}
       </span>
       <div>

@@ -298,15 +298,15 @@ function CodeExerciseSummary({ exercise }: { exercise: InterviewReport["codeExer
               : "The coding mark is based on the submitted implementation and available execution evidence."}
           </p>
         </div>
-        <div className="shrink-0 rounded-xl bg-black/20 px-5 py-3 text-left ring-1 ring-inset ring-white/[0.06] sm:text-right">
+        <div className="shrink-0 border-t border-white/[0.07] pt-4 text-left sm:min-w-[8.5rem] sm:self-stretch sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-cream/42">
             Code score
           </p>
           {score === null || score === undefined ? (
             // A status, not a number, so it reads at label weight.
-            <p className="mt-2 text-lg font-semibold text-cream/72">Not scored</p>
+            <p className="mt-3 text-base font-medium text-cream/58">Not scored</p>
           ) : (
-            <p className="mt-1 text-3xl font-semibold tabular-nums text-cream">
+            <p className="mt-2 text-3xl font-semibold tabular-nums text-cream">
               {score}
               <span className="ml-1 text-sm text-cream/42">/100</span>
             </p>
@@ -499,7 +499,7 @@ function FeedbackSection({
   if (!signals.length) return null;
 
   return (
-    <section className="border-t border-white/[0.07] py-7 first:border-t-0 first:pt-0">
+    <section className="report-section-divider relative pb-8 pt-10">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
         <h2 className="text-xl font-semibold tracking-tight text-cream">{title}</h2>
         <p className="max-w-xl text-sm leading-6 text-cream/48 sm:text-right">{description}</p>
@@ -798,12 +798,12 @@ function DownloadInterviewReportButton({
       className={
         variant === "primary"
           ? "progress-cta-shimmer relative inline-flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-cream px-6 py-3 text-base font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-wait disabled:opacity-65"
-          : "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.11] px-3.5 text-sm font-semibold text-cream/74 transition hover:bg-white/[0.06] hover:text-cream disabled:cursor-wait disabled:opacity-65"
+          : "report-download-link inline-flex h-9 items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold text-[var(--workspace-accent)] transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] disabled:cursor-wait disabled:opacity-65"
       }
     >
       <Download
         size={variant === "primary" ? 17 : 16}
-        strokeWidth={1.9}
+        strokeWidth={variant === "primary" ? 1.9 : 1.6}
         aria-hidden="true"
         className={variant === "primary" ? "relative z-10" : undefined}
       />

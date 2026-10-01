@@ -18,7 +18,6 @@ import {
   House,
   HandHelping,
   LogOut,
-  Menu,
   Mic,
   PanelLeftClose,
   Settings,
@@ -636,9 +635,14 @@ export function WorkspaceShell({
               type="button"
               aria-label="Open navigation"
               onClick={() => setMenuOpen(true)}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-cream/80 outline-none transition-colors hover:bg-white/[0.06] hover:text-cream focus-visible:ring-2 focus-visible:ring-[#F26E01]/45"
+              className="workspace-menu-toggle group grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cream/20 text-cream/75 outline-none transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.08] focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] motion-reduce:transition-none"
             >
-              <Menu size={25} strokeWidth={1.7} aria-hidden="true" />
+              {/* Two light lines in the theme toggle's frame; the shorter one
+                  reaches full width on hover. */}
+              <span aria-hidden="true" className="flex w-[18px] flex-col gap-[5px]">
+                <span className="block h-[1.5px] w-full rounded-full bg-current" />
+                <span className="block h-[1.5px] w-full origin-left scale-x-[0.62] rounded-full bg-current transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100 motion-reduce:transition-none" />
+              </span>
             </button>
           </div>
         </header>

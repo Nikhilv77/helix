@@ -48,25 +48,22 @@ export function ResumeRoastLoading() {
               <Block className="h-2.5 w-24" />
               <Block className="h-4 w-32" />
             </div>
-            <Block className="h-7 w-24 !rounded-full" />
+            <Block className="h-3 w-24" />
           </div>
           <div className="min-h-0 flex-1 px-5 py-7 sm:px-8 sm:py-9">
             <div className="mx-auto max-w-2xl space-y-8">
-              <div className="flex items-start gap-3">
-                <Block className="h-9 w-9 shrink-0 !rounded-full" />
-                <div className="resume-roast-skeleton-message w-full max-w-[26rem] rounded-2xl p-4">
-                  <Block className="h-2.5 w-full" />
-                  <Block className="mt-2.5 h-2.5 w-5/6" />
-                  <Block className="mt-2.5 h-2.5 w-2/3" />
-                </div>
+              <div className="space-y-2.5">
+                <Block className="h-3.5 w-full" />
+                <Block className="h-3.5 w-2/3" />
               </div>
-              <div className="ml-12 space-y-4">
-                <Block className="h-4 w-2/3" />
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  {[0, 1, 2, 3].map((option) => (
-                    <div key={option} className="resume-roast-skeleton-choice rounded-xl p-3.5">
-                      <Block className="h-2.5 w-4/5" />
-                    </div>
+              <div className="space-y-5">
+                <Block className="h-3.5 w-1/2" />
+                <div className="flex flex-wrap gap-2">
+                  {["w-36", "w-40", "w-44", "w-32", "w-36", "w-40"].map((width, option) => (
+                    <div
+                      key={option}
+                      className={`resume-roast-skeleton-choice h-9 ${width} rounded-full`}
+                    />
                   ))}
                 </div>
               </div>
@@ -80,9 +77,9 @@ export function ResumeRoastLoading() {
           <div className="resume-roast-skeleton-stage resume-roast-skeleton-rule flex h-40 shrink-0 items-end border-b p-4">
             <Block className="h-7 w-20 !rounded-full" />
           </div>
-          <div className="space-y-4 p-3.5">
+          <div className="space-y-6 px-4 py-5">
             {[0, 1, 2].map((entry) => (
-              <div key={entry} className="resume-roast-skeleton-message rounded-xl p-3">
+              <div key={entry} className="px-1">
                 <Block className="h-2 w-14" />
                 <Block className="mt-3 h-2.5 w-full" />
                 <Block className="mt-2 h-2.5 w-3/4" />

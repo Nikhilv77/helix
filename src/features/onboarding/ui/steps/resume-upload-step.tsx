@@ -234,10 +234,10 @@ export function ResumeStep({
                   delay={620}
                   duration={880}
                   className={[
-                    "resume-upload-title font-bold leading-none tracking-[-0.035em] text-cream",
+                    "resume-upload-title font-semibold leading-none tracking-[-0.03em] text-cream",
                     compact
-                      ? "mt-4 text-[clamp(1.65rem,8vw,2.15rem)] sm:mt-6 sm:text-[2.35rem]"
-                      : "mt-6 text-[2rem] sm:text-[2.45rem]"
+                      ? "mt-4 text-[clamp(1.35rem,6vw,1.5rem)] sm:mt-5 sm:text-[1.65rem]"
+                      : "mt-5 text-[1.5rem] sm:text-[1.65rem]"
                   ].join(" ")}
                 />
                 <p

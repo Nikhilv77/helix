@@ -1455,6 +1455,62 @@ body[data-workspace-accent="mono"] {
   pointer-events: none;
 }
 
+/* Interviews roadmap: flat cards, outlined icon tiles, one faded rule. */
+.interview-roadmap-card {
+  background: #17181b;
+  /* Backwards fill only: once the entrance ends, hover can move the card. */
+  animation: interviews-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(120ms + var(--interview-delay, 0ms));
+}
+
+a.interview-roadmap-card:hover {
+  background: #1b1c20;
+  transform: translateY(-2px);
+}
+
+.interview-roadmap-card[aria-disabled="true"] {
+  opacity: 0.5;
+  animation: none;
+}
+
+.interview-roadmap-rule {
+  border-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 70%, transparent) 1;
+}
+
+.interviews-active-row,
+.interviews-skeleton-card {
+  background: #17181b;
+}
+
+html.light .interviews-skeleton .interviews-skeleton-card,
+html[data-theme="light"] .interviews-skeleton .interviews-skeleton-card {
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html.light .interviews-page .interview-roadmap-card,
+html[data-theme="light"] .interviews-page .interview-roadmap-card,
+html.light .interviews-page .interviews-active-row,
+html[data-theme="light"] .interviews-page .interviews-active-row {
+  background: #ffffff;
+  box-shadow: none;
+}
+
+html.light .interviews-page a.interview-roadmap-card:hover,
+html[data-theme="light"] .interviews-page a.interview-roadmap-card:hover {
+  background: #ffffff;
+}
+
+html.light .interviews-page .interview-roadmap-progress,
+html[data-theme="light"] .interviews-page .interview-roadmap-progress {
+  background: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light .interviews-page .interview-roadmap-rule,
+html[data-theme="light"] .interviews-page .interview-roadmap-rule {
+  border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 70%, transparent) 1 !important;
+}
+
 .interview-session-icon {
   border: 1px solid rgba(241, 234, 216, 0.14);
   background: rgba(16, 17, 19, 0.34);
@@ -1465,7 +1521,6 @@ body[data-workspace-accent="mono"] {
 .progress-question-card {
   border: 1px solid rgba(151, 146, 135, 0.18);
   background: rgba(31, 32, 36, 0.58);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(16px);
   opacity: 0;
   animation: interviews-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -1475,7 +1530,6 @@ body[data-workspace-accent="mono"] {
 .progress-question-card:hover {
   border-color: rgba(181, 174, 160, 0.25);
   background: rgba(38, 39, 44, 0.66);
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.16);
 }
 
 .progress-question-icon {
@@ -1490,10 +1544,28 @@ body[data-workspace-accent="mono"] {
   backdrop-filter: blur(20px);
 }
 
+.progress-page .progress-maya-bubble {
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .report-glass-card {
   background: rgba(31, 32, 36, 0.58);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(16px);
+}
+
+/* A hairline between report sections that fades out at both ends. */
+.report-section-divider::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1) 18%, rgba(255, 255, 255, 0.1) 82%, transparent);
+}
+
+html.light .report-section-divider::before,
+html[data-theme="light"] .report-section-divider::before {
+  background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.1) 18%, rgba(15, 23, 42, 0.1) 82%, transparent);
 }
 
 .report-glass-tail {
@@ -2006,7 +2078,9 @@ html[data-theme="light"] .workspace-mobile-topbar button:hover {
 }
 
 html.light .workspace-theme-toggle,
-html[data-theme="light"] .workspace-theme-toggle {
+html[data-theme="light"] .workspace-theme-toggle,
+html.light .workspace-menu-toggle,
+html[data-theme="light"] .workspace-menu-toggle {
   border-color: rgba(15, 23, 42, 0.12) !important;
   background: transparent !important;
   color: #475569 !important;
@@ -2015,7 +2089,9 @@ html[data-theme="light"] .workspace-theme-toggle {
 /* Hover only scales the toggle; the frame and icon stay as they are. This also
    outranks the mobile top bar's generic button hover. */
 html.light button.workspace-theme-toggle:hover,
-html[data-theme="light"] button.workspace-theme-toggle:hover {
+html[data-theme="light"] button.workspace-theme-toggle:hover,
+html.light button.workspace-menu-toggle:hover,
+html[data-theme="light"] button.workspace-menu-toggle:hover {
   background: transparent !important;
   color: #475569 !important;
 }
@@ -2538,15 +2614,19 @@ html[data-theme="light"] .trailmate-badge-modal [class*="bg-black"] {
 /* Reports, progress, and resume roast all share the teacher-stage language.
    Keep that stage warm in light mode while turning the reading surfaces into
    paper and preserving the selected workspace accent. */
+html.light .resume-roast-page,
+html[data-theme="light"] .resume-roast-page {
+  background: #f8f7f5 !important;
+  color: #1f2937;
+}
+
+/* Reports and Progress keep their accent glow behind the teacher only; a
+   page-level wash landed off to the side, behind cards and empty space. */
 html.light .reports-page,
 html[data-theme="light"] .reports-page,
 html.light .progress-page,
-html[data-theme="light"] .progress-page,
-html.light .resume-roast-page,
-html[data-theme="light"] .resume-roast-page {
-  background:
-    radial-gradient(circle at 25% 24%, color-mix(in srgb, var(--workspace-accent) 8%, transparent), transparent 28rem),
-    #f8f7f5 !important;
+html[data-theme="light"] .progress-page {
+  background: #f8f7f5 !important;
   color: #1f2937;
 }
 
@@ -2638,6 +2718,15 @@ html[data-theme="light"] .resume-roast-page .progress-maya-bubble {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05), 0 18px 42px -34px rgba(15, 23, 42, 0.32) !important;
 }
 
+/* Report and Progress cards are flat: no ring, no drop shadow. */
+html.light .reports-page .report-glass-card,
+html[data-theme="light"] .reports-page .report-glass-card,
+html.light .progress-page .progress-maya-bubble,
+html[data-theme="light"] .progress-page .progress-maya-bubble {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
 /* The resume reading pane is intentionally unframed in light mode. */
 html.light .resume-roast-page .resume-roast-resume-stage .progress-maya-bubble,
 html[data-theme="light"] .resume-roast-page .resume-roast-resume-stage .progress-maya-bubble {
@@ -2658,7 +2747,7 @@ html.light .progress-page .progress-question-card,
 html[data-theme="light"] .progress-page .progress-question-card {
   border-color: rgba(15, 23, 42, 0.09) !important;
   background: rgba(255, 255, 255, 0.88) !important;
-  box-shadow: 0 18px 36px -30px rgba(15, 23, 42, 0.3) !important;
+  box-shadow: none !important;
 }
 
 html.light .progress-page .progress-question-card:hover,
@@ -2705,9 +2794,7 @@ html[data-theme="light"] .reports-skeleton {
    shell the same paper canvas in light mode. */
 html.light .resume-roast-skeleton,
 html[data-theme="light"] .resume-roast-skeleton {
-  background:
-    radial-gradient(circle at 25% 24%, color-mix(in srgb, var(--workspace-accent) 8%, transparent), transparent 28rem),
-    #f8f7f5 !important;
+  background: #f8f7f5 !important;
 }
 
 html.light .resume-roast-skeleton .progress-maya-bubble,
@@ -3739,6 +3826,17 @@ html[data-theme="light"] {
       var(--workspace-accent-soft) 0%,
       color-mix(in srgb, var(--workspace-accent) 7%, transparent) 44%,
       transparent 72%
+    );
+  }
+
+  /* The Interviews intro glow keeps its desktop strength on touch screens;
+     the shared wash above is far too dense behind a paragraph of text. */
+  .interviews-accent-glow {
+    background: radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--workspace-accent) 9%, transparent) 0%,
+      color-mix(in srgb, var(--workspace-accent) 2%, transparent) 40%,
+      transparent 70%
     );
   }
 
@@ -5868,6 +5966,7 @@ html[data-theme="light"] .practice-editor-caret {
   .interviews-intro-word,
   .interviews-active-link,
   .interview-session-card,
+  .interview-roadmap-card,
   .progress-question-card,
   .interviews-accent-glow-top,
   .browse-nudge,
@@ -6609,10 +6708,6 @@ html[data-theme="light"] .practice-code-viewer {
 /* Interview routes use the live-room palette in a few different entry points.
    Keep the paper treatment scoped here so other black workspace canvases retain
    their intentional dark appearance. */
-html.light .interviews-page,
-html[data-theme="light"] .interviews-page,
-html.light .interviews-skeleton,
-html[data-theme="light"] .interviews-skeleton,
 html.light .interview-setup-skeleton,
 html[data-theme="light"] .interview-setup-skeleton,
 html.light .interview-workspace-skeleton,
@@ -6620,6 +6715,15 @@ html[data-theme="light"] .interview-workspace-skeleton {
   background:
     radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--workspace-accent) 8%, transparent), transparent 30rem),
     #f8f7f5 !important;
+  color: #1f2937;
+}
+
+/* The Interviews list sits on plain paper; no accent wash behind the cards. */
+html.light .interviews-page,
+html[data-theme="light"] .interviews-page,
+html.light .interviews-skeleton,
+html[data-theme="light"] .interviews-skeleton {
+  background: #f8f7f5 !important;
   color: #1f2937;
 }
 
@@ -8492,22 +8596,21 @@ html[data-theme="light"] .dashboard-skeleton .skeleton::after {
 
 /* The Roastumé loader follows the resume sheet, conversation, and transcript
    panel sizes used by the actual room. */
-.resume-roast-skeleton-document {
-  background: rgba(0, 0, 0, 0.22);
-}
-
+/* The loading shell mirrors the live room: the resume sits straight on its
+   panel, rules fade at both ends, and nothing has an outline. */
+.resume-roast-skeleton-document,
 .resume-roast-skeleton-sheet {
-  background: #18191d;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+  background: transparent;
+  box-shadow: none;
 }
 
 .resume-roast-skeleton-rule {
-  border-color: rgba(255, 255, 255, 0.07);
+  border-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1) 16%, rgba(255, 255, 255, 0.1) 84%, transparent) 1;
 }
 
 .resume-roast-skeleton-message,
 .resume-roast-skeleton-choice {
-  border: 1px solid rgba(255, 255, 255, 0.055);
+  border: 0;
   background: rgba(255, 255, 255, 0.035);
 }
 
@@ -8521,33 +8624,30 @@ html[data-theme="light"] .dashboard-skeleton .skeleton::after {
 
 html.light .resume-roast-skeleton .resume-roast-skeleton-panel,
 html[data-theme="light"] .resume-roast-skeleton .resume-roast-skeleton-panel {
-  border-color: rgba(15, 23, 42, 0.075) !important;
+  border: 0 !important;
   background: #fff !important;
-  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3);
+  box-shadow: none !important;
 }
 
-html.light .resume-roast-skeleton-document,
-html[data-theme="light"] .resume-roast-skeleton-document {
-  background: #f3f4f6;
-}
-
-html.light .resume-roast-skeleton-sheet,
-html[data-theme="light"] .resume-roast-skeleton-sheet {
-  background: #fff;
-  box-shadow: 0 12px 36px -28px rgba(15, 23, 42, 0.3);
+html.light .resume-roast-skeleton .resume-roast-skeleton-document,
+html[data-theme="light"] .resume-roast-skeleton .resume-roast-skeleton-document,
+html.light .resume-roast-skeleton .resume-roast-skeleton-sheet,
+html[data-theme="light"] .resume-roast-skeleton .resume-roast-skeleton-sheet {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 html.light .resume-roast-skeleton-rule,
 html[data-theme="light"] .resume-roast-skeleton-rule {
-  border-color: rgba(15, 23, 42, 0.085) !important;
+  border-image: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.1) 16%, rgba(15, 23, 42, 0.1) 84%, transparent) 1 !important;
 }
 
 html.light .resume-roast-skeleton-message,
 html[data-theme="light"] .resume-roast-skeleton-message,
 html.light .resume-roast-skeleton-choice,
 html[data-theme="light"] .resume-roast-skeleton-choice {
-  border-color: rgba(15, 23, 42, 0.06);
-  background: #f7f8fa;
+  border: 0;
+  background: rgba(15, 23, 42, 0.045) !important;
 }
 
 html.light .resume-roast-skeleton .resume-roast-skeleton-stage,
@@ -8586,7 +8686,71 @@ html[data-theme="light"] .resume-roast-page .interview-panel-shell,
 html.light .resume-roast-skeleton .resume-roast-skeleton-panel,
 html[data-theme="light"] .resume-roast-skeleton .resume-roast-skeleton-panel {
   border: 0 !important;
-  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+  box-shadow: none !important;
+}
+
+/* Resume Roast's three panels scroll with a faint 4px thumb. Chrome ignores
+   ::-webkit-scrollbar while scrollbar-width/colour are set, so reset them here
+   and give Firefox its own faint thin bar. */
+.resume-roast-page .thin-scroll {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+
+.resume-roast-page .thin-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.resume-roast-page .thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.resume-roast-page .thin-scroll::-webkit-scrollbar-thumb {
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--scroll-thumb) 45%, transparent);
+}
+
+.resume-roast-page .thin-scroll:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--scroll-thumb) 75%, transparent);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .resume-roast-page .thin-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--scroll-thumb) 45%, transparent) transparent;
+  }
+}
+
+/* Resume Roast's rules fade out at both ends instead of running edge to edge:
+   panel headers, the teacher stage, the resume name block and history. */
+.resume-roast-page .interview-panel-rule,
+.resume-roast-page .resume-sheet > header,
+.resume-roast-page .resume-roast-soft-rule {
+  border-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1) 16%, rgba(255, 255, 255, 0.1) 84%, transparent) 1 !important;
+}
+
+html.light .resume-roast-page .interview-panel-rule,
+html[data-theme="light"] .resume-roast-page .interview-panel-rule,
+html.light .resume-roast-page .resume-sheet > header,
+html[data-theme="light"] .resume-roast-page .resume-sheet > header,
+html.light .resume-roast-page .resume-roast-soft-rule,
+html[data-theme="light"] .resume-roast-page .resume-roast-soft-rule {
+  border-image: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.1) 16%, rgba(15, 23, 42, 0.1) 84%, transparent) 1 !important;
+}
+
+/* In Resume Roast the resume is read straight off its panel: no grey canvas
+   and no floating sheet (a box inside a box). Interview rooms keep the sheet. */
+.resume-roast-page.interview-workspace-page .resume-preview-canvas,
+.resume-roast-page.interview-workspace-page .resume-sheet,
+html.light .resume-roast-page.interview-workspace-page .resume-preview-canvas,
+html[data-theme="light"] .resume-roast-page.interview-workspace-page .resume-preview-canvas,
+html.light .resume-roast-page.interview-workspace-page .resume-sheet,
+html[data-theme="light"] .resume-roast-page.interview-workspace-page .resume-sheet {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

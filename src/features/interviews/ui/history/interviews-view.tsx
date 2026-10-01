@@ -20,6 +20,7 @@ import {
   type InterviewRoadmapSession
 } from "@/features/interviews/domain/interview-roadmap-sessions";
 import type { InterviewHistoryItem } from "@/lib/shared/types";
+import type { InterviewReportFamily } from "@/features/interviews/domain/evaluation-profile";
 import { NextRoundTime } from "./next-round-time";
 
 interface InterviewsViewProps {
@@ -29,6 +30,8 @@ interface InterviewsViewProps {
   sessions: InterviewHistoryItem[];
   firstName: string;
   roadmapSessions: InterviewRoadmapSession[];
+  /** Latest round score per report family, as shown on Reports. */
+  latestScores?: Partial<Record<InterviewReportFamily, number>>;
 }
 
 /**
@@ -51,15 +54,54 @@ const sessionIcons: Record<string, LucideIcon> = {
   "hiring-manager-final": Rocket
 };
 
+/** Which Reports family each roadmap round is scored under. */
+const sessionFamilies: Record<string, InterviewReportFamily> = {
+  dsa: "dsa",
+  "problem-solving": "dsa",
+  "core-technical": "core-technical-projects",
+  "technical-deep-dive": "core-technical-projects",
+  "applied-engineering": "core-technical-projects",
+  "technical-project": "core-technical-projects",
+  "architecture-system-design": "system-design",
+  "system-design": "system-design",
+  "resume-behavioral-defense": "resume-behavioral",
+  "hiring-manager-final": "hr-behavioral"
+};
+
+function familyScore(
+  session: InterviewRoadmapSession,
+  scores: Partial<Record<InterviewReportFamily, number>>
+): number | null {
+  const family = sessionFamilies[session.kind ?? session.id] ?? sessionFamilies[session.id];
+  return family ? (scores[family] ?? null) : null;
+}
+
 export function InterviewsView({
   quota,
   nextSessionAt = null,
   sessions,
   firstName,
-  roadmapSessions
+  roadmapSessions,
+  latestScores = {}
 }: InterviewsViewProps) {
   const remaining = Math.max(0, quota.limit - quota.used);
   const exhausted = remaining === 0;
+  const isAvailable = (session: InterviewRoadmapSession) =>
+    Boolean(roadmapSessionHref(session)) &&
+    session.id !== "technical-project" &&
+    !(exhausted && !session.resumeSessionId);
+  // The next round to do: the first one not started yet, or once every round
+  // has been tried, the one with the lowest latest score.
+  const recommendedId =
+    roadmapSessions.find(
+      (session) => session.attemptStatus === "not_started" && isAvailable(session)
+    )?.id ??
+    roadmapSessions
+      .filter((session) => isAvailable(session) && session.attemptStatus !== "in_progress")
+      .map((session) => ({ id: session.id, score: familyScore(session, latestScores) }))
+      .filter((entry): entry is { id: string; score: number } => entry.score !== null)
+      .sort((left, right) => left.score - right.score)[0]?.id ??
+    null;
   // Old generic sessions remain in history for reporting, but they no longer
   // have a valid room. Only the permanent round engines can be resumed.
   const active = sessions.find(
@@ -78,14 +120,14 @@ export function InterviewsView({
   const introWords = introCopy.split(" ");
 
   return (
-    <main className="interviews-page relative isolate mx-auto w-full max-w-[92rem] overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
+    <main className="interviews-page relative isolate mx-auto w-full max-w-[76rem] overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       <DocumentTitle title="Interviews" />
       <span
         aria-hidden="true"
-        className="interviews-accent-glow interviews-accent-glow-top pointer-events-none absolute -top-32 left-1/2 -z-10 h-[34rem] w-[48rem] -translate-x-1/2 rounded-full"
+        className="interviews-accent-glow interviews-accent-glow-top pointer-events-none absolute -top-24 left-1/2 -z-10 h-[24rem] w-[24rem] -translate-x-1/2 rounded-full sm:-top-32 sm:h-[34rem] sm:w-[48rem]"
       />
 
-      <section className="interviews-intro-in mx-auto max-w-3xl text-center">
+      <section className="mx-auto max-w-3xl text-center">
         <p
           aria-label={introCopy}
           className="font-display text-[clamp(1.1rem,1.25vw,1.4rem)] font-medium leading-[1.55] tracking-normal text-cream"
@@ -117,39 +159,40 @@ export function InterviewsView({
         {active && activeHref ? (
           <Link
             href={activeHref}
-            className="interviews-active-link group mt-6 inline-flex items-center gap-3 rounded-2xl bg-[#17181b]/90 px-4 py-3 text-left transition hover:-translate-y-0.5 hover:bg-[#1c1e22] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+            className="interviews-active-link interviews-active-row group mx-auto mt-7 flex max-w-xl items-center gap-4 rounded-2xl px-5 py-4 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
           >
-            <Play
-              size={17}
-              aria-hidden="true"
-              fill="currentColor"
-              className="shrink-0 text-[var(--workspace-accent)]"
-            />
-            <span>
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-cream/52">
-                Round in progress
+            <span className="interview-roadmap-icon grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.1] text-[var(--workspace-accent)]">
+              <Play size={16} strokeWidth={1.5} aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-cream">Round in progress</span>
+              <span className="mt-0.5 block text-[13px] text-cream/52">
+                Pick up where you left off.
               </span>
-              <span className="mt-0.5 flex items-center gap-1.5 text-sm font-medium text-cream/82">
-                Resume your interview
-                <ArrowRight
-                  size={15}
-                  aria-hidden="true"
-                  className="transition-transform duration-200 group-hover:translate-x-0.5"
-                />
-              </span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-[var(--workspace-accent)]">
+              Resume
+              <ArrowRight
+                size={16}
+                strokeWidth={1.6}
+                aria-hidden="true"
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
             </span>
           </Link>
         ) : null}
       </section>
 
-      <section className="relative isolate mt-12 sm:mt-14" aria-label="Interview sessions">
-        <div className="relative z-10 grid gap-x-8 gap-y-12 md:grid-cols-2 xl:grid-cols-3">
+      <section className="mt-12 sm:mt-14" aria-label="Interview sessions">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {roadmapSessions.length ? (
             roadmapSessions.map((session, index) => (
               <RoadmapSessionCard
                 key={session.id}
                 session={session}
                 limitReached={exhausted && !session.resumeSessionId}
+                latestScore={familyScore(session, latestScores)}
+                recommended={session.id === recommendedId}
                 disabled={
                   (exhausted && !session.resumeSessionId) || session.id === "technical-project"
                 }
@@ -157,7 +200,7 @@ export function InterviewsView({
               />
             ))
           ) : (
-            <p className="col-span-full rounded-2xl bg-[#17181b] px-5 py-8 text-center text-sm leading-6 text-cream/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+            <p className="interview-roadmap-card col-span-full rounded-2xl px-5 py-8 text-center text-sm leading-6 text-cream/60">
               Your teacher is still preparing your session plan. Please check back in a moment.
             </p>
           )}
@@ -181,11 +224,15 @@ function supportsResume(session: InterviewHistoryItem): boolean {
 function RoadmapSessionCard({
   session,
   limitReached,
+  latestScore,
+  recommended,
   disabled,
   delay
 }: {
   session: InterviewRoadmapSession;
   limitReached: boolean;
+  latestScore: number | null;
+  recommended: boolean;
   disabled: boolean;
   delay: number;
 }) {
@@ -228,6 +275,13 @@ function RoadmapSessionCard({
       statusLabel={statusLabel}
       actionLabel={actionLabel}
       durationMinutes={session.durationMinutes}
+      latestScore={session.attemptStatus === "not_started" ? null : latestScore}
+      recommended={recommended && !unavailable}
+      progressPercent={
+        session.attemptStatus === "in_progress" && session.totalQuestions > 0
+          ? Math.round((session.completedQuestions / session.totalQuestions) * 100)
+          : null
+      }
       difficulty={session.difficulty}
       disabled={unavailable}
       delay={delay}

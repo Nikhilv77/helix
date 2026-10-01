@@ -9,6 +9,8 @@ import {
   nextInterviewSessionAt
 } from "@/features/interviews/server/load-interviews-home";
 import { redirect } from "next/navigation";
+import { buildReportsPageData } from "@/features/reports/server/reports-page-data";
+import type { InterviewReportFamily } from "@/features/interviews/domain/evaluation-profile";
 
 export const dynamic = "force-dynamic";
 export const unstable_dynamicStaleTime = 30;
@@ -23,11 +25,19 @@ export default async function InterviewsPage() {
   const userId = await getUserIdForRequest();
   if (!userId) redirect("/");
   const ownerId = authenticatedOwnerId(userId);
-  const data = await getAppContainer().workspacePageSnapshotStore.readOrBuild(
-    ownerId,
-    "interviews",
-    () => buildInterviewsHomeForOwner(ownerId)
-  );
+  const snapshots = getAppContainer().workspacePageSnapshotStore;
+  // Scores come from the Reports snapshot so both pages show the same numbers.
+  // A missing score is not worth failing the page over.
+  const [data, reports] = await Promise.all([
+    snapshots.readOrBuild(ownerId, "interviews", () => buildInterviewsHomeForOwner(ownerId)),
+    snapshots
+      .readOrBuild(ownerId, "reports", () => buildReportsPageData(ownerId))
+      .catch(() => null)
+  ]);
+  const latestScores: Partial<Record<InterviewReportFamily, number>> = {};
+  for (const family of reports?.reports.families ?? []) {
+    if (family.latestScore !== null) latestScores[family.family] = family.latestScore;
+  }
 
   return (
     <InterviewsView
@@ -36,6 +46,7 @@ export default async function InterviewsPage() {
       sessions={data.sessions}
       firstName={data.firstName}
       roadmapSessions={data.roadmapSessions}
+      latestScores={latestScores}
     />
   );
 }

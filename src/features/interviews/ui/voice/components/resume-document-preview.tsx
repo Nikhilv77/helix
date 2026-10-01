@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import type { CandidateResume } from "@/lib/shared/types";
+import { displayName } from "@/lib/shared/display-name";
 import { INTERVIEW_PANEL_RULE, INTERVIEW_PANEL_SHELL } from "./panel-surface";
 
 /**
@@ -69,7 +70,7 @@ export function ResumeDocumentPreview({
           {pageIndex === 0 ? (
             <header className="border-b border-white/[0.07] pb-5">
               <h2 className="font-display text-xl font-semibold tracking-tight text-cream">
-                {resume.fullName || "Candidate"}
+                {displayName(resume.fullName) || "Candidate"}
               </h2>
               {resume.skills.length ? (
                 <p className="mt-1.5 text-sm leading-6 text-cream/44">
