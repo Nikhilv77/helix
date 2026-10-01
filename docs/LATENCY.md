@@ -71,7 +71,8 @@ Measured during the September work, before the production baseline.
 | --- | --- | --- |
 | Audit live voice interviews | The most latency-sensitive and expensive feature; turn latency, reconnects, and cost per session are not measured. Entry and setup were audited on October 1 (see below); the live turns still need a real-microphone run | In progress |
 | Starting a new DSA round | About 7 s on dev from Mumbai: several sequential reads (open-round check, lease, profile, solved questions, performance profile) before the session is written. Measure on production before restructuring | Todo |
-| Instrument voice turns | No timing log covers speech-end → decision → first audio | With the audit |
+| Instrument voice turns | Done October 1: every decide request logs `interview.voice-turn.timing` with `serverMs` and the previous turn's browser-measured wait (`speechToRequestMs`, `requestMs`, `responseToAudioMs`, `speechToAudioMs`); dev also prints `[voice-turn]` in the browser console | Collect real rounds |
+| Shorten the voice turn | Silence 900 → 750 ms and commit grace 1,000 → 750 ms (October 1). Next candidates, once timings are in: an instant spoken acknowledgement in the interviewer's own Gemini voice, starting the decision during the grace window, and a faster decision model | Measure first |
 | Stream or show progress for AI-graded answers | Written grading and DSA feedback still show a silent wait of about 2 s (longer when hedged) | Todo |
 | Overview and Progress rebuild after every answer | The rebuild runs after the response and is coalesced per user, so learners do not wait. Revisit with a queue if `*_rebuild_slow` or database load grows | Watching |
 | Trailmate helper matching | Scores every eligible profile per request (about 1.3 ms each on dev) | At 1,000–2,000 users |

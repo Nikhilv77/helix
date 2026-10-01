@@ -18,6 +18,7 @@ import {
 } from "@/features/interviews/domain/gemini-live-conversation";
 import { forwardRef, useEffect, useImperativeHandle, useRef, type MutableRefObject } from "react";
 import { submitAnswer } from "@/lib/api/api-client";
+import { createTurnTimer } from "./utils/turn-timing";
 import type { AgentState, VoiceStatus } from "./types";
 
 const INPUT_SAMPLE_RATE = 16_000;
@@ -122,6 +123,11 @@ interface GeminiLiveInterviewerProps {
   onAnswerPersisted: (response?: AuthoritativeResponse) => void | Promise<void>;
   onFinalResponseSpoken: () => void;
   microphoneDeviceId: string;
+  /**
+   * The candidate's design canvas as text, given to the interviewer as silent
+   * context so follow-ups can refer to what is drawn. Never spoken.
+   */
+  canvasSummary?: string;
 }
 
 export const GeminiLiveInterviewer = forwardRef<
@@ -142,7 +148,8 @@ export const GeminiLiveInterviewer = forwardRef<
       onOutputTranscript,
       onAnswerPersisted,
       onFinalResponseSpoken,
-      microphoneDeviceId
+      microphoneDeviceId,
+      canvasSummary = ""
     },
     ref
   ) => {
@@ -167,6 +174,12 @@ export const GeminiLiveInterviewer = forwardRef<
     const speakWorkspaceUpdateRef = useRef<GeminiLiveInterviewerHandle["speakWorkspaceUpdate"]>(
       () => false
     );
+    const canvasSummaryRef = useRef(canvasSummary);
+    canvasSummaryRef.current = canvasSummary.trim();
+    const shareCanvasRef = useRef<() => void>(() => undefined);
+    useEffect(() => {
+      shareCanvasRef.current();
+    }, [canvasSummary]);
     const reconnectRef = useRef<() => void>(() => undefined);
     const switchMicrophoneRef = useRef<(deviceId: string) => Promise<boolean>>(async () => false);
     const inputTranscriptRef = useRef("");
@@ -231,9 +244,16 @@ export const GeminiLiveInterviewer = forwardRef<
       let suppressCurrentModelTurn = false;
       let closingResponsePending = false;
       let closingResponseStarted = false;
+      /**
+       * Gemini has finished sending the closing turn. Audio arrives in chunks,
+       * and a gap between the first two used to read as "finished speaking",
+       * ending the room a fraction of a second into the goodbye.
+       */
+      let closingTurnComplete = false;
       let closingResponseFallbackTimer: number | null = null;
       let workspaceUpdateFallbackTimer: number | null = null;
       let workspaceUpdateRetryTimer: number | null = null;
+      let canvasRetryTimer: number | null = null;
       const answersInFlight = new Set<string>();
       const completedToolCalls = new Set<string>();
       let lastCompletedCandidateTurn: { fingerprint: string; completedAtMs: number } | null = null;
@@ -303,7 +323,9 @@ export const GeminiLiveInterviewer = forwardRef<
         callbacksRef.current.onAgentState(speaking ? "speaking" : "listening");
         if (!speaking) finishApprovedResponsePlayback();
         if (closingResponsePending && speaking) closingResponseStarted = true;
-        if (closingResponsePending && closingResponseStarted && !speaking) {
+        // Only the end of the whole closing turn closes the room, not a pause
+        // between its audio chunks.
+        if (closingResponsePending && closingResponseStarted && !speaking && closingTurnComplete) {
           completeClosingResponse();
         }
       };
@@ -344,6 +366,10 @@ export const GeminiLiveInterviewer = forwardRef<
         if (approvedResponseFallbackTimer !== null) {
           window.clearTimeout(approvedResponseFallbackTimer);
           approvedResponseFallbackTimer = null;
+        }
+        if (canvasRetryTimer !== null) {
+          window.clearTimeout(canvasRetryTimer);
+          canvasRetryTimer = null;
         }
         queuedWorkspaceUpdateText = null;
         if (pendingTypedSubmission) {
@@ -387,6 +413,14 @@ export const GeminiLiveInterviewer = forwardRef<
         speakAuthoritativeResponse(response);
       };
 
+      const turnTimer = createTurnTimer();
+      const markReplyAudio = () => {
+        const timings = turnTimer.audioStarted();
+        if (timings && process.env.NODE_ENV !== "production") {
+          console.info("[voice-turn]", timings);
+        }
+      };
+
       const persistAnswer = async (
         input: { text: string; startMs: number; endMs: number },
         options: {
@@ -407,6 +441,7 @@ export const GeminiLiveInterviewer = forwardRef<
         answersInFlight.add(fingerprint);
         callbacksRef.current.onAgentState("thinking");
         try {
+          turnTimer.requestStarted();
           const decision = await submitAnswer({
             sessionId,
             turnId: crypto.randomUUID(),
@@ -414,8 +449,10 @@ export const GeminiLiveInterviewer = forwardRef<
             startMs: input.startMs,
             endMs: input.endMs,
             submissionSource: options.submissionSource,
-            liveProposal: options.liveProposal
+            liveProposal: options.liveProposal,
+            clientTimings: turnTimer.takeReport()
           });
+          turnTimer.responseReceived();
           lastAuthoritativeResponse = {
             answer: fingerprint,
             utterance: decision.utterance,
@@ -428,6 +465,7 @@ export const GeminiLiveInterviewer = forwardRef<
           if (lastAuthoritativeResponse.phase === "done") {
             closingResponsePending = true;
             closingResponseStarted = false;
+            closingTurnComplete = false;
             if (closingResponseFallbackTimer !== null) {
               window.clearTimeout(closingResponseFallbackTimer);
             }
@@ -442,6 +480,7 @@ export const GeminiLiveInterviewer = forwardRef<
           return lastAuthoritativeResponse;
         } catch (error) {
           answersInFlight.delete(fingerprint);
+          turnTimer.reset();
           throw error;
         }
       };
@@ -576,6 +615,27 @@ export const GeminiLiveInterviewer = forwardRef<
                   approvedResponse: pendingWorkspaceUpdateText,
                   instruction:
                     "This was a workspace event, not a candidate answer. Do not advance or save it. Speak approvedResponse exactly once."
+                }
+              }
+            ]
+          });
+          return;
+        }
+        // On a resumed round Gemini sometimes treats the "Start now" opening
+        // instruction as a candidate turn and calls the tool with it. The
+        // candidate has said nothing yet, so nothing is saved; the opening is
+        // spoken instead.
+        if (openingTurnPending && !openingTurnStarted && initialOpeningUtterance) {
+          session.sendToolResponse({
+            functionResponses: [
+              {
+                id: call.id,
+                name: call.name,
+                response: {
+                  saved: false,
+                  approvedResponse: initialOpeningUtterance,
+                  instruction:
+                    "That was the server's opening instruction, not a candidate answer. Do not save or answer it. Speak approvedResponse exactly once, then listen."
                 }
               }
             ]
@@ -835,6 +895,42 @@ export const GeminiLiveInterviewer = forwardRef<
         !pendingWorkspaceUpdateText &&
         !closingResponsePending;
 
+      // The latest diagram, and what the current connection has already been
+      // told. A new connection starts with no canvas context, so it is told again.
+      let canvasSentSummary = "";
+      let canvasSentTo: LiveSession | null = null;
+      const shareCanvasContext = () => {
+        if (canvasRetryTimer !== null) {
+          window.clearTimeout(canvasRetryTimer);
+          canvasRetryTimer = null;
+        }
+        if (closed || !geminiLedConversation || !session) return;
+        const canvasSummary = canvasSummaryRef.current;
+        if (canvasSentTo === session && canvasSentSummary === canvasSummary) return;
+        if (canvasSentTo !== session && !canvasSummary) return;
+        // Content sent mid-reply cuts Gemini off, so wait for a quiet moment.
+        if (!liveConversationIdle()) {
+          canvasRetryTimer = window.setTimeout(shareCanvasContext, 1_000);
+          return;
+        }
+        session.sendClientContent({
+          turns: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `The design canvas—not the candidate—sent the candidate's current architecture diagram. This is context only: do not reply, do not call complete_interview_turn, and do not advance the interview.\n<CANVAS>\n${canvasSummary || "The canvas is now empty."}\n</CANVAS>`
+                }
+              ]
+            }
+          ],
+          turnComplete: false
+        });
+        canvasSentTo = session;
+        canvasSentSummary = canvasSummary;
+      };
+      shareCanvasRef.current = shareCanvasContext;
+
       const scheduleRotationTimer = () => {
         if (rotationTimer !== null) window.clearTimeout(rotationTimer);
         rotationTimer = window.setTimeout(() => {
@@ -906,8 +1002,18 @@ export const GeminiLiveInterviewer = forwardRef<
                 body: JSON.stringify({ sessionId, purpose: "rotation" })
               });
               const payload = await tokenResponse.json();
-              // A finished or timed-out interview cannot be continued.
-              if (tokenResponse.status === 409) break;
+              // A finished or timed-out interview cannot be continued; end it
+              // cleanly instead of reporting a lost connection.
+              if (tokenResponse.status === 409) {
+                // Audio already buffered (usually the closing line) keeps
+                // playing; its end completes the room as normal.
+                if (closingResponsePending) {
+                  if (scheduled.size === 0) completeClosingResponse();
+                } else {
+                  callbacksRef.current.onFinalResponseSpoken();
+                }
+                return;
+              }
               if (!tokenResponse.ok || !payload?.success) {
                 console.warn(
                   "[Live] rotation credential failed",
@@ -960,6 +1066,7 @@ export const GeminiLiveInterviewer = forwardRef<
               callbacksRef.current.onError(null);
               callbacksRef.current.onStatus("live");
               scheduleRotationTimer();
+              shareCanvasContext();
               return;
             } catch {
               // Try the next attempt.
@@ -991,6 +1098,17 @@ export const GeminiLiveInterviewer = forwardRef<
             body: JSON.stringify({ sessionId })
           });
           const payload = await response.json();
+          // The round already finished (or ran out of time) while the room was
+          // connecting. That is the end of the interview, not a lost
+          // connection: hand over to the completion screen.
+          if (
+            response.status === 409 &&
+            (payload?.error?.code === "SESSION_COMPLETE" ||
+              payload?.error?.code === "SESSION_EXPIRED")
+          ) {
+            if (!closed) callbacksRef.current.onFinalResponseSpoken();
+            return;
+          }
           if (!response.ok || !payload?.success) {
             throw new Error(payload?.error?.message ?? "Could not prepare the live interviewer.");
           }
@@ -1285,6 +1403,7 @@ export const GeminiLiveInterviewer = forwardRef<
                         if (approvedGeminiTurnPending) approvedGeminiTurnStarted = true;
                         for (const part of content.modelTurn.parts) {
                           if (!part.inlineData?.data || !outputContext) continue;
+                          if (approvedGeminiTurnPending) markReplyAudio();
                           if (approvedGeminiTurnPending && approvedResponseText) {
                             approvedResponseHasAudio = true;
                             callbacksRef.current.onError(null);
@@ -1345,6 +1464,7 @@ export const GeminiLiveInterviewer = forwardRef<
                         if (authoritativePromptSent) authoritativeTurnStarted = true;
                         for (const part of content.modelTurn.parts) {
                           if (!part.inlineData?.data || !outputContext) continue;
+                          if (authoritativePromptSent) markReplyAudio();
                           schedulePcmAudio(
                             outputContext,
                             avatarDestination,
@@ -1389,14 +1509,12 @@ export const GeminiLiveInterviewer = forwardRef<
                           }
                         }
                       }
-                      if (
-                        closingResponsePending &&
-                        completedApprovedTurn &&
-                        !approvedResponseText
-                      ) {
-                        // Playback completion normally closes the room. If it
-                        // completed before this packet, finish the durable turn.
-                        completeClosingResponse();
+                      if (closingResponsePending && completedApprovedTurn) {
+                        // The closing turn is fully sent. If its audio has also
+                        // finished playing, close now; otherwise the end of
+                        // playback closes the room.
+                        closingTurnComplete = true;
+                        if (scheduled.size === 0) completeClosingResponse();
                       } else if (
                         !closingResponsePending &&
                         !decisionPending &&
@@ -1430,6 +1548,10 @@ export const GeminiLiveInterviewer = forwardRef<
                     } else if (approvedAuthoritativeTurn) {
                       authoritativePromptSent = false;
                       authoritativeTurnStarted = false;
+                      if (closingResponsePending) {
+                        closingTurnComplete = true;
+                        if (scheduled.size === 0) completeClosingResponse();
+                      }
                     }
                   }
                 },
@@ -1503,6 +1625,8 @@ export const GeminiLiveInterviewer = forwardRef<
             ],
             turnComplete: true
           });
+          // A diagram drawn before this connection opened (a reload mid-round).
+          shareCanvasContext();
 
           const source = inputContext.createMediaStreamSource(stream);
           inputSource = source;
@@ -1519,9 +1643,11 @@ export const GeminiLiveInterviewer = forwardRef<
             );
             // Room noise is sent as true silence so Gemini can tell the candidate
             // has finished; a distant microphone otherwise never "stops talking".
-            const pcm = noiseGate(samples, event.timeStamp || performance.now())
-              ? resampled
-              : new Int16Array(resampled.length);
+            const voiced = noiseGate(samples, event.timeStamp || performance.now());
+            // The last open-gate frame is the end of the candidate's speech
+            // (plus the gate's short hangover) for the turn timing log.
+            if (voiced) turnTimer.speech();
+            const pcm = voiced ? resampled : new Int16Array(resampled.length);
             const audio = {
               data: bytesToBase64(new Uint8Array(pcm.buffer)),
               mimeType: "audio/pcm;rate=16000"
@@ -1809,7 +1935,37 @@ export function toolCallMatchesPendingTypedSubmission(
   pendingTypedAnswer: string
 ): boolean {
   const toolFingerprint = answerFingerprint(toolAnswer);
-  return Boolean(toolFingerprint && toolFingerprint === answerFingerprint(pendingTypedAnswer));
+  if (!toolFingerprint) return false;
+  if (toolFingerprint === answerFingerprint(pendingTypedAnswer)) return true;
+  // Gemini echoes a submitted solution into the tool call, but often drops the
+  // code fence or reflows whitespace. Strict equality then treated a real
+  // Submit as spoken think-aloud and the question never advanced. Compare the
+  // code-bearing content instead; speech cannot reproduce most of the code.
+  const tool = submissionContent(toolAnswer);
+  if (!tool) return false;
+  // Gemini may echo the whole submission, or only the code without the
+  // written reasoning, so compare against both.
+  const candidates = [pendingTypedAnswer, ...fencedCode(pendingTypedAnswer)]
+    .map(submissionContent)
+    .filter((content) => content.length >= 20);
+  return candidates.some((typed) => {
+    if (tool === typed) return true;
+    const [shorter, longer] = tool.length <= typed.length ? [tool, typed] : [typed, tool];
+    return shorter.length >= longer.length * 0.85 && longer.includes(shorter);
+  });
+}
+
+/** The code inside each ``` fence of an answer. */
+function fencedCode(answer: string): string[] {
+  return [...answer.matchAll(/```[\w+#.-]*\n([\s\S]*?)```/g)].map((match) => match[1] ?? "");
+}
+
+/** Answer text without code fences, language tags, or any whitespace. */
+function submissionContent(answer: string): string {
+  return answer
+    .replace(/```[\w+#.-]*/g, "")
+    .replace(/\s+/g, "")
+    .toLocaleLowerCase();
 }
 
 export function candidateAnswerWasRecentlySubmitted(

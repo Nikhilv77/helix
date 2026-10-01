@@ -95,6 +95,7 @@ import { roundTimeExpired, roundTimeLimitAt } from "./voice-connection-policy";
 const INTERVIEW_ROUND_PAGE_LIMIT = 4;
 import {
   EMPTY_SYSTEM_DESIGN_CANVAS,
+  describeSystemDesignCanvas,
   systemDesignCanvasDocumentSchema,
   type SystemDesignCanvasDocument,
   type VersionedSystemDesignCanvas
@@ -782,7 +783,15 @@ export class InterviewService {
       .slice(0, -1)
       .slice(-8)
       .map((turn) => ({ speaker: turn.speaker, text: turn.text.slice(0, 600) }));
-    const candidateTurnMode = classifyCandidateTurn(answer.text, conversationHistory);
+    // Submitting code is an answer by definition. Classifying it as
+    // conversation kept the question open forever: every submit got "let me
+    // answer that" and the round never advanced. Typed text also arrives as a
+    // workspace submission, but it can be a question (a design brief's
+    // requirement discovery), so it is classified like speech.
+    const codeSubmission = submissionSource === "workspace" && question.kind === "code";
+    const candidateTurnMode = codeSubmission
+      ? ("answer" as const)
+      : classifyCandidateTurn(answer.text, conversationHistory);
     const isDialogueRepair =
       candidateTurnMode === "conversation" && !question.acceptsCandidateQuestions;
 
@@ -852,9 +861,11 @@ export class InterviewService {
           ? Promise.resolve({
               ...liveProposal,
               action:
-                isDialogueRepair && liveProposal.action !== "respond"
-                  ? ("respond" as const)
-                  : liveProposal.action,
+                codeSubmission && liveProposal.action === "respond"
+                  ? ("probe" as const)
+                  : isDialogueRepair && liveProposal.action !== "respond"
+                    ? ("respond" as const)
+                    : liveProposal.action,
               missing: isDialogueRepair ? ("none" as const) : liveProposal.missing,
               acknowledgement: isDialogueRepair ? "" : liveProposal.acknowledgement,
               candidateResponse:
@@ -904,7 +915,8 @@ export class InterviewService {
             question,
             now,
             Boolean(liveProposal),
-            blockAssessmentCodeSubmission ? BLOCK_ASSESSMENT_EVALUATOR_BUDGET_MS : undefined
+            blockAssessmentCodeSubmission ? BLOCK_ASSESSMENT_EVALUATOR_BUDGET_MS : undefined,
+            ownerId
           )
     ]);
 
@@ -1414,7 +1426,8 @@ export class InterviewService {
     question: PlannedQuestion,
     now: number,
     defer = false,
-    budgetMs = EVALUATOR_BUDGET_MS
+    budgetMs = EVALUATOR_BUDGET_MS,
+    ownerId?: string
   ): Promise<{
     evaluation: QuestionEvaluation | null;
     recovery?: EvaluationRecoveryMutation;
@@ -1425,12 +1438,14 @@ export class InterviewService {
 
     const questionIndex = state.questionIndex;
     const answers = answerTexts(state, questionIndex);
+    const designCanvas = await this.designCanvasEvidence(state, ownerId);
     const input = {
       setup: state.setup,
       question,
       answers,
       rubric: rubricFor(state.setup, question) ?? [],
       execution: executionForEvaluation(state, questionIndex, answers),
+      ...(designCanvas ? { designCanvas } : {}),
       evaluatedAt: now
     };
     const recoveryPayload: EvaluationRecoveryPayload = {
@@ -1477,6 +1492,25 @@ export class InterviewService {
         evaluation: unavailableTechnicalEvaluation(state, question, now),
         recovery: { action: "enqueue", payload: recoveryPayload }
       };
+    }
+  }
+
+  /**
+   * The diagram as it stood when this answer was given, so the grade reflects
+   * what the candidate drew as well as what they said. A failed read grades
+   * the spoken answer alone rather than failing the turn.
+   */
+  private async designCanvasEvidence(
+    state: InterviewState,
+    ownerId?: string
+  ): Promise<string | null> {
+    if (!ownerId || !isSystemDesignRound(state.setup)) return null;
+    try {
+      const stored = await this.store.getDesignCanvas(state.id, ownerId);
+      const parsed = stored && systemDesignCanvasDocumentSchema.safeParse(stored.document);
+      return parsed?.success ? describeSystemDesignCanvas(parsed.data) || null : null;
+    } catch {
+      return null;
     }
   }
 
@@ -2376,7 +2410,7 @@ function consecutiveQuestionDeclines(state: InterviewState): number {
 }
 
 function candidateEndUtterance(): string {
-  return "Of course, we'll end the interview here. I'll save what we covered, and your feedback will be ready shortly.";
+  return "Of course, we'll stop here. Thank you for your time today. I'll hand what we covered to your teacher, and your report will be ready shortly.";
 }
 
 function concurrentTurnError(sessionId: string): ConflictErrorException {
@@ -2452,7 +2486,7 @@ export function closingDecision(): Decision {
     missing: "none",
     reason: "interview complete",
     utterance:
-      "We've reached the end of the interview, so we'll finish here. Thank you for your time.",
+      "That's the end of the interview. Thank you for your time today. I'll hand my notes to your teacher, who'll walk you through your report.",
     forcedBy: null
   };
 }

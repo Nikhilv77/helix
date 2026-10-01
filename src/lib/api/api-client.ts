@@ -108,6 +108,13 @@ export function submitAnswer(params: {
     line: string;
     candidateResponse?: string;
   };
+  /** How long the previous turn's wait was, for latency logs. */
+  clientTimings?: {
+    speechToRequestMs: number | null;
+    requestMs: number | null;
+    responseToAudioMs: number | null;
+    speechToAudioMs: number | null;
+  };
 }): Promise<DecideResponse> {
   // One turn ID for every attempt: the server replays a turn it already
   // saved, so a retry can never record the same answer twice.

@@ -142,7 +142,11 @@ export function DsaCodeEditor({
 }) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
-  const [lightTheme, setLightTheme] = useState(false);
+  // Read the page theme on first render so Monaco is created in the right
+  // theme; starting dark and switching after mount flashed black in light mode.
+  const [lightTheme, setLightTheme] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("light")
+  );
 
   useEffect(() => {
     const root = document.documentElement;
@@ -215,11 +219,11 @@ export function DsaCodeEditor({
       }}
       beforeMount={registerTrailgradTheme}
       onMount={handleMount}
-      theme="trailgrad-modern"
+      theme={lightTheme ? "trailgrad-modern-light" : "trailgrad-modern"}
       loading={
         <div
           role="status"
-          className="flex h-full w-full items-center justify-center bg-[#0b0d10] text-sm text-cream/45"
+          className="dsa-editor-loading flex h-full w-full items-center justify-center text-sm text-cream/45"
         >
           Loading code editor…
         </div>

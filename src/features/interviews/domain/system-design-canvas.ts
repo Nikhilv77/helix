@@ -74,3 +74,44 @@ export const EMPTY_SYSTEM_DESIGN_CANVAS: SystemDesignCanvasDocument = {
   edges: [],
   notes: ""
 };
+
+/** Longest canvas summary handed to the interviewer or the grader. */
+const CANVAS_SUMMARY_MAX_CHARS = 4_000;
+
+/**
+ * The candidate's diagram as plain text, for the live interviewer and the
+ * grader: what each component is, how they connect, and the notes. Positions
+ * are left out because they carry no design meaning. Empty means nothing drawn.
+ */
+export function describeSystemDesignCanvas(document: SystemDesignCanvasDocument): string {
+  const labels = new Map(
+    document.nodes.map((node) => [node.id, node.label.trim() || node.kind])
+  );
+  const components = document.nodes.map((node) => {
+    const name = labels.get(node.id)!;
+    const detail = node.detail.trim();
+    return `- ${name} (${node.kind})${detail ? `: ${detail}` : ""}`;
+  });
+  const connected = new Set(document.edges.flatMap((edge) => [edge.from, edge.to]));
+  const connections = document.edges.map((edge) => {
+    const label = edge.label.trim();
+    return `- ${labels.get(edge.from) ?? edge.from} -> ${labels.get(edge.to) ?? edge.to} (${edge.mode}${label ? `, ${label}` : ""})`;
+  });
+  const unconnected = document.nodes
+    .filter((node) => !connected.has(node.id) && node.kind !== "note")
+    .map((node) => labels.get(node.id)!);
+  const notes = document.notes.trim();
+
+  const sections = [
+    components.length ? `Components:\n${components.join("\n")}` : "",
+    connections.length ? `Connections:\n${connections.join("\n")}` : "",
+    components.length && unconnected.length
+      ? `Not connected to anything: ${unconnected.join(", ")}`
+      : "",
+    notes ? `Assumptions and estimates:\n${notes}` : ""
+  ].filter(Boolean);
+  const summary = sections.join("\n\n");
+  return summary.length > CANVAS_SUMMARY_MAX_CHARS
+    ? `${summary.slice(0, CANVAS_SUMMARY_MAX_CHARS)}\n(diagram summary truncated)`
+    : summary;
+}

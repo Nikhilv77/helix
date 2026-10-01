@@ -332,6 +332,10 @@ describe("technical answer evaluator", () => {
     expect(buildTechnicalEvaluationPrompt(input(null))).toContain(
       "Compilation or execution without tests is not proof of correctness"
     );
+    expect(buildTechnicalEvaluationPrompt(input(null))).not.toContain("architecture canvas");
+    expect(
+      buildTechnicalEvaluationPrompt({ ...input(null), designCanvas: "Components:\n- Queue (queue)" })
+    ).toContain("Candidate's architecture canvas (drawn by the candidate");
     expect(result.runtime).toMatchObject({
       engineVersion: expect.any(String),
       promptVersion: expect.any(String),

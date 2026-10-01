@@ -121,6 +121,67 @@ describe("InterviewService resume round", () => {
     });
   });
 
+  it("answers typed requirement questions in a design Frame instead of probing", async () => {
+    const frame: PlannedQuestion = {
+      text: "Design a support assistant. Ask whatever you need to clarify.",
+      kind: "conversation",
+      interviewSection: "design",
+      stage: "design-frame",
+      competency: "Requirements and scale",
+      mustHit: ["scope", "scale"],
+      probeIfMissing: "Which quantified constraint changes your design most?",
+      maxFollowUps: 2
+    };
+    const { service } = harness([frame, questions[0]!]);
+    const started = await service.start(
+      {
+        ...setup,
+        templateId: "system-design",
+        templateTitle: "System Design Interview",
+        dsaDesignRound: {
+          kind: "dsa-design-round",
+          version: 1,
+          designScenarioKey: "global-media-processing",
+          designScenarioVersion: 1,
+          designScenarioTitle: "Global media processing",
+          designDifficulty: "standard"
+        }
+      },
+      "user-1",
+      1_000,
+      [frame, questions[0]!]
+    );
+    const stakeholderAnswer =
+      "Plan for about 2,000 tenants and 50 queries per second at peak. Every answer must cite a source.";
+
+    // Typed answers arrive as workspace submissions, like code does.
+    const result = await service.answer(
+      started.state.id,
+      {
+        text: "1. How many tenants? 2. Must every answer include citations?",
+        startMs: 500,
+        endMs: 1_000
+      },
+      2_000,
+      undefined,
+      {
+        action: "respond",
+        missing: "none",
+        candidateIntent: "question-or-clarification",
+        acknowledgement: "",
+        line: "",
+        candidateResponse: stakeholderAnswer,
+        reason: "Requirement discovery."
+      },
+      "workspace"
+    );
+
+    expect(result.decision.action).toBe("respond");
+    expect(result.decision.utterance).toContain("2,000 tenants");
+    expect(result.decision.utterance).not.toContain("Which quantified constraint");
+    expect(result.state.questionIndex).toBe(0);
+  });
+
   it("recognizes clear question refusals without swallowing substantive negative answers", () => {
     expect(candidateDeclinesQuestion("No.")).toBe(true);
     expect(candidateDeclinesQuestion("Pass, thanks.")).toBe(true);
@@ -675,7 +736,7 @@ describe("InterviewService resume round", () => {
     expect(evaluate).not.toHaveBeenCalled();
     expect(result.state.phase).toBe("done");
     expect(result.decision.utterance).toBe(
-      "Of course, we'll end the interview here. I'll save what we covered, and your feedback will be ready shortly."
+      "Of course, we'll stop here. Thank you for your time today. I'll hand what we covered to your teacher, and your report will be ready shortly."
     );
   });
 

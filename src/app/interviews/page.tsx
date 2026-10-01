@@ -29,7 +29,11 @@ export default async function InterviewsPage() {
   // Scores come from the Reports snapshot so both pages show the same numbers.
   // A missing score is not worth failing the page over.
   const [data, reports] = await Promise.all([
-    snapshots.readOrBuild(ownerId, "interviews", () => buildInterviewsHomeForOwner(ownerId)),
+    // Like Reports: people land here straight after a round, so wait briefly
+    // for the rebuild instead of showing that round as still in progress.
+    snapshots.readOrBuild(ownerId, "interviews", () => buildInterviewsHomeForOwner(ownerId), {
+      waitForFreshMs: 2_000
+    }),
     snapshots
       .readOrBuild(ownerId, "reports", () => buildReportsPageData(ownerId))
       .catch(() => null)

@@ -5,6 +5,7 @@ import {
   sessionRoomHref
 } from "@/features/interviews/ui/shared/interview-room-navigation";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -79,6 +80,7 @@ import { ConnectionRecoveryToast } from "./components/connection-recovery-toast"
 import { MediaPermissionGate, type MediaSetupResult } from "./components/media-permission-gate";
 import { useInterviewClock } from "./hooks/use-interview-clock";
 import { GeminiLiveInterviewer, type GeminiLiveInterviewerHandle } from "./gemini-live-interviewer";
+import { describeSystemDesignCanvas } from "@/features/interviews/domain/system-design-canvas";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 import { interviewerPersonaIdForSetup } from "@/features/interviews/domain/interviewer-persona";
 import {
@@ -216,6 +218,10 @@ export function VoiceInterviewClient({
   const [micCheckDismissed, setMicCheckDismissed] = useState(false);
   const [answerPanelOpen, setAnswerPanelOpen] = useState(false);
   const [typedDraft, setTypedDraft] = useState("");
+  // True while the server is closing the round; Reports would be stale until then.
+  const [roundClosing, setRoundClosing] = useState(false);
+  // The design canvas as text, for the live interviewer.
+  const [canvasSummary, setCanvasSummary] = useState("");
   const [typedNotes, setTypedNotes] = useState("");
   const [typedStartedAt, setTypedStartedAt] = useState<number | null>(null);
   const [typedSending, setTypedSending] = useState(false);
@@ -241,6 +247,11 @@ export function VoiceInterviewClient({
   const dsaSkipPendingRef = useRef(false);
   const candidateCameraStreamRef = useRef<MediaStream | null>(null);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
+  /** The round hit its time limit, as opposed to being ended by the candidate. */
+  const [timeUp, setTimeUp] = useState(false);
+  const timeUpHandledRef = useRef(false);
+  /** Sends whatever unsent code is in the editor; refreshed every render. */
+  const submitPendingCodeRef = useRef<(() => Promise<void>) | null>(null);
   const elapsed = useInterviewClock({
     startedAt,
     disabled: sessionUnavailable || status === "ended" || status === "error",
@@ -1015,7 +1026,9 @@ export function VoiceInterviewClient({
     sessionCompleteRef.current = true;
     setError(null);
     setStatus("ended");
+    setRoundClosing(true);
     const ended = await endInterview(sessionId).catch(() => null);
+    setRoundClosing(false);
     if (ended?.phase === "done" && !reportNotificationRef.current) {
       reportNotificationRef.current = true;
       notifyWorkspaceNotificationsChanged();
@@ -1029,7 +1042,22 @@ export function VoiceInterviewClient({
       storyPracticeAssessment !== null
     )
       return;
-    void stop();
+    if (timeUpHandledRef.current) return;
+    timeUpHandledRef.current = true;
+    setTimeUp(true);
+    // Time's up: send any written-but-unsent solution first (as a timed coding
+    // round would), so finished work is graded instead of discarded. The live
+    // connection is expiring too, so this is bounded; the round ends either way.
+    const submitPending = submitPendingCodeRef.current;
+    void (async () => {
+      if (submitPending) {
+        await Promise.race([
+          submitPending().catch(() => undefined),
+          new Promise((resolve) => window.setTimeout(resolve, 12_000))
+        ]);
+      }
+      if (!sessionCompleteRef.current) await stop();
+    })();
   }, [
     elapsed,
     sessionUnavailable,
@@ -1061,6 +1089,8 @@ export function VoiceInterviewClient({
   }
 
   const overCap = elapsed >= hardCapMs;
+  const minutesLeftWarning =
+    status === "live" && !overCap && hardCapMs - elapsed <= 2 * 60 * 1000;
   const latestAgentTurn = [...turns].reverse().find((turn) => turn.speaker === "agent") ?? null;
   const optimisticAlreadyPersisted = optimisticUserTurn
     ? turns.some(
@@ -1166,6 +1196,17 @@ export function VoiceInterviewClient({
     currentQuestion?.interviewSection !== "design" &&
     currentQuestion?.kind === "code" &&
     Boolean(activeDsaQuestion);
+  // What "unsent code" means at the time limit: a coding question whose editor
+  // holds real work that is neither the starter nor already being sent.
+  submitPendingCodeRef.current =
+    currentQuestion?.kind === "code" &&
+    !typedSending &&
+    typedDraft.trim().length >= 10 &&
+    typedDraft.trim() !== (currentQuestion.codeSnippet ?? "").trim()
+      ? isActiveDsaCodeQuestion
+        ? submitDsaAnswer
+        : submitTypedAnswer
+      : null;
   const isActiveDsaDesignQuestion =
     isSystemDesignInterview && currentQuestion?.interviewSection === "design";
   const evaluationProfile = setup ? evaluationProfileForSetup(setup) : null;
@@ -1192,6 +1233,7 @@ export function VoiceInterviewClient({
       <SessionStateScreen
         workspaceAccent={workspaceAccent}
         kind="complete"
+        timedOut={timeUp}
         answers={
           turns.filter(
             (turn) => turn.speaker === "user" && !turn.endedInterview && !turn.assessmentExcluded
@@ -1200,6 +1242,7 @@ export function VoiceInterviewClient({
         evaluationLabel={evaluationProfile?.label}
         evaluationParameters={evaluationProfile?.parameters.map((parameter) => parameter.label)}
         interviewerName={persona.name}
+        reportPending={roundClosing}
         blockAssessmentBlockId={setup?.dsaBlockAssessment?.blockId ?? null}
         storyPracticeAssessment={
           storyPracticeAssessment
@@ -1291,6 +1334,7 @@ export function VoiceInterviewClient({
             setStatus("ended");
           }}
           microphoneDeviceId={selectedInputId}
+          canvasSummary={canvasSummary}
         />
       ) : null}
       {micCheckOpen && status === "live" ? (
@@ -1374,12 +1418,20 @@ export function VoiceInterviewClient({
 
           <span
             className={`interview-live-timer px-2 py-2.5 text-sm font-medium tabular-nums ${
-              overCap ? "text-[var(--workspace-accent)]" : "text-cream/72"
+              overCap || minutesLeftWarning ? "text-[var(--workspace-accent)]" : "text-cream/72"
             }`}
           >
             {formatClock(Math.min(elapsed, hardCapMs))}
             <span className="hidden text-cream/28 sm:inline"> / {formatClock(hardCapMs)}</span>
+            {minutesLeftWarning ? (
+              <span className="ml-2 hidden font-semibold text-[var(--workspace-accent)] md:inline">
+                {currentQuestion?.kind === "code"
+                  ? "2 min left · unsent code is sent when time runs out"
+                  : "2 min left"}
+              </span>
+            ) : null}
           </span>
+          <ThemeToggle className="interview-theme-toggle" size={16} />
           <button
             type="button"
             onClick={() => void stop()}
@@ -1588,6 +1640,7 @@ export function VoiceInterviewClient({
       ) : isActiveDsaDesignQuestion ? (
         <DsaDesignConversationWorkspace
           canvasStorageKey={sessionId}
+          onDiagramChange={(document) => setCanvasSummary(describeSystemDesignCanvas(document))}
           question={currentQuestion}
           questionIndex={progress.index}
           questionCount={progress.count}
@@ -1961,7 +2014,7 @@ function DsaLiveWorkspace({
                 className={`dsa-live-question-header interview-live-sticky sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} bg-[rgba(17,18,21,0.92)] px-5 py-4 text-sm backdrop-blur-2xl sm:-mx-7 sm:px-7`}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)]" />
                   <span className="whitespace-nowrap font-medium text-cream/72">
                     {isBlockTransfer ? "Transfer problem" : "Problem"} {transferQuestionIndex} of{" "}
                     {transferQuestionCount}
@@ -2006,12 +2059,12 @@ function DsaLiveWorkspace({
                     {question.examples.map((example, index) => (
                       <article
                         key={`${example.input}-${example.output}`}
-                        className="dsa-live-example rounded-xl bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5"
+                        className="dsa-live-example rounded-xl bg-white/[0.03] p-4 sm:p-5"
                       >
                         <div className="flex items-center gap-2.5">
                           <span
                             aria-hidden="true"
-                            className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_9px_var(--workspace-accent)]"
+                            className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)]"
                           />
                           <p className="text-sm font-semibold text-cream/78">Example {index + 1}</p>
                         </div>
@@ -2041,12 +2094,12 @@ function DsaLiveWorkspace({
               ) : null}
               {question.constraints?.length ? (
                 <DsaCopySection title="Constraints">
-                  <ul className="space-y-3 rounded-xl bg-white/[0.03] p-4 font-mono text-sm leading-6 text-cream/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5">
+                  <ul className="space-y-3 rounded-xl bg-white/[0.03] p-4 font-mono text-sm leading-6 text-cream/68 sm:p-5">
                     {question.constraints.map((constraint) => (
                       <li key={constraint} className="flex gap-3">
                         <span
                           aria-hidden="true"
-                          className="mt-[0.62rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_9px_var(--workspace-accent)]"
+                          className="mt-[0.62rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)]"
                         />
                         <code>{constraint}</code>
                       </li>
@@ -2314,7 +2367,7 @@ function DsaOutputPanel({
         </div>
         {running ? (
           <span className="flex items-center gap-2 text-sm text-cream/58">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--workspace-accent)]" />
             Running tests
           </span>
         ) : result ? (
@@ -2322,7 +2375,7 @@ function DsaOutputPanel({
             <span
               className={`h-1.5 w-1.5 rounded-full ${
                 result.accepted
-                  ? "bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]"
+                  ? "bg-[var(--workspace-accent)]"
                   : "bg-[#ff8f8f] shadow-[0_0_10px_#ff8f8f]"
               }`}
             />
@@ -2330,7 +2383,7 @@ function DsaOutputPanel({
           </span>
         ) : (
           <span className="inline-flex items-center gap-2 text-sm text-cream/48">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)]" />
             Ready to run
           </span>
         )}
@@ -2376,9 +2429,12 @@ function DsaOutputPanel({
             ) : null}
           </div>
         ) : examples.length ? (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div>
             {examples.slice(0, 10).map((example, index) => (
-              <div key={`${example.input}-${index}`} className="rounded-xl bg-white/[0.03] p-3.5">
+              <div
+                key={`${example.input}-${index}`}
+                className="dsa-live-test-case rounded-xl bg-white/[0.03] p-3.5"
+              >
                 <p className="text-sm font-semibold text-cream/72">Case {index + 1}</p>
                 <dl className="mt-3 grid gap-x-4 gap-y-2 text-sm leading-6 sm:grid-cols-[5rem_1fr]">
                   <dt className="font-medium text-cream/38">Input</dt>

@@ -46,7 +46,20 @@ const NODE_WIDTH = 152;
 const NODE_HEIGHT = 78;
 const HISTORY_LIMIT = 80;
 const CANVAS_INPUT_CLASS =
-  "mt-1 block h-8 w-full rounded-md border border-white/[0.07] bg-black/20 px-2.5 text-xs text-cream/72 outline-none placeholder:text-cream/25 focus:border-[var(--workspace-accent)]/50";
+  "system-design-input mt-1.5 block h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-sm text-cream/80 outline-none placeholder:text-cream/30 focus:border-[var(--workspace-accent-border)]";
+
+/** The small type label in each component's header. */
+const NODE_TYPE_LABELS: Record<NodeKind, string> = {
+  client: "Client",
+  gateway: "Gateway",
+  service: "Service",
+  database: "Database",
+  cache: "Cache",
+  queue: "Queue",
+  storage: "Storage",
+  external: "External",
+  note: "Note"
+};
 
 const NODE_DEFAULTS: Record<NodeKind, string> = {
   client: "Client",
@@ -67,13 +80,16 @@ export function SystemDesignCanvas({
   storageKey,
   sessionId,
   practiceBlockId,
-  embedded = false
+  embedded = false,
+  onDiagramChange
 }: {
   storageKey?: string;
   sessionId?: string;
   practiceBlockId?: string;
   /** Removes the interview card chrome when another workspace already owns the surface. */
   embedded?: boolean;
+  /** The diagram once edits settle, so the live interviewer can read it. */
+  onDiagramChange?: (document: SystemDesignCanvasDocument) => void;
 }) {
   const serverUrl = practiceBlockId
     ? `/api/practice/architecture-design/canvas/${encodeURIComponent(practiceBlockId)}`
@@ -218,6 +234,18 @@ export function SystemDesignCanvas({
       // The in-memory canvas remains fully usable when storage is unavailable.
     }
   }, [hydrated, persistenceKey, snapshot]);
+
+  const onDiagramChangeRef = useRef(onDiagramChange);
+  onDiagramChangeRef.current = onDiagramChange;
+  useEffect(() => {
+    // Wait for the saved diagram to load, so the first report is not empty.
+    if (!hydrated || !serverReady || !onDiagramChangeRef.current) return;
+    const timer = window.setTimeout(
+      () => onDiagramChangeRef.current?.(documentFromSnapshot(snapshot)),
+      1_000
+    );
+    return () => window.clearTimeout(timer);
+  }, [hydrated, serverReady, snapshot]);
 
   useEffect(() => {
     const retry = () => setRetryTick((value) => value + 1);
@@ -460,7 +488,7 @@ export function SystemDesignCanvas({
       className={`system-design-canvas practice-paper ${
         embedded
           ? "overflow-hidden"
-          : "mt-6 overflow-hidden rounded-xl border border-white/[0.07] bg-black/20"
+          : "system-design-frame mt-6 overflow-hidden rounded-xl border border-white/[0.07] bg-black/20"
       } ${practiceBlockId && saveStatus === "loading" ? "pointer-events-none opacity-60" : ""}`}
       aria-busy={Boolean(practiceBlockId) && saveStatus === "loading"}
       onKeyDown={(event) => {
@@ -487,7 +515,7 @@ export function SystemDesignCanvas({
             <div className="flex items-center gap-2">
               <p className="text-sm font-medium text-cream/82">Architecture canvas</p>
               <span
-                className={`font-mono text-[8px] uppercase tracking-[0.12em] ${
+                className={`text-xs font-medium ${
                   saveStatus === "offline" || saveStatus === "conflict"
                     ? "text-amber-300/65"
                     : "text-cream/28"
@@ -758,14 +786,16 @@ export function SystemDesignCanvas({
             return (
               <div
                 key={node.id}
-                className={`absolute flex h-[78px] w-[152px] flex-col overflow-hidden rounded-lg border text-left shadow-lg transition-colors ${nodeSurface(node.kind, selected, connecting)}`}
+                className={`system-design-node system-design-node--${node.kind} ${
+                  connecting ? "is-connecting" : selected ? "is-selected" : ""
+                } absolute flex h-[78px] w-[152px] flex-col overflow-hidden rounded-lg border text-left transition-colors ${nodeSurface(node.kind, selected, connecting)}`}
                 style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                 onClick={() => selectNode(node.id)}
               >
                 <button
                   type="button"
                   aria-label={`Move ${node.label}`}
-                  className="flex h-7 cursor-grab items-center gap-1.5 border-b border-white/[0.06] px-2 font-mono text-[9px] uppercase tracking-[0.12em] text-cream/38 active:cursor-grabbing"
+                  className="system-design-node-head flex h-7 cursor-grab items-center gap-1.5 border-b border-white/[0.06] px-2 text-xs font-medium text-cream/52 active:cursor-grabbing"
                   onPointerDown={(event) => {
                     const bounds = event.currentTarget.parentElement?.getBoundingClientRect();
                     if (!bounds) return;
@@ -780,8 +810,10 @@ export function SystemDesignCanvas({
                     setSelectedEdgeId(null);
                   }}
                 >
-                  <NodeIcon kind={node.kind} />
-                  {node.kind}
+                  <span className="system-design-node-icon">
+                    <NodeIcon kind={node.kind} />
+                  </span>
+                  {NODE_TYPE_LABELS[node.kind] ?? node.kind}
                 </button>
                 <input
                   value={node.label}
@@ -801,9 +833,9 @@ export function SystemDesignCanvas({
                       )
                     }));
                   }}
-                  className="min-h-0 flex-1 bg-transparent px-2 pt-1 text-xs font-medium text-cream/78 outline-none placeholder:text-cream/24"
+                  className="min-h-0 flex-1 bg-transparent px-2 pt-1 text-[13px] font-semibold text-cream/86 outline-none placeholder:text-cream/30"
                 />
-                <p className="truncate px-2 pb-1.5 text-[9px] text-cream/28">
+                <p className="truncate px-2 pb-1.5 text-[11px] text-cream/42">
                   {node.detail || "Add details below"}
                 </p>
               </div>
@@ -811,7 +843,7 @@ export function SystemDesignCanvas({
           })}
         </div>
 
-        <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-white/[0.07] bg-[#111318]/90 p-1 shadow-xl backdrop-blur">
+        <div className="system-design-zoom absolute bottom-3 right-3 flex items-center gap-1 rounded-lg bg-[#111318] p-1">
           <IconButton
             label="Zoom out"
             disabled={zoom <= 0.55}
@@ -852,7 +884,7 @@ export function SystemDesignCanvas({
       </div>
 
       {selectedNode ? (
-        <div className="grid gap-3 border-t border-white/[0.06] bg-white/[0.018] px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+        <div className="system-design-inspector grid gap-3 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]">
           <InspectorField label="Component name">
             <input
               value={selectedNode.label}
@@ -877,13 +909,13 @@ export function SystemDesignCanvas({
           <button
             type="button"
             onClick={duplicateSelected}
-            className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-md bg-white/[0.055] px-2.5 text-[11px] text-cream/58 hover:bg-white/[0.09] hover:text-cream"
+            className="mt-6 inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[var(--workspace-accent)] hover:bg-[var(--workspace-accent-soft)]"
           >
             <Copy size={12} /> Duplicate
           </button>
         </div>
       ) : selectedEdge ? (
-        <div className="grid gap-3 border-t border-white/[0.06] bg-white/[0.018] px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_12rem]">
+        <div className="system-design-inspector grid gap-3 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
           <InspectorField label="Connection label">
             <input
               value={selectedEdge.label}
@@ -920,8 +952,8 @@ export function SystemDesignCanvas({
       ) : null}
 
       {!embedded ? (
-        <label className="block border-t border-white/[0.06] px-3 py-2.5">
-          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-cream/35">
+        <label className="system-design-inspector block px-3 py-3">
+          <span className="text-xs font-semibold text-cream/52">
             Assumptions and estimates
           </span>
           <textarea
@@ -932,7 +964,7 @@ export function SystemDesignCanvas({
               commit((current) => ({ ...current, notes }));
             }}
             placeholder="Record clarified requirements, scale estimates, SLOs, and trade-offs…"
-            className="mt-1.5 min-h-16 w-full resize-y bg-transparent text-sm leading-6 text-cream/72 outline-none placeholder:text-cream/24"
+            className="rounded-md p-2 mt-1.5 min-h-16 w-full resize-none bg-transparent text-sm leading-6 text-cream/72 outline-none placeholder:text-cream/24"
           />
         </label>
       ) : null}
@@ -998,7 +1030,7 @@ function IconButton({
 function InspectorField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label>
-      <span className="font-mono text-[8px] uppercase tracking-[0.14em] text-cream/30">
+      <span className="text-xs font-medium text-cream/48">
         {label}
       </span>
       {children}
@@ -1018,13 +1050,14 @@ function NodeIcon({ kind }: { kind: NodeKind }) {
   return <Server size={11} aria-hidden="true" />;
 }
 
+// Opaque fills, so nodes dragged over each other never show through.
 function nodeSurface(kind: NodeKind, selected: boolean, connecting: boolean): string {
   if (connecting) return "border-[var(--workspace-accent)] bg-[var(--workspace-accent)]/10";
   if (selected) return "border-cream/35 bg-[#171a1f]";
-  if (kind === "database" || kind === "storage") return "border-sky-300/15 bg-sky-950/20";
-  if (kind === "queue") return "border-violet-300/15 bg-violet-950/20";
-  if (kind === "cache") return "border-amber-300/15 bg-amber-950/20";
-  if (kind === "note") return "border-orange-300/15 bg-orange-950/15";
+  if (kind === "database" || kind === "storage") return "border-sky-300/15 bg-[#0f171e]";
+  if (kind === "queue") return "border-violet-300/15 bg-[#16121f]";
+  if (kind === "cache") return "border-amber-300/15 bg-[#19150f]";
+  if (kind === "note") return "border-orange-300/15 bg-[#18130f]";
   return "border-white/[0.09] bg-[#111419]";
 }
 

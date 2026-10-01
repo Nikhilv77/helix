@@ -1,5 +1,6 @@
 import type { QuestionEvaluation } from "./types";
 import {
+  answerTexts,
   evaluationAnswerHash,
   InterviewEvaluationRecoveryService,
   type ClaimedEvaluationJob,
@@ -60,6 +61,32 @@ function job(attempts = 1, maxAttempts = 5): ClaimedEvaluationJob {
 }
 
 describe("interview evaluation recovery", () => {
+  it("keeps a declined turn out of the answer a queued grade was taken from", () => {
+    const state = {
+      turns: [
+        {
+          speaker: "user",
+          text: "Kafka in front of the workers.",
+          startMs: 0,
+          endMs: 1,
+          questionIndex: 1
+        },
+        { speaker: "agent", text: "Why Kafka?", startMs: 2, endMs: 3, questionIndex: 1 },
+        {
+          speaker: "user",
+          text: "Can we skip this?",
+          startMs: 4,
+          endMs: 5,
+          questionIndex: 1,
+          skipped: true,
+          assessmentExcluded: true
+        }
+      ]
+    } as unknown as Parameters<typeof answerTexts>[0];
+
+    expect(answerTexts(state, 1)).toEqual(["Kafka in front of the workers."]);
+  });
+
   it("marks a recovered evaluation and applies it once", async () => {
     const repository = {
       claim: vi.fn().mockResolvedValue([job()]),

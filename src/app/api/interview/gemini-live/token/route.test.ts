@@ -155,6 +155,8 @@ describe("Gemini Live interview instruction", () => {
 
     expect(instruction).toContain("You are Claire, a calm and technically sharp");
     expect(instruction).toContain("Stay quiet while the candidate types");
+    expect(instruction).toContain('beginning "The design canvas—not the candidate—sent"');
+    expect(instruction).toContain("Never say you cannot see the canvas");
     expect(instruction).toContain("Wait for the workspace code submission");
     expect(instruction).toContain(
       'A trusted client message beginning "The coding workspace—not the candidate—reported an execution event"'

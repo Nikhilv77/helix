@@ -128,6 +128,9 @@ export function ConversationTranscript({
           {displayTurns.map((turn, index) => {
             const isAgent = turn.speaker === "agent";
             const isLatestAgent = isAgent && index === latestAgentIndex;
+            // A submitted solution needs the panel's full width; a right-aligned
+            // bubble squeezed the code into a sliver.
+            const carriesCode = !isAgent && turn.text.includes("```");
 
             return (
               <article
@@ -136,13 +139,13 @@ export function ConversationTranscript({
               >
                 <div
                   className={`max-w-[min(100%,44rem)] break-words px-1 ${
-                    isAgent ? "text-left" : "max-w-[88%] text-right"
+                    isAgent ? "text-left" : carriesCode ? "w-full text-left" : "max-w-[88%] text-right"
                   }`}
                 >
                   <div
-                    className={
-                      compact ? "mb-1.5 flex items-center gap-2" : "mb-2 flex items-center gap-2"
-                    }
+                    className={`${compact ? "mb-1.5" : "mb-2"} flex items-center gap-2 ${
+                      carriesCode ? "justify-end" : ""
+                    }`}
                   >
                     <span
                       className={`text-xs font-semibold ${
@@ -243,11 +246,11 @@ function TranscriptCodeBlock({ code, language }: { code: string; language: strin
 
   return (
     <div
-      className="w-full min-w-0 overflow-hidden rounded-xl border border-white/[0.07] bg-[#0b0d10] text-left"
+      className="transcript-code w-full min-w-0 overflow-hidden rounded-xl border border-white/[0.07] text-left"
       data-testid="transcript-code-block"
     >
-      <div className="border-b border-white/[0.06] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.14em] text-cream/38">
-        {language || editorLanguage}
+      <div className="border-b border-white/[0.06] px-3 py-2 text-xs font-medium text-cream/52">
+        {displayLanguage(language || editorLanguage)}
       </div>
       <div style={{ height }}>
         <DsaCodeEditor
@@ -261,6 +264,26 @@ function TranscriptCodeBlock({ code, language }: { code: string; language: strin
       </div>
     </div>
   );
+}
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  python: "Python",
+  py: "Python",
+  javascript: "JavaScript",
+  js: "JavaScript",
+  typescript: "TypeScript",
+  ts: "TypeScript",
+  java: "Java",
+  cpp: "C++",
+  "c++": "C++",
+  sql: "SQL",
+  go: "Go"
+};
+
+/** "python" → "Python", for headers that read as words, not code tokens. */
+function displayLanguage(language: string): string {
+  const normalized = language.trim().toLowerCase();
+  return LANGUAGE_NAMES[normalized] ?? (language.trim() || "Code");
 }
 
 function normalizeEditorLanguage(language: string): DsaEditorLanguage {
@@ -298,20 +321,16 @@ function ThinkingLine({ interviewerName }: { interviewerName: string }) {
 
 function CodeBlock({ code, language }: { code: string; language: string }) {
   return (
-    <div className="overflow-hidden rounded-xl bg-black/15">
+    <div className="transcript-code overflow-hidden rounded-xl">
       <div className="flex items-center justify-between px-4 py-2.5">
-        <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-cream/42">
-          {language}
-        </span>
-        <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-cream/25">
-          review target
-        </span>
+        <span className="text-xs font-semibold text-cream/62">{displayLanguage(language)}</span>
+        <span className="text-xs text-cream/42">Code to review</span>
       </div>
-      <pre className="thin-scroll max-h-72 overflow-auto p-4 text-[12px] leading-6 text-[#d8e2ff]">
+      <pre className="transcript-code-text thin-scroll max-h-72 overflow-auto px-4 pb-4 font-mono text-[12px] leading-6">
         <code>
           {code.split("\n").map((line, index) => (
             <span key={index} className="block whitespace-pre">
-              <span className="mr-4 inline-block w-5 select-none text-right text-cream/20">
+              <span className="transcript-code-gutter mr-4 inline-block w-5 select-none text-right">
                 {index + 1}
               </span>
               {line || " "}
@@ -325,7 +344,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 
 function ContextPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-cream/[0.055] px-2.5 py-1 text-[10px] font-medium text-cream/45">
+    <span className="rounded-full bg-cream/[0.055] px-2.5 py-1 text-xs font-medium text-cream/52">
       {children}
     </span>
   );

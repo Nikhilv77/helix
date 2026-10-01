@@ -261,9 +261,21 @@ export function evaluationAnswerHash(answers: string[]): string {
     .digest("hex");
 }
 
+/**
+ * What the candidate answered to one question. A turn that is never assessed
+ * (declining it, asking for a break, ending the round) is left out, as it is
+ * in the report. Counting it changed the answer under a queued grade, which
+ * then discarded itself and left the earlier answers unscored.
+ */
 export function answerTexts(state: InterviewState, questionIndex: number): string[] {
   return state.turns
-    .filter((turn) => turn.speaker === "user" && turn.questionIndex === questionIndex)
+    .filter(
+      (turn) =>
+        turn.speaker === "user" &&
+        turn.questionIndex === questionIndex &&
+        !turn.assessmentExcluded &&
+        !turn.endedInterview
+    )
     .map((turn) => turn.text);
 }
 

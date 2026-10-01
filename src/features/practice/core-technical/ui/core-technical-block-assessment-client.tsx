@@ -5,6 +5,7 @@ import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { practiceAssessmentMoment } from "@/features/practice/shared/domain/assessment-speech";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import {
   Check,
   CheckCircle2,
@@ -490,6 +491,7 @@ export function CoreTechnicalBlockAssessmentClient({
               <Clock3 size={13} className="text-[var(--workspace-accent)]" />
               {formatClock(remainingMs)}
             </div>
+            <ThemeToggle className="interview-theme-toggle" size={16} />
           </div>
         </header>
 

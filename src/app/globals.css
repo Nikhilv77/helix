@@ -6867,6 +6867,185 @@ html[data-theme="light"] .interview-workspace-page .interview-live-end:hover {
   background: rgba(15, 23, 42, 0.05) !important;
 }
 
+/* Inside every live round: DSA examples and test cases read as a list split
+   by faded hairlines, not grey cards holding white boxes; only the code
+   values keep a soft fill. Multiple-choice options are a soft fill only. */
+.interview-workspace-page:not(.practice-paper) .dsa-live-example,
+.interview-workspace-page:not(.practice-paper) .dsa-live-test-case,
+html.light .interview-workspace-page:not(.practice-paper) .dsa-live-example,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-example,
+html.light .interview-workspace-page:not(.practice-paper) .dsa-live-test-case,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-test-case {
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding-inline: 0;
+}
+
+.interview-workspace-page:not(.practice-paper) .dsa-live-example + .dsa-live-example,
+.interview-workspace-page:not(.practice-paper) .dsa-live-test-case + .dsa-live-test-case {
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 70%, transparent) 1;
+}
+
+html.light .interview-workspace-page:not(.practice-paper) .dsa-live-example + .dsa-live-example,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-example + .dsa-live-example,
+html.light .interview-workspace-page:not(.practice-paper) .dsa-live-test-case + .dsa-live-test-case,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-test-case + .dsa-live-test-case {
+  border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 70%, transparent) 1;
+}
+
+html.light .interview-workspace-page:not(.practice-paper) .dsa-live-example-code,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-example-code {
+  background: rgba(15, 23, 42, 0.04) !important;
+  box-shadow: none !important;
+}
+
+html.light .interview-workspace-page:not(.practice-paper) .interview-answer-option,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .interview-answer-option,
+html.light .interview-workspace-page:not(.practice-paper) .interview-panel-card,
+html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .interview-panel-card {
+  box-shadow: none !important;
+}
+
+html.light .interview-workspace-page .system-design-zoom,
+html[data-theme="light"] .interview-workspace-page .system-design-zoom {
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Code shown in the transcript and the editor's loading state follow the
+   theme; a fixed charcoal panel flashed black, and pale blue code text
+   disappeared on paper. */
+.transcript-code,
+.dsa-editor-loading {
+  background: #0b0d10;
+}
+
+.transcript-code-text {
+  color: #d8e2ff;
+}
+
+.transcript-code-gutter {
+  color: rgba(241, 234, 216, 0.24);
+}
+
+html.light .transcript-code,
+html[data-theme="light"] .transcript-code,
+html.light .dsa-editor-loading,
+html[data-theme="light"] .dsa-editor-loading {
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .transcript-code-text,
+html[data-theme="light"] .transcript-code-text {
+  color: #334155 !important;
+}
+
+html.light .transcript-code-gutter,
+html[data-theme="light"] .transcript-code-gutter {
+  color: #94a3b8 !important;
+}
+
+/* Architecture canvas: plain components told apart by a tinted icon, one
+   hairline per box, no drop shadows, and an inspector without grey bands. */
+.system-design-inspector {
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 70%, transparent) 1;
+}
+
+.system-design-node--database .system-design-node-icon,
+.system-design-node--storage .system-design-node-icon {
+  color: #7dd3fc;
+}
+
+.system-design-node--queue .system-design-node-icon {
+  color: #c4b5fd;
+}
+
+.system-design-node--cache .system-design-node-icon {
+  color: #fcd34d;
+}
+
+.system-design-node--note .system-design-node-icon {
+  color: #fdba74;
+}
+
+html.light .system-design-canvas .system-design-node,
+html[data-theme="light"] .system-design-canvas .system-design-node {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html.light .system-design-canvas .system-design-node.is-selected,
+html[data-theme="light"] .system-design-canvas .system-design-node.is-selected,
+html.light .system-design-canvas .system-design-node.is-connecting,
+html[data-theme="light"] .system-design-canvas .system-design-node.is-connecting {
+  border-color: var(--workspace-accent) !important;
+}
+
+html.light .system-design-canvas .system-design-node-head,
+html[data-theme="light"] .system-design-canvas .system-design-node-head {
+  border-color: rgba(15, 23, 42, 0.07) !important;
+}
+
+html.light .system-design-node--database .system-design-node-icon,
+html[data-theme="light"] .system-design-node--database .system-design-node-icon,
+html.light .system-design-node--storage .system-design-node-icon,
+html[data-theme="light"] .system-design-node--storage .system-design-node-icon {
+  color: #0284c7;
+}
+
+html.light .system-design-node--queue .system-design-node-icon,
+html[data-theme="light"] .system-design-node--queue .system-design-node-icon {
+  color: #7c3aed;
+}
+
+html.light .system-design-node--cache .system-design-node-icon,
+html[data-theme="light"] .system-design-node--cache .system-design-node-icon {
+  color: #d97706;
+}
+
+html.light .system-design-node--note .system-design-node-icon,
+html[data-theme="light"] .system-design-node--note .system-design-node-icon {
+  color: #ea580c;
+}
+
+html.light .system-design-inspector,
+html[data-theme="light"] .system-design-inspector {
+  border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 70%, transparent) 1;
+  background: transparent !important;
+}
+
+html.light .system-design-canvas .system-design-input,
+html[data-theme="light"] .system-design-canvas .system-design-input {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: #ffffff !important;
+}
+
+html.light .system-design-canvas .system-design-input:focus,
+html[data-theme="light"] .system-design-canvas .system-design-input:focus {
+  border-color: var(--workspace-accent-border) !important;
+}
+
+html.light .system-design-frame,
+html[data-theme="light"] .system-design-frame {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Theme switch beside the room timer: just the icon, no frame. */
+.interview-theme-toggle {
+  border-color: transparent !important;
+}
+
+html.light .interview-theme-toggle,
+html[data-theme="light"] .interview-theme-toggle {
+  color: #475569 !important;
+}
+
 /* Room dialogs dim the room without blurring it. */
 .interview-dialog-backdrop {
   background: rgba(0, 0, 0, 0.45);

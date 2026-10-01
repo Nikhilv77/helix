@@ -273,8 +273,8 @@ export function InterviewQuestionPanel({
                               : state === "wrong"
                                 ? "bg-[#dd5f5f]/[0.1] ring-1 ring-inset ring-[#dd5f5f]/40"
                                 : chosen
-                                  ? "bg-white/[0.07] ring-1 ring-inset ring-white/[0.14]"
-                                  : "bg-white/[0.03] ring-1 ring-inset ring-white/[0.05] enabled:hover:bg-white/[0.06] enabled:hover:ring-white/[0.1]"
+                                  ? "bg-white/[0.07] ring-1 ring-inset ring-[var(--workspace-accent-border)]"
+                                  : "bg-white/[0.03] enabled:hover:bg-white/[0.06]"
                           }`}
                         >
                           <span

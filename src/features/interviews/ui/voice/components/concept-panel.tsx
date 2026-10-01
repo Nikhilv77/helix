@@ -60,7 +60,7 @@ export function ConceptPanel({
         {concept ? (
           <article key={concept.title} className="concept-card-in">
             {concept.areaTitle ? (
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+              <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">
                 {concept.areaTitle}
               </p>
             ) : null}
@@ -74,7 +74,7 @@ export function ConceptPanel({
                 <li key={point} className="flex gap-3 text-[15px] leading-7 text-cream/74">
                   <span
                     aria-hidden="true"
-                    className="mt-[0.7rem] h-1 w-1 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_8px_var(--workspace-accent)]"
+                    className="mt-[0.7rem] h-1 w-1 shrink-0 rounded-full bg-[var(--workspace-accent)]"
                   />
                   <span>{point}</span>
                 </li>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -804,9 +805,16 @@ export function AvatarStage({
 
       {showStatus && status !== "ready" ? (
         <div className="absolute inset-0 flex items-center justify-center">
-          <p className="blueprint-label text-cream/40">
-            {status === "loading" ? "Loading interviewer" : "Avatar unavailable"}
-          </p>
+          {status === "loading" ? (
+            <Loader2
+              size={18}
+              strokeWidth={1.5}
+              className="animate-spin text-[var(--workspace-accent)]"
+              aria-label="Loading interviewer"
+            />
+          ) : (
+            <p className="text-xs font-medium text-cream/48">Avatar unavailable</p>
+          )}
         </div>
       ) : null}
     </div>

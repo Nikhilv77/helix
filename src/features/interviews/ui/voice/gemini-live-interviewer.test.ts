@@ -152,6 +152,21 @@ describe("Gemini-led interview tool decisions", () => {
     ).toBe(false);
   });
 
+  it("still recognises a submitted solution that Gemini echoed without its code fence", () => {
+    const typed =
+      "```javascript\nfunction solve(nums) {\n  return nums.length;\n}\n```\n\nReasoning and complexity: O(1).";
+    const echoed = "function solve(nums) { return nums.length; } Reasoning and complexity: O(1).";
+    expect(toolCallMatchesPendingTypedSubmission(echoed, typed)).toBe(true);
+    // Gemini sometimes echoes only the code, without the written reasoning.
+    expect(
+      toolCallMatchesPendingTypedSubmission("function solve(nums) { return nums.length; }", typed)
+    ).toBe(true);
+    // A spoken remark made while a submission is pending is not that submission.
+    expect(toolCallMatchesPendingTypedSubmission("Let me check the edge cases first.", typed)).toBe(
+      false
+    );
+  });
+
   it("accepts the bounded conversational proposal sent by Gemini Live", () => {
     expect(
       liveConversationProposalFromToolArgs({

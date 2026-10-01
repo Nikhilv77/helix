@@ -33,11 +33,12 @@ type Props = Omit<
   "stages" | "anchorLabel"
 > & {
   canvasStorageKey?: string;
+  onDiagramChange?: ComponentProps<typeof SystemDesignCanvas>["onDiagramChange"];
 };
 
 /** Candidate-led design workspace used by dedicated and legacy combined sessions. */
 export function DsaDesignConversationWorkspace(props: Props) {
-  const { canvasStorageKey, ...workspaceProps } = props;
+  const { canvasStorageKey, onDiagramChange, ...workspaceProps } = props;
   const framing = props.question?.stage === "design-frame" || props.question?.stage === "rapid";
   return (
     <BlockAssessmentReviewWorkspace
@@ -48,7 +49,11 @@ export function DsaDesignConversationWorkspace(props: Props) {
       showExpectations={false}
       questionWorkspace={
         framing ? undefined : (
-          <SystemDesignCanvas storageKey={canvasStorageKey} sessionId={canvasStorageKey} />
+          <SystemDesignCanvas
+            storageKey={canvasStorageKey}
+            sessionId={canvasStorageKey}
+            onDiagramChange={onDiagramChange}
+          />
         )
       }
     />

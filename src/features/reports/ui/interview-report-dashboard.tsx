@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import type { ReportPdfBriefing } from "@/features/reports/application/report-pdf";
 import type { ReportFamilySummary, ReportsOverview } from "@/features/reports/contracts/reports";
 import { formatShortDate, roundShortLabel } from "@/lib/shared/labels";
+import { interviewerNameForSetup } from "@/features/interviews/domain/interviewer-persona";
 import type { InterviewReport } from "@/lib/shared/types";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 import {
@@ -205,7 +206,7 @@ function InterviewReportContent({
             <Meta
               icon={MessageSquareText}
               label="Round"
-              value={roundShortLabel(report.setup.roundType)}
+              value={evaluationProfile.label}
             />
             <Meta icon={CalendarDays} label="Date" value={formatShortDate(report.startedAt)} />
             <Meta
@@ -682,16 +683,18 @@ function mayaSummary(
   const nextStep = report.summary.nextStep || `focus on ${gap.toLowerCase()}`;
   const profile = evaluationProfileForSetup(report.setup);
   const overallScore = roundParameterScore(report);
+  // Claire runs the coding and design rounds; James runs the rest.
+  const interviewer = interviewerNameForSetup(report.setup);
 
   if (overallScore >= 75) {
-    return `James reported back to me, ${firstName}. In your ${profile.label} interview, your ${strongest.toLowerCase()} really came through. You are building a strong signal—keep that same clarity in your next round.`;
+    return `${interviewer} reported back to me, ${firstName}. In your ${profile.label} interview, your ${strongest.toLowerCase()} really came through. You are building a strong signal—keep that same clarity in your next round.`;
   }
 
   if (overallScore >= 45) {
-    return `James reported back to me, ${firstName}. I reviewed your ${profile.label} parameters, and your ${strongest.toLowerCase()} is starting to show. Next time, ${lowercaseFirst(nextStep)} Keep going—you are making real progress.`;
+    return `${interviewer} reported back to me, ${firstName}. I reviewed your ${profile.label} parameters, and your ${strongest.toLowerCase()} is starting to show. Next time, ${lowercaseFirst(nextStep)} Keep going—you are making real progress.`;
   }
 
-  return `James reported back to me, ${firstName}. This ${profile.label} attempt gives us a useful starting point. Begin with ${gap.toLowerCase()}. ${uppercaseFirst(nextStep)} Do not be discouraged—this is exactly what practice is for.`;
+  return `${interviewer} reported back to me, ${firstName}. This ${profile.label} attempt gives us a useful starting point. Begin with ${gap.toLowerCase()}. ${uppercaseFirst(nextStep)} Do not be discouraged—this is exactly what practice is for.`;
 }
 
 function pressureMessage(report: InterviewReport) {
@@ -741,12 +744,12 @@ function buildPdfBriefing(
     gapText: gapSignal?.nextMove ?? report.summary.nextStep,
     pressureText: pressureMessage(report),
     nextAction: gapSignal?.nextMove ?? report.summary.nextStep,
-    latestText: `${roundShortLabel(report.setup.roundType)} · ${roundScore}/100 · ${formatShortDate(report.startedAt)}`,
+    latestText: `${evaluationProfileForSetup(report.setup).label} · ${roundScore}/100 · ${formatShortDate(report.startedAt)}`,
     history: overview.rounds
       .slice(0, 4)
       .map(
         (round) =>
-          `${roundShortLabel(round.roundType)} · ${round.evidenceScore ?? 0}/100 · ${formatShortDate(round.startedAt)}`
+          `${round.templateTitle ?? roundShortLabel(round.roundType)} · ${round.evidenceScore ?? 0}/100 · ${formatShortDate(round.startedAt)}`
       ),
     readinessScore: overview.readinessScore,
     competencyBars: signals.slice(0, 6).map((signal) => ({

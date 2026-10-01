@@ -139,9 +139,15 @@ export function SessionStateScreen({
   evaluationLabel = "interview",
   evaluationParameters = [],
   interviewerName = "James",
-  answers
+  answers,
+  timedOut = false,
+  reportPending = false
 }: {
   kind: "expired" | "complete";
+  /** The server is still closing the round, so Reports would not show it yet. */
+  reportPending?: boolean;
+  /** The round reached its time limit rather than being ended by the candidate. */
+  timedOut?: boolean;
   duration?: number;
   answers?: number;
   workspaceAccent: WorkspaceAccent;
@@ -170,8 +176,12 @@ export function SessionStateScreen({
     return (
       <ClosedRoundScreen
         workspaceAccent={workspaceAccent}
-        title="No report for this round"
-        body={`This round closed before you answered a question, so there is nothing for ${interviewerName} to score and it will not appear in Reports. Start it again whenever you are ready.`}
+        title={timedOut ? "Time's up" : "No report for this round"}
+        body={
+          timedOut
+            ? `The round reached its time limit before an answer was submitted, so there is nothing for ${interviewerName} to score and it will not appear in Reports. Running code checks it, but only Submit sends it to ${interviewerName}.`
+            : `This round closed before you answered a question, so there is nothing for ${interviewerName} to score and it will not appear in Reports. Start it again whenever you are ready.`
+        }
         primaryLabel="Back to interviews"
       />
     );
@@ -187,6 +197,7 @@ export function SessionStateScreen({
           evaluationLabel={evaluationLabel}
           evaluationParameters={evaluationParameters}
           interviewerName={interviewerName}
+          reportPending={reportPending}
         />
       </VoiceShell>
     );
@@ -261,8 +272,10 @@ function CompletionDebrief({
   storyPracticeAssessment,
   evaluationLabel,
   evaluationParameters,
-  interviewerName
+  interviewerName,
+  reportPending
 }: {
+  reportPending: boolean;
   blockAssessmentBlockId: string | null;
   coreTechnicalBlockId: string | null;
   storyPracticeAssessment: {
@@ -280,12 +293,17 @@ function CompletionDebrief({
   // The interviewer and rubric are shown on screen; the spoken line is pre-recorded.
   const voiceLine = useMemo(() => pickLine(TEACHER_LINES.interviewDebrief), []);
   const speaking = state === "speaking" || state === "loading";
+  // Mark the line as started before playing it. Marking it only after playback
+  // began let the "loading" re-render schedule a second start, which cut the
+  // first one off and made the teacher stammer.
   const speakDebrief = useCallback(() => {
-    if (spoken.current && !speaking) spoken.current = false;
+    if (spoken.current) return;
+    spoken.current = true;
     void speak(voiceLine).then((result) => {
-      if (result === "started" || result === "unavailable") spoken.current = true;
+      // Autoplay was blocked: let the first tap or key press play it.
+      if (result === "blocked") spoken.current = false;
     });
-  }, [speak, speaking, voiceLine]);
+  }, [speak, voiceLine]);
 
   useEffect(() => {
     if (awaitingGesture || spoken.current) return;
@@ -340,7 +358,7 @@ function CompletionDebrief({
               {evaluationParameters.map((parameter) => (
                 <span
                   key={parameter}
-                  className="rounded-full border border-white/[0.1] bg-white/[0.035] px-3 py-1.5 text-xs font-medium text-cream/62"
+                  className="rounded-full bg-white/[0.035] px-3 py-1.5 text-xs font-medium text-cream/62"
                 >
                   {parameter}
                 </span>
@@ -350,7 +368,15 @@ function CompletionDebrief({
 
           <button
             type="button"
-            onClick={() => (speaking ? stop() : speakDebrief())}
+            onClick={() => {
+              if (speaking) {
+                stop();
+                return;
+              }
+              // An explicit replay.
+              spoken.current = false;
+              speakDebrief();
+            }}
             className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--workspace-accent)] transition hover:brightness-110"
           >
             {speaking ? (
@@ -362,14 +388,28 @@ function CompletionDebrief({
           </button>
 
           <div className="mx-auto mt-7 flex max-w-sm flex-col gap-2.5 lg:mx-0">
-            <Link
-              href="/reports"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
-            >
-              <FileText size={15} aria-hidden="true" />
-              Review my report with {teacher.name}
-              <ArrowRight size={15} aria-hidden="true" />
-            </Link>
+            {/* No prefetch: one taken now would hold Reports from before this round. */}
+            {reportPending ? (
+              <button
+                type="button"
+                disabled
+                aria-live="polite"
+                className="inline-flex min-h-12 cursor-default items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] opacity-70"
+              >
+                <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+                Preparing your report…
+              </button>
+            ) : (
+              <Link
+                href="/reports"
+                prefetch={false}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
+              >
+                <FileText size={15} aria-hidden="true" />
+                Review my report with {teacher.name}
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            )}
             {blockHref ? (
               <Link
                 href={blockHref}

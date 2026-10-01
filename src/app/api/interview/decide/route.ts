@@ -40,10 +40,20 @@ const decideSchema = z.object({
       line: z.string().trim().max(300),
       candidateResponse: z.string().trim().max(400).optional()
     })
+    .optional(),
+  /** The previous turn's wait as the browser measured it; logged only. */
+  clientTimings: z
+    .object({
+      speechToRequestMs: z.number().int().min(0).max(600_000).nullable(),
+      requestMs: z.number().int().min(0).max(600_000).nullable(),
+      responseToAudioMs: z.number().int().min(0).max(600_000).nullable(),
+      speechToAudioMs: z.number().int().min(0).max(600_000).nullable()
+    })
     .optional()
 });
 
 export async function POST(request: NextRequest) {
+  const receivedAt = Date.now();
   try {
     const body = await readJson(request);
     const parsed = decideSchema.safeParse(body);
@@ -55,25 +65,32 @@ export async function POST(request: NextRequest) {
     }
 
     const app = getAppContainer();
-    const access = await authorizeInterviewSession(
-      request,
-      app.config,
-      parsed.data.sessionId,
-      "answer"
-    );
     const guard = getSharedGuard(app.config);
-    const lease = await guard.enforceAndAcquire(
-      { policy: RATE_LIMIT_POLICIES.answerEvaluation, identity: parsed.data.sessionId },
-      {
-        policy: {
-          namespace: "answer-evaluate",
-          ttlMs: 65_000,
-          code: "ANSWER_EVALUATION_IN_PROGRESS",
-          message: "The previous answer is still being evaluated."
-        },
-        identity: parsed.data.sessionId
-      }
-    );
+    // Both are on the spoken-turn path and neither needs the other: the lease
+    // is keyed by session, so it can be taken while access is checked.
+    const [accessResult, leaseResult] = await Promise.allSettled([
+      authorizeInterviewSession(request, app.config, parsed.data.sessionId, "answer"),
+      guard.enforceAndAcquire(
+        { policy: RATE_LIMIT_POLICIES.answerEvaluation, identity: parsed.data.sessionId },
+        {
+          policy: {
+            namespace: "answer-evaluate",
+            ttlMs: 65_000,
+            code: "ANSWER_EVALUATION_IN_PROGRESS",
+            message: "The previous answer is still being evaluated."
+          },
+          identity: parsed.data.sessionId
+        }
+      )
+    ]);
+    if (accessResult.status === "rejected") {
+      if (leaseResult.status === "fulfilled") await leaseResult.value.release();
+      throw accessResult.reason;
+    }
+    if (leaseResult.status === "rejected") throw leaseResult.reason;
+    const access = accessResult.value;
+    const lease = leaseResult.value;
+    let leaseHandedOff = false;
 
     try {
       const now = Date.now();
@@ -106,6 +123,22 @@ export async function POST(request: NextRequest) {
               { requireLiveProposal: true }
             );
       const { response } = answerResult;
+      // One line per turn: the server's share now, and the previous turn's
+      // full wait as heard in the browser (see LATENCY.md).
+      console.info(
+        JSON.stringify({
+          event: "interview.voice-turn.timing",
+          sessionId: parsed.data.sessionId,
+          serverMs: Date.now() - receivedAt,
+          previousTurn: parsed.data.clientTimings ?? null
+        })
+      );
+      // The answer is saved; release the lease after James's reply has been
+      // sent rather than holding the response for one more round trip.
+      // Registered first so it never waits behind grading below, and the
+      // lease also expires on its own if this ever fails to run.
+      leaseHandedOff = true;
+      after(() => lease.release());
       // Recovery runs outside the spoken-turn response. The job itself was
       // persisted with the answer, so a serverless shutdown only delays it.
       if (response.phase !== "done") {
@@ -162,7 +195,7 @@ export async function POST(request: NextRequest) {
 
       return apiSuccess(response);
     } finally {
-      await lease.release();
+      if (!leaseHandedOff) await lease.release();
     }
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

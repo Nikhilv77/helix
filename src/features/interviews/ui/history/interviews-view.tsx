@@ -104,16 +104,13 @@ export function InterviewsView({
     null;
   // Old generic sessions remain in history for reporting, but they no longer
   // have a valid room. Only the permanent round engines can be resumed.
+  // Only interview rounds: unfinished Practice checkpoints stay open on
+  // purpose and are resumed from Practice, not from this page.
   const active = sessions.find(
-    (session) => session.status === "in_progress" && supportsResume(session)
+    (session) =>
+      session.status === "in_progress" && supportsResume(session) && !isPracticeCheckpoint(session)
   );
-  const activeHref = active
-    ? active.sessionId.startsWith("core-technical:")
-      ? "/practice/core-technical"
-      : active.sessionId.startsWith("applied-engineering:")
-        ? "/practice/applied-engineering"
-        : sessionRoomHref(active.sessionId, active.setup)
-    : null;
+  const activeHref = active ? sessionRoomHref(active.sessionId, active.setup) : null;
   const introCopy = firstName
     ? `${firstName}, choose the interview session that feels most useful right now. Each round is shaped around your saved profile and a focused agenda, so you can practise with intent and leave knowing exactly what to sharpen next.`
     : "Choose the interview session that feels most useful right now. Each round is shaped around your saved profile and a focused agenda, so you can practise with intent and leave knowing exactly what to sharpen next.";
@@ -207,6 +204,15 @@ export function InterviewsView({
         </div>
       </section>
     </main>
+  );
+}
+
+function isPracticeCheckpoint(session: InterviewHistoryItem): boolean {
+  return Boolean(
+    /^(?:core-technical|applied-engineering|architecture-design):/.test(session.sessionId) ||
+    session.setup.storyPracticeAssessment ||
+    session.setup.dsaBlockAssessment ||
+    session.setup.coreTechnicalAssessment
   );
 }
 

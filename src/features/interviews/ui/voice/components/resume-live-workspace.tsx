@@ -134,10 +134,10 @@ export function ResumeLiveWorkspace({
             <div className="flex min-w-0 items-center gap-2.5">
               <span
                 aria-hidden="true"
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]"
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)]"
               />
               <p className="truncate text-sm font-medium text-cream/72">Your editor</p>
-              <span className="shrink-0 rounded-md bg-white/[0.05] px-1.5 py-0.5 text-[11px] font-medium text-cream/48">
+              <span className="shrink-0 rounded-md bg-white/[0.05] px-1.5 py-0.5 text-xs font-medium text-cream/48">
                 {syntaxLanguage}
               </span>
             </div>
@@ -281,7 +281,13 @@ function ResumeRunOutput({ result, running }: { result: DsaRunResult | null; run
             ) : (
               <CheckCircle2 size={13} aria-hidden="true" />
             )}
-            {result.status}
+            {/* These tasks have no automated tests, so a clean run only means
+                the code executed; "Accepted" read like it had been marked right. */}
+            {failed
+              ? result.compileOutput?.trim()
+                ? "Didn't compile"
+                : "Error"
+              : "Ran without errors"}
           </span>
         ) : (
           <span className="text-xs text-cream/34">⌘/Ctrl + Enter to run</span>
