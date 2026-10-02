@@ -3,6 +3,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { Logger } from "../../common/logger";
 import { isRecord } from "../../common/utils/is-record";
 import { AppConfigService } from "../../config/app-config.service";
+import { recordProviderUsage } from "../../usage/provider-usage";
 import { AiProviderException } from "../ai-provider.exception";
 import { toPrunedJsonSchema } from "../strict-json-schema";
 import type {
@@ -140,6 +141,7 @@ export class GeminiProvider implements SystemDesignerAIProvider {
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       if (request.signal?.aborted) throw this.cancelledError(request.operation);
       const startedAt = Date.now();
+      let billedTokens = { inputTokens: 0, outputTokens: 0 };
       this.logRequestMetadata(request, model, attempt, maxAttempts);
 
       try {
@@ -167,7 +169,23 @@ export class GeminiProvider implements SystemDesignerAIProvider {
           request.timeoutMs ?? this.config.aiTimeoutMs,
           request.signal
         );
+        const usage = response.usageMetadata;
+        // Billed whether or not the output then validates.
+        billedTokens = {
+          inputTokens: usage?.promptTokenCount ?? 0,
+          outputTokens: (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0)
+        };
         const result = this.parseAndValidateResponse(response, request);
+
+        recordProviderUsage({
+          kind: "text",
+          provider: PROVIDER_NAME,
+          model,
+          operation: request.operation,
+          outcome: "success",
+          durationMs: Date.now() - startedAt,
+          ...billedTokens
+        });
 
         this.logger.log(
           JSON.stringify({
@@ -195,6 +213,16 @@ export class GeminiProvider implements SystemDesignerAIProvider {
         return result;
       } catch (error) {
         const mappedError = this.mapError(error, request.operation);
+        recordProviderUsage({
+          kind: "text",
+          provider: PROVIDER_NAME,
+          model,
+          operation: request.operation,
+          outcome: "failure",
+          errorCode: mappedError.code,
+          durationMs: Date.now() - startedAt,
+          ...billedTokens
+        });
         // A spent daily quota cannot recover on this model today.
         const shouldRetry =
           mappedError.retryable && attempt < maxAttempts && !isDailyQuotaExhausted(error);

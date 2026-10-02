@@ -1,6 +1,6 @@
 # Latency
 
-Last updated: October 1, 2026
+Last updated: October 2, 2026
 
 How to measure latency in Trailgrad, the production baseline to fill in, what is still open, and
 the lessons from the work so far. The history of each change is in [CHANGELOG.md](CHANGELOG.md).
@@ -65,6 +65,33 @@ Measured during the September work, before the production baseline.
 | Pre-recorded teacher line | About 0.1 s | CDN |
 | Live teacher line | About 1 s to first audio (Deepgram) | TTS provider |
 
+### Practice page loads (measured October 2, 2026, from Mumbai)
+
+Each Prisma `include` used to run as one query per relation, one after another. A path read
+(block, questions, state, attempts, code runs, assessment, report) was six or seven sequential
+round trips. Turning on `relationJoins` (`previewFeatures` in `prisma/schema.prisma`) makes Prisma
+load a record and its relations in one SQL query. Same pages, same data, second load:
+
+| Click | Before | After | Queries before → after |
+| --- | --- | --- | --- |
+| Core Technical track page | 4.6 s | 1.1 s | 15 → 3 |
+| Core Technical change path (`?block=`) | 3.5 s | 1.1 s | 15 → 3 |
+| Core Technical open question | 2.6 s | 0.4 s | 6 → 1 |
+| Architecture track page | 4.2 s | 1.1 s | 15 → 4 |
+| Story track page (Frontend, Backend, Data, AI/ML) | 2.2–2.8 s | 0.9–1.2 s | 8 → 4 |
+| Story open question | 1.0–2.0 s | 0.2–0.6 s | 4 → 1 |
+| Story reveal hint | 1.9 s | 0.3 s | 5 → 1 |
+| Story Learn | 2.6 s | 2.1 s | 7 → 4 (a locked write transaction) |
+| DSA page | 0.7 s | unchanged | already parallel |
+| DSA open question | 0.4 s | unchanged | one read |
+| Practice home (warm snapshot) | 0.5 s | unchanged | one read |
+| Assessment room session read | 0.2 s | unchanged | one read |
+
+Production sits next to the database, so absolute times there are far lower; the gain is the
+removed round trips. Measure with a script that sets `globalThis.trailgradPrisma` to a client
+created with `log: [{ emit: "event", level: "query" }]` before `getAppContainer()`, then counts
+overlapping queries ("waves") per page.
+
 ## Open items
 
 | Item | Why | Status |
@@ -75,6 +102,8 @@ Measured during the September work, before the production baseline.
 | Shorten the voice turn | Silence 900 → 750 ms and commit grace 1,000 → 750 ms (October 1). Next candidates, once timings are in: an instant spoken acknowledgement in the interviewer's own Gemini voice, starting the decision during the grace window, and a faster decision model | Measure first |
 | Stream or show progress for AI-graded answers | Written grading and DSA feedback still show a silent wait of about 2 s (longer when hedged) | Todo |
 | Overview and Progress rebuild after every answer | The rebuild runs after the response and is coalesced per user, so learners do not wait. Revisit with a queue if `*_rebuild_slow` or database load grows | Watching |
+| Grading status polling | A grading checkpoint re-renders the whole track page (`router.refresh()`) every 5 s to check one status. A small status endpoint would avoid re-reading the path | Todo |
+| Duplicate path reads on track pages | `current()` and `history.list()` both read the current path (`CoreTechnicalBlock` and `ArchitectureBlock` twice). They run in parallel, so this costs queries, not wall time | Watching |
 | Trailmate helper matching | Scores every eligible profile per request (about 1.3 ms each on dev) | At 1,000–2,000 users |
 
 ## Lessons

@@ -42,7 +42,7 @@ export function pickFilmSource({ src, touchSrc, portraitSrc }: FilmSources): str
  * A silent product film, played like part of the page rather than a player:
  * no controls, no frame. It loads only once visible, loops while on screen,
  * pauses off-screen or in a hidden tab, and stays on its poster for visitors
- * who prefer reduced motion. The Remotion sources live in `video/`.
+ * who prefer reduced motion. Rendered assets live in `public/videos/marketing/`.
  */
 export function ProductFilm({
   src,

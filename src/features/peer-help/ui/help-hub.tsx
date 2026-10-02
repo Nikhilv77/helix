@@ -380,7 +380,7 @@ function BadgeRankingToast({ overview, onClose }: { overview: HelpOverview; onCl
   );
 }
 
-function ActiveConversationView({
+export function ActiveConversationView({
   conversation
 }: {
   conversation: NonNullable<HelpOverview["activeConversation"]>;

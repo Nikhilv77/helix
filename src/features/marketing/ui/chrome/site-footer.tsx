@@ -22,13 +22,12 @@ const linkClass =
 
 /**
  * White like the page, so the footer ends it instead of boxing it off. The
- * mark and one line on the left, two short link groups on the right, and a
- * large faded wordmark along the bottom edge. The only rule is a hairline
- * that fades out at both ends.
+ * mark and one line on the left, two short link groups on the right. The
+ * only rule is a hairline that fades out at both ends.
  */
 export function SiteFooter({ sectionHrefPrefix = "" }: { sectionHrefPrefix?: string }) {
   return (
-    <footer className="site-footer relative z-10 overflow-hidden px-5 pt-12 sm:px-8">
+    <footer className="site-footer relative z-10 overflow-hidden px-5 pb-10 pt-12 sm:px-8 sm:pb-12">
       <div className="site-footer-inner mx-auto w-full max-w-[72rem] pt-12 sm:pt-14">
         <div className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex max-w-[20rem] flex-col gap-3">
@@ -70,10 +69,6 @@ export function SiteFooter({ sectionHrefPrefix = "" }: { sectionHrefPrefix?: str
         <p className="mt-14 text-[0.8125rem] text-cream/40 sm:mt-16">
           © {new Date().getFullYear()} Trailgrad
         </p>
-      </div>
-
-      <div aria-hidden="true" className="site-footer-wordmark wordmark">
-        Trailgrad
       </div>
     </footer>
   );

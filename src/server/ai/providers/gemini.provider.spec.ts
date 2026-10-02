@@ -9,6 +9,7 @@ import {
   GeminiGenerateContentClient,
   GeminiGenerateContentResponse
 } from "./gemini-provider.types";
+import { configureProviderUsageSink, flushProviderUsage } from "../../usage/provider-usage";
 
 describe("GeminiProvider", () => {
   const outputSchema = z.object({
@@ -499,5 +500,35 @@ describe("GeminiProvider", () => {
       await provider.generateStructured(createRequest({ modelClass: "reasoning" }));
       expect(calls).toEqual(["quota-reasoning-b", "quota-reasoning-b"]);
     });
+  });
+
+  it("records billed tokens for pricing, with thinking counted as output", async () => {
+    const sink = vi.fn().mockResolvedValue(undefined);
+    configureProviderUsageSink(sink);
+    try {
+      const provider = new GeminiProvider(
+        createConfig(),
+        createClient(async () => ({
+          text: JSON.stringify({ ok: true, message: "done" }),
+          usageMetadata: { promptTokenCount: 120, candidatesTokenCount: 30, thoughtsTokenCount: 50 }
+        }))
+      );
+      await provider.generateStructured(createRequest());
+      await flushProviderUsage();
+
+      expect(sink).toHaveBeenCalledWith([
+        expect.objectContaining({
+          kind: "text",
+          provider: "gemini",
+          model: "gemini-fast-test",
+          operation: "test.operation",
+          outcome: "success",
+          inputTokens: 120,
+          outputTokens: 80
+        })
+      ]);
+    } finally {
+      configureProviderUsageSink(null);
+    }
   });
 });

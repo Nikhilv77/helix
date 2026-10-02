@@ -1,6 +1,6 @@
 # 9. Future scope
 
-Last updated: September 28, 2026
+Last updated: October 2, 2026
 
 Where Trailgrad goes from here. The near-term queue with checkboxes is in
 [REMAINING_WORK.md](REMAINING_WORK.md); this page is the longer view and the reasoning behind the
@@ -26,6 +26,37 @@ Nothing below should jump that order without a reason from real usage data.
 | Fill the production latency baseline | Replace estimates with p50/p95 from `api.action_timing` in [LATENCY.md](LATENCY.md) | A few days of traffic |
 | Raise or plan AI provider quota | 429 at about 16 calls/min will fail under a small launch | Hours plus billing |
 | Watch the new logs | `resume_roast.generation`, `help.request.*`, fresh-wait logs | Ongoing |
+
+## Make Practice and Interviews genuinely useful
+
+Written October 2, 2026. The engineering is solid; the product still feels loose because nothing
+is anchored to reality. A learner cannot tell whether a question is one real companies ask,
+whether "58/100" means they would pass, or whether improving here leads to an offer. The fix is
+credibility, focus, and one connected loop, not more features.
+
+| Item | What it means | Why |
+| --- | --- | --- |
+| Real, curated question bank | 60–80 hand-written or verified backend and full-stack questions, each built on a real artifact (a slow-query log, an incident timeline, a PR diff). AI writes follow-ups, variations, and grading, not the core bank. Retire the weakest generated paths | Generated paths read like rubric checklists; real questions are narrower and messier, and learners can tell |
+| Sourced questions | Tag each question with where it comes from ("asked at a fintech, 2026, L2 backend round") | Provenance is what makes a question worth practising |
+| User-submitted questions | Learners submit questions they were actually asked, reviewed before publishing, in exchange for credits that unlock peer help | Fits the escalation ladder and builds the one asset competitors cannot copy |
+| One audience first | Own the 2–5 years' experience engineer in India targeting product companies end to end (DSA, low-level design, system design, backend fundamentals) before deepening other roles | Five disciplines at once leaves every one thin |
+| Hiring-bar verdicts | Replace "58/100" with Strong hire / Hire / Lean no / No, plus three quoted transcript moments as evidence | A score without a bar means nothing; a verdict with evidence reads like a real debrief |
+| Calibrated grading | A gold set of about 50 transcripts graded by real senior engineers; track agreement with the AI (extend the existing gold-evaluation runner); later, ask learners how real interviews went and correct against that | "You would likely pass this round" is only valuable if it is believable |
+| Interviews that feel real | Strict clock, an interviewer who interrupts and digs into the candidate's own code and resume, real silence instead of encouragement, a few company-style interviewer personas | Pressure is what Practice cannot give; the AI should act as an interviewer, not a teacher |
+| Annotated replay | Replay a finished round with weak moments marked | Reviewing your own round is where most of the learning happens |
+| One connected loop | Mock round reveals gaps → Practice drills exactly those gaps (spaced repetition on misses, not a fixed path) → the next mock re-tests them | Practice paths and interviews barely talk to each other today |
+| Explain out loud | A spoken-answer mode in Practice | Real rounds are spoken; typing answers trains the wrong skill |
+| Peer mock interviews as the core | Two learners interview each other with Trailgrad's rubric and timer, built on Trailmate; AI stays the solo warm-up and the scorer | The hardest thing to copy, and what made Pramp and interviewing.io work |
+
+**First four weeks**
+
+1. Talk to 15–20 target users: what did their last real interview ask, and would they trust a
+   Trailgrad verdict?
+2. Hand-write 20 excellent backend questions with real artifacts; retire the weakest generated
+   paths.
+3. Ship hiring-bar verdicts with quoted evidence and start the gold set.
+4. Build one complete loop (mock round → targeted practice → re-test) for one round type.
+5. Track one number: do learners come back within 7 days?
 
 ## Next: measure voice interviews
 

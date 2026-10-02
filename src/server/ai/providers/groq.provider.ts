@@ -3,6 +3,7 @@ import { Logger } from "../../common/logger";
 import { isRecord } from "../../common/utils/is-record";
 import { AppConfigService } from "../../config/app-config.service";
 import { AiProviderException } from "../ai-provider.exception";
+import { recordProviderUsage } from "../../usage/provider-usage";
 import { toStrictJsonSchema } from "../strict-json-schema";
 import type {
   GenerateStructuredRequest,
@@ -45,6 +46,7 @@ export class GroqProvider implements SystemDesignerAIProvider {
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       if (request.signal?.aborted) throw this.cancelledError(request.operation);
       const startedAt = Date.now();
+      const billed = { inputTokens: 0, outputTokens: 0 };
 
       this.logger.log(
         JSON.stringify({
@@ -59,7 +61,7 @@ export class GroqProvider implements SystemDesignerAIProvider {
       );
 
       try {
-        const content = await this.requestCompletion(request);
+        const content = await this.requestCompletion(request, billed);
         let parsed: T;
         try {
           parsed = request.schema.parse(JSON.parse(content));
@@ -73,6 +75,16 @@ export class GroqProvider implements SystemDesignerAIProvider {
             cause: error
           });
         }
+
+        recordProviderUsage({
+          kind: "text",
+          provider: PROVIDER_NAME,
+          model: this.model,
+          operation: request.operation,
+          outcome: "success",
+          durationMs: Date.now() - startedAt,
+          ...billed
+        });
 
         this.logger.log(
           JSON.stringify({
@@ -100,6 +112,16 @@ export class GroqProvider implements SystemDesignerAIProvider {
       } catch (error) {
         const mapped = this.mapError(error, request.operation);
         const shouldRetry = mapped.retryable && attempt < maxAttempts;
+        recordProviderUsage({
+          kind: "text",
+          provider: PROVIDER_NAME,
+          model: this.model,
+          operation: request.operation,
+          outcome: "failure",
+          errorCode: mapped.code,
+          durationMs: Date.now() - startedAt,
+          ...billed
+        });
 
         this.logger.warn(
           JSON.stringify({
@@ -148,7 +170,11 @@ export class GroqProvider implements SystemDesignerAIProvider {
     });
   }
 
-  private async requestCompletion<T>(request: GenerateStructuredRequest<T>): Promise<string> {
+  /** Returns the message text and writes the billed token counts into `billed`. */
+  private async requestCompletion<T>(
+    request: GenerateStructuredRequest<T>,
+    billed: { inputTokens: number; outputTokens: number }
+  ): Promise<string> {
     const controller = new AbortController();
     let callerAborted = false;
     let timedOut = false;
@@ -203,6 +229,9 @@ export class GroqProvider implements SystemDesignerAIProvider {
       }
 
       const payload: unknown = await response.json();
+      const usage = isRecord(payload) && isRecord(payload.usage) ? payload.usage : null;
+      billed.inputTokens = Number(usage?.prompt_tokens) || 0;
+      billed.outputTokens = Number(usage?.completion_tokens) || 0;
       if (callerAborted || request.signal?.aborted) throw this.cancelledError(request.operation);
       if (timedOut) throw this.timeoutError(request.operation);
       const content = extractContent(payload);

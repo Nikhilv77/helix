@@ -1,6 +1,7 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "rhel-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -2641,4 +2642,30 @@ model UserMayaInsight {
   @@index([ownerId, isActive])
   @@index([kind])
   @@index([priority])
+}
+
+/// One paid call to an outside service: an AI generation, a spoken line, or a
+/// code run. Counts and timing only — never prompts, answers, audio, or code —
+/// so the admin dashboard can price usage without holding candidate content.
+model ProviderUsageEvent {
+  id           String   @id @default(uuid())
+  /// "text" (Gemini, Groq), "speech" (Gemini TTS, Deepgram), or "code" (Judge0, Vercel Sandbox).
+  kind         String
+  provider     String
+  model        String
+  operation    String
+  /// Set where the caller is known (speech, code runs); AI calls are not attributed.
+  ownerId      String?
+  outcome      String
+  errorCode    String?
+  durationMs   Int
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  /// Characters for speech, runs for code.
+  units        Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+  @@index([ownerId, createdAt])
 }

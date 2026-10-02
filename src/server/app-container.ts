@@ -7,6 +7,9 @@ import { AppConfigService } from "./config/app-config.service";
 import { validateEnvironment } from "./config/environment.schema";
 import { getPrismaService } from "./database/prisma.service";
 import { HealthService } from "./health/health.service";
+import { AdminAnalyticsService } from "@/features/admin/server/admin-analytics.service";
+import { AdminUsageService } from "@/features/admin/server/admin-usage.service";
+import { configureProviderUsageSink } from "./usage/provider-usage";
 import { InterviewDecider } from "@/features/interviews/server/decider";
 import { InterviewPlanner } from "@/features/interviews/server/planner";
 import { InterviewService } from "@/features/interviews/server/interview.service";
@@ -137,6 +140,8 @@ export interface AppContainer {
   interviewEvaluationRecoveryService: InterviewEvaluationRecoveryService;
   interviewQualityRunner: InterviewQualityRunner;
   interviewOperationsService: InterviewOperationsService;
+  adminAnalyticsService: AdminAnalyticsService;
+  adminUsageService: AdminUsageService;
   profileService: ProfileService;
   curriculumService: CurriculumService;
   resumeService: ResumeService;
@@ -243,6 +248,7 @@ export function getAppContainer(): AppContainer {
 
   const config = new AppConfigService(validateEnvironment(process.env));
   const prisma = getPrismaService();
+  configureProviderUsageSink((events) => prisma.providerUsageEvent.createMany({ data: events }));
   const geminiClient = new GoogleGenAI({ apiKey: config.geminiApiKey });
 
   const geminiAi = new AiService(new GeminiProvider(config, geminiClient));
@@ -708,7 +714,9 @@ export function getAppContainer(): AppContainer {
     interviewService,
     interviewEvaluationRecoveryService,
     interviewQualityRunner,
-    interviewOperationsService
+    interviewOperationsService,
+    adminAnalyticsService: new AdminAnalyticsService(prisma),
+    adminUsageService: new AdminUsageService(prisma)
   };
 
   return container;

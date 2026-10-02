@@ -421,6 +421,8 @@ function preferredLanguageFor(slug: string, preferred: DsaEditorLanguage): DsaEd
   return supported.includes(preferred) ? preferred : (supported[0] ?? "javascript");
 }
 
+export { RunOutput as DsaRunOutput };
+
 function RunOutput({
   examples,
   result,

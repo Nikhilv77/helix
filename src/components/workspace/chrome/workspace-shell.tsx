@@ -11,17 +11,22 @@ import { TrailgradMark } from "@/components/trailgrad-mark";
 import { NotificationInbox } from "@/features/notifications/ui/notification-inbox";
 import { WorkspaceNotificationPollingProvider } from "@/features/notifications/ui/workspace-notification-polling";
 import {
+  ArrowLeft,
   Braces,
   ChartNoAxesCombined,
   ClipboardList,
+  Coins,
   Flame,
   House,
   HandHelping,
+  LayoutDashboard,
   LogOut,
   Mic,
   PanelLeftClose,
   Settings,
+  ShieldCheck,
   UserRound,
+  UsersRound,
   X
 } from "lucide-react";
 import { ProfileAvatar } from "@/features/profile/ui/profile-avatar";
@@ -65,6 +70,25 @@ const navGroups = [
   {
     label: "Account",
     items: [{ label: "Profile", href: "/profile", icon: UserRound }]
+  }
+];
+
+/** The same sidebar under /admin, listing the admin pages instead of the workspace. */
+const adminNavGroups = [
+  {
+    label: "Admin",
+    items: [
+      { label: "Overview", href: "/admin", icon: LayoutDashboard },
+      { label: "Users", href: "/admin/users", icon: UsersRound },
+      { label: "Practice", href: "/admin/practice", icon: Braces },
+      { label: "Interviews", href: "/admin/interviews", icon: Mic },
+      { label: "Cost", href: "/admin/cost", icon: Coins },
+      { label: "Reliability", href: "/admin/reliability", icon: ShieldCheck }
+    ]
+  },
+  {
+    label: "Workspace",
+    items: [{ label: "Back to Trailgrad", href: "/", icon: ArrowLeft }]
   }
 ];
 
@@ -140,6 +164,8 @@ export function WorkspaceShell({
   const welcomeHome =
     pathname === "/" && welcomePersonaFromQuery(searchParams.get("welcome")) !== null;
   const showChrome = pathname ? isWorkspaceChromeRoute(pathname) && !welcomeHome : false;
+  const adminMode = pathname === "/admin" || Boolean(pathname?.startsWith("/admin/"));
+  const groups = adminMode ? adminNavGroups : navGroups;
   const userName =
     user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -321,7 +347,7 @@ export function WorkspaceShell({
   }, [pathname, collapsed, menuOpen]);
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
+    if (href === "/" || href === "/admin") return pathname === href;
     if (href === "/practice") {
       return Boolean(pathname?.startsWith("/practice") || pathname?.startsWith("/dsa-questions"));
     }
@@ -399,7 +425,7 @@ export function WorkspaceShell({
               <TrailgradMark className="workspace-brand-mark h-7 w-7" sizes="28px" />
             </Link>
 
-            {navGroups
+            {groups
               .flatMap((group) => group.items)
               .map((item) => {
                 const Icon = item.icon;
@@ -426,7 +452,7 @@ export function WorkspaceShell({
 
             <span className="flex-1" />
 
-            <UpgradeRailButton onNavigate={() => setMenuOpen(false)} />
+            {adminMode ? null : <UpgradeRailButton onNavigate={() => setMenuOpen(false)} />}
 
             <Link
               href="/manage"
@@ -466,6 +492,11 @@ export function WorkspaceShell({
                 <span className="truncate text-[1.05rem] font-semibold tracking-[-0.02em] text-cream">
                   Trailgrad
                 </span>
+                {adminMode ? (
+                  <span className="truncate text-[1.05rem] font-medium tracking-[-0.02em] text-cream/45">
+                    Admin
+                  </span>
+                ) : null}
               </Link>
               <button
                 type="button"
@@ -506,7 +537,7 @@ export function WorkspaceShell({
                     : undefined
                 }
               />
-              {navGroups.map((group, groupIndex) => {
+              {groups.map((group, groupIndex) => {
                 return (
                   // The main pages are one unlabelled list; each later group
                   // gets a small, quiet sentence-case heading, the way most
@@ -553,7 +584,7 @@ export function WorkspaceShell({
               })}
             </nav>
 
-            <UpgradeCard onNavigate={() => setMenuOpen(false)} />
+            {adminMode ? null : <UpgradeCard onNavigate={() => setMenuOpen(false)} />}
 
             {/* You, and your settings, in one quiet row. */}
             <div className="workspace-profile-row mt-3 hidden shrink-0 items-center gap-1 md:flex">
@@ -618,7 +649,7 @@ export function WorkspaceShell({
             collapsed ? "left-[7rem]" : "left-[17rem]"
           ].join(" ")}
         >
-          <WorkspaceSearch />
+          {adminMode ? <span /> : <WorkspaceSearch />}
           <div className="flex items-center gap-1.5">
             <ThemeToggle className="workspace-theme-toggle" size={17} />
             <NotificationInbox />

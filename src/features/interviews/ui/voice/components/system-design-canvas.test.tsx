@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EMPTY_SYSTEM_DESIGN_CANVAS } from "@/features/interviews/domain/system-design-canvas";
+import { EMPTY_SYSTEM_DESIGN_CANVAS, type SystemDesignCanvasDocument } from "@/features/interviews/domain/system-design-canvas";
 import { SystemDesignCanvas } from "./system-design-canvas";
 
 describe("SystemDesignCanvas", () => {
@@ -8,6 +8,67 @@ describe("SystemDesignCanvas", () => {
     cleanup();
     window.localStorage.clear();
     vi.restoreAllMocks();
+    vi.useRealTimers();
+    document.documentElement.classList.remove("light");
+  });
+
+  it.each(["dark", "light"])("renders seekable, immutable capture documents in %s mode without persistence", (theme) => {
+    document.documentElement.classList.toggle("light", theme === "light");
+    vi.useFakeTimers();
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const storageRead = vi.spyOn(Storage.prototype, "getItem");
+    const storageWrite = vi.spyOn(Storage.prototype, "setItem");
+    const fixture: SystemDesignCanvasDocument = {
+      ...EMPTY_SYSTEM_DESIGN_CANVAS,
+      nodes: [
+        { id: "api", kind: "service", label: "API", detail: "Validate requests", x: 20, y: 30 },
+        { id: "queue", kind: "queue", label: "Queue", detail: "Buffer bursts", x: 240, y: 30 }
+      ],
+      edges: [{ id: "publish", from: "api", to: "queue", label: "publish", mode: "async" }],
+      notes: "Orders is the source of truth."
+    };
+    const sessionId = "11111111-1111-4111-8111-111111111111";
+    const view = render(<SystemDesignCanvas document={fixture} readOnly noPersistence storageKey={sessionId} sessionId={sessionId} />);
+
+    expect(screen.getByRole("button", { name: "Connection API to Queue" })).toBeVisible();
+    expect(screen.getByLabelText("service label")).toHaveAttribute("readonly");
+    expect(screen.getByRole("button", { name: "Service" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Add component" })).toBeDisabled();
+    expect(screen.getByPlaceholderText(/record clarified requirements/i)).toHaveAttribute("readonly");
+    fireEvent.click(screen.getByLabelText("service label").parentElement!);
+    expect(screen.getByRole("button", { name: "Delete selected" })).toBeDisabled();
+    fireEvent.keyDown(screen.getByLabelText("System design diagram canvas"), { key: "Delete" });
+    fireEvent.change(screen.getByLabelText("service label"), { target: { value: "Changed by input" } });
+    expect(screen.getByLabelText("service label")).toHaveValue("API");
+
+    const next: SystemDesignCanvasDocument = {
+      ...fixture,
+      nodes: fixture.nodes.map((node) => node.id === "api" ? { ...node, label: "Payment API", x: 50 } : node),
+      notes: "A retry returns the original result."
+    };
+    view.rerender(<SystemDesignCanvas document={next} readOnly noPersistence storageKey={sessionId} sessionId={sessionId} />);
+    expect(screen.getByRole("button", { name: "Connection Payment API to Queue" })).toBeVisible();
+    expect(screen.getByLabelText("service label")).toHaveValue("Payment API");
+    expect(screen.getByPlaceholderText(/record clarified requirements/i)).toHaveValue(next.notes);
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(storageRead).not.toHaveBeenCalled();
+    expect(storageWrite).not.toHaveBeenCalled();
+  });
+
+  it("keeps an editable isolated preview out of browser and server persistence", () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const storageRead = vi.spyOn(Storage.prototype, "getItem");
+    const storageWrite = vi.spyOn(Storage.prototype, "setItem");
+    render(<SystemDesignCanvas noPersistence storageKey="preview" sessionId="11111111-1111-4111-8111-111111111111" />);
+    fireEvent.click(screen.getByRole("button", { name: "Service" }));
+    fireEvent.change(screen.getByLabelText("service label"), { target: { value: "Preview API" } });
+    expect(screen.getByLabelText("service label")).toHaveValue("Preview API");
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(storageRead).not.toHaveBeenCalled();
+    expect(storageWrite).not.toHaveBeenCalled();
   });
 
   it("lets the candidate add, label, connect, and remove architecture nodes", () => {

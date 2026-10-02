@@ -2,6 +2,8 @@ import { randomBytes } from "node:crypto";
 import { Sandbox } from "@vercel/sandbox";
 import { after } from "next/server";
 
+import { recordProviderUsage } from "@/server/usage/provider-usage";
+
 import {
   CORE_TECHNICAL_NODE_RUNTIME_VERSION,
   type CoreTechnicalSandboxExecutor,
@@ -80,7 +82,9 @@ export class VercelSandboxNode22Executor implements CoreTechnicalSandboxExecutor
     let sandbox: Promise<VercelSandbox> | undefined;
     let verified: Promise<void> | undefined;
     let runs = 0;
+    let startedAt = 0;
     const start = () => {
+      if (!sandbox) startedAt = Date.now();
       sandbox ??= this.createSandbox({
         runtime: "node22",
         timeout: Math.max(10_000, plan.runs * (plan.timeoutMs + 2_000) + 5_000),
@@ -102,6 +106,16 @@ export class VercelSandboxNode22Executor implements CoreTechnicalSandboxExecutor
       },
       close: () => {
         if (!sandbox) return;
+        // Billed by the time the VM is up, so the session length is the cost.
+        recordProviderUsage({
+          kind: "code",
+          provider: "vercel-sandbox",
+          model: "node22-1vcpu",
+          operation: "code.run",
+          outcome: "success",
+          durationMs: Date.now() - startedAt,
+          units: runs
+        });
         this.defer(sandbox.then((vm) => vm.stop()).catch(() => undefined));
       }
     };

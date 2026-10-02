@@ -11,6 +11,7 @@ export function ResumeEvidenceStep({
   result,
   teacherName,
   showBack = true,
+  autoScroll = true,
   onBack,
   onReplace,
   onContinue
@@ -18,6 +19,8 @@ export function ResumeEvidenceStep({
   result: ResumeExtractionResponse;
   teacherName: string;
   showBack?: boolean;
+  /** Isolated previews may control the viewport instead of scrolling it. */
+  autoScroll?: boolean;
   onBack: () => void;
   onReplace: () => void;
   onContinue: () => void;
@@ -69,6 +72,7 @@ export function ResumeEvidenceStep({
   ];
 
   useEffect(() => {
+    if (!autoScroll) return;
     let cancelled = false;
     function cancelScroll() {
       cancelled = true;
@@ -91,7 +95,7 @@ export function ResumeEvidenceStep({
       window.removeEventListener("touchstart", cancelScroll);
       window.removeEventListener("keydown", cancelScroll);
     };
-  }, []);
+  }, [autoScroll]);
 
   return (
     <div className="relative w-full">

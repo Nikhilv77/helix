@@ -5135,25 +5135,6 @@ html[data-theme="light"] .marketing-theme .site-footer {
   box-shadow: none;
 }
 
-/* A large wordmark along the footer's bottom edge, fading from warm ink into
-   the page and cut off by the edge, so it reads as texture, not a heading. */
-.site-footer-wordmark {
-  margin: 1.5rem auto -0.22em;
-  max-width: 72rem;
-  font-size: clamp(4.5rem, 19vw, 15rem);
-  font-weight: 700;
-  letter-spacing: -0.06em;
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-  background: linear-gradient(180deg, rgba(242, 110, 1, 0.16), rgba(242, 110, 1, 0.02) 78%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  user-select: none;
-  pointer-events: none;
-}
-
 /* Closing ask: words rise out of a mask one after another, then the line
    and action follow. */
 .begin-title {
@@ -9235,4 +9216,185 @@ html[data-theme="light"] .practice-range {
     var(--workspace-accent) var(--range-fill, 0%),
     rgba(23, 26, 22, 0.12) var(--range-fill, 0%)
   );
+}
+
+/* Admin dashboard (/admin). Same flat cards and faded rules as the workspace;
+   light mode sits on the same plain paper as Interviews. */
+.admin-rule {
+  border-bottom: 1px solid;
+  border-image: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08) 70%, transparent) 1;
+}
+
+/* Collapsed tables ignore border-image on rows and paint a solid line in the
+   text colour instead, so table rows draw a soft line on their cells. */
+tr.admin-rule {
+  border: 0;
+}
+
+tr.admin-rule > :is(td, th) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+tbody > tr.admin-rule:last-child > td {
+  border-bottom: 0;
+}
+
+.admin-row {
+  transition: background-color 160ms ease-out;
+}
+
+.admin-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-tabs {
+  background: #17181b;
+}
+
+.admin-tab {
+  color: rgb(var(--color-cream-rgb) / 0.55);
+  transition: color 160ms ease-out, background-color 160ms ease-out;
+}
+
+.admin-tab:hover {
+  color: rgb(var(--color-cream-rgb));
+}
+
+.admin-tab[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgb(var(--color-cream-rgb));
+}
+
+.admin-bar-track {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-gridline {
+  border-top: 1px dashed rgba(255, 255, 255, 0.07);
+}
+
+.admin-field {
+  background: #17181b;
+  color: rgb(var(--color-cream-rgb));
+}
+
+.admin-field::placeholder {
+  color: rgb(var(--color-cream-rgb) / 0.4);
+}
+
+.admin-tooltip {
+  background: #232428;
+  box-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.9);
+}
+
+.admin-column {
+  transform-origin: bottom;
+  animation: admin-column-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes admin-column-rise {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-column {
+    animation: none;
+  }
+}
+
+.admin-page svg.lucide[stroke-width="2"] {
+  stroke-width: 1.5;
+}
+
+html.light .admin-page,
+html[data-theme="light"] .admin-page {
+  background: #f8f7f5 !important;
+  color: #1f2937;
+}
+
+html.light .admin-page [class*="text-cream/"],
+html[data-theme="light"] .admin-page [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .admin-page [class~="text-cream"],
+html[data-theme="light"] .admin-page [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .admin-page [class*="bg-[#17181b]"],
+html[data-theme="light"] .admin-page [class*="bg-[#17181b]"],
+html.light .admin-page .admin-tabs,
+html[data-theme="light"] .admin-page .admin-tabs,
+html.light .admin-page .admin-field,
+html[data-theme="light"] .admin-page .admin-field {
+  background: #ffffff !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.32) !important;
+}
+
+html.light .admin-page [class*="border-white/"],
+html[data-theme="light"] .admin-page [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .admin-page .admin-rule,
+html[data-theme="light"] .admin-page .admin-rule {
+  border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.08) 70%, transparent) 1;
+}
+
+html.light .admin-page tr.admin-rule > :is(td, th),
+html[data-theme="light"] .admin-page tr.admin-rule > :is(td, th) {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
+}
+
+html.light .admin-page .admin-row:hover,
+html[data-theme="light"] .admin-page .admin-row:hover {
+  background: rgba(15, 23, 42, 0.025);
+}
+
+html.light .admin-page .admin-tab,
+html[data-theme="light"] .admin-page .admin-tab {
+  color: #64748b;
+}
+
+html.light .admin-page .admin-tab:hover,
+html[data-theme="light"] .admin-page .admin-tab:hover,
+html.light .admin-page .admin-tab[aria-current="page"],
+html[data-theme="light"] .admin-page .admin-tab[aria-current="page"] {
+  color: #1f2937;
+}
+
+html.light .admin-page .admin-tab[aria-current="page"],
+html[data-theme="light"] .admin-page .admin-tab[aria-current="page"] {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+html.light .admin-page .admin-bar-track,
+html[data-theme="light"] .admin-page .admin-bar-track {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+html.light .admin-page .admin-gridline,
+html[data-theme="light"] .admin-page .admin-gridline {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+html.light .admin-page .admin-field,
+html[data-theme="light"] .admin-page .admin-field {
+  color: #1f2937;
+}
+
+html.light .admin-page .admin-tooltip,
+html[data-theme="light"] .admin-page .admin-tooltip {
+  background: #1f2937;
+}
+
+html.light .admin-page .admin-tooltip [class*="text-cream"],
+html[data-theme="light"] .admin-page .admin-tooltip [class*="text-cream"] {
+  color: #f8f7f5 !important;
 }

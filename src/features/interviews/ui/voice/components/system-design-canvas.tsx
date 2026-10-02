@@ -81,7 +81,10 @@ export function SystemDesignCanvas({
   sessionId,
   practiceBlockId,
   embedded = false,
-  onDiagramChange
+  onDiagramChange,
+  document: controlledDocument,
+  readOnly = false,
+  noPersistence = false
 }: {
   storageKey?: string;
   sessionId?: string;
@@ -90,18 +93,30 @@ export function SystemDesignCanvas({
   embedded?: boolean;
   /** The diagram once edits settle, so the live interviewer can read it. */
   onDiagramChange?: (document: SystemDesignCanvasDocument) => void;
+  /** An externally driven presentation of the same canvas, without edit state. */
+  document?: SystemDesignCanvasDocument;
+  readOnly?: boolean;
+  /** Disables browser and server persistence for isolated previews and captures. */
+  noPersistence?: boolean;
 }) {
-  const serverUrl = practiceBlockId
+  const persistenceEnabled = !noPersistence && !controlledDocument;
+  const locked = readOnly || Boolean(controlledDocument);
+  const serverUrl = !persistenceEnabled
+    ? null
+    : practiceBlockId
     ? `/api/practice/architecture-design/canvas/${encodeURIComponent(practiceBlockId)}`
     : sessionId
       ? `/api/interview/${encodeURIComponent(sessionId)}/design-canvas`
       : null;
   const persistenceKey =
-    !practiceBlockId && storageKey ? `trailgrad:system-design-canvas:${storageKey}` : null;
+    persistenceEnabled && !practiceBlockId && storageKey
+      ? `trailgrad:system-design-canvas:${storageKey}`
+      : null;
   const canvasRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
   const markerId = `design-arrow-${useId().replaceAll(":", "")}`;
-  const [snapshot, setSnapshot] = useState<CanvasSnapshot>(EMPTY_SNAPSHOT);
+  const [localSnapshot, setSnapshot] = useState<CanvasSnapshot>(EMPTY_SNAPSHOT);
+  const snapshot = controlledDocument ? snapshotFromDocument(controlledDocument) : localSnapshot;
   const [past, setPast] = useState<CanvasSnapshot[]>([]);
   const [future, setFuture] = useState<CanvasSnapshot[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -132,6 +147,7 @@ export function SystemDesignCanvas({
   const selectedEdge = snapshot.edges.find((edge) => edge.id === selectedEdgeId) ?? null;
 
   const commit = useCallback((update: (current: CanvasSnapshot) => CanvasSnapshot) => {
+    if (locked) return;
     setSnapshot((current) => {
       const next = update(current);
       if (next === current) return current;
@@ -139,9 +155,10 @@ export function SystemDesignCanvas({
       setFuture([]);
       return next;
     });
-  }, []);
+  }, [locked]);
 
   const undo = useCallback(() => {
+    if (locked) return;
     setPast((history) => {
       const previous = history.at(-1);
       if (!previous) return history;
@@ -154,9 +171,10 @@ export function SystemDesignCanvas({
       setLinkFrom(null);
       return history.slice(0, -1);
     });
-  }, []);
+  }, [locked]);
 
   const redo = useCallback(() => {
+    if (locked) return;
     setFuture((items) => {
       const next = items[0];
       if (!next) return items;
@@ -169,7 +187,7 @@ export function SystemDesignCanvas({
       setLinkFrom(null);
       return items.slice(1);
     });
-  }, []);
+  }, [locked]);
 
   useEffect(() => {
     if (!persistenceKey) {
@@ -248,10 +266,11 @@ export function SystemDesignCanvas({
   }, [hydrated, serverReady, snapshot]);
 
   useEffect(() => {
+    if (!persistenceEnabled) return;
     const retry = () => setRetryTick((value) => value + 1);
     window.addEventListener("online", retry);
     return () => window.removeEventListener("online", retry);
-  }, []);
+  }, [persistenceEnabled]);
 
   useEffect(() => {
     if (!serverUrl || !serverReady || conflictCurrent) return;
@@ -330,7 +349,7 @@ export function SystemDesignCanvas({
   ]);
 
   const addNode = (kind: NodeKind) => {
-    if (snapshot.nodes.length >= 100) return;
+    if (locked || snapshot.nodes.length >= 100) return;
     const ordinal = nextId.current++;
     const id = `design-node-${ordinal}`;
     const offset = (ordinal - 1) % 6;
@@ -395,6 +414,7 @@ export function SystemDesignCanvas({
   };
 
   const removeSelected = useCallback(() => {
+    if (locked) return;
     if (selectedEdgeId) {
       commit((current) => ({
         ...current,
@@ -413,10 +433,10 @@ export function SystemDesignCanvas({
     }));
     setLinkFrom((current) => (current === selectedNodeId ? null : current));
     setSelectedNodeId(null);
-  }, [commit, selectedEdgeId, selectedNodeId]);
+  }, [commit, locked, selectedEdgeId, selectedNodeId]);
 
   const duplicateSelected = () => {
-    if (!selectedNode || snapshot.nodes.length >= 100) return;
+    if (locked || !selectedNode || snapshot.nodes.length >= 100) return;
     const ordinal = nextId.current++;
     const id = `design-node-${ordinal}`;
     commit((current) => ({
@@ -436,7 +456,7 @@ export function SystemDesignCanvas({
   };
 
   const autoLayout = () => {
-    if (!snapshot.nodes.length) return;
+    if (locked || !snapshot.nodes.length) return;
     commit((current) => {
       const ordered = topologicalNodeOrder(current.nodes, current.edges);
       const columns = Math.max(2, Math.ceil(Math.sqrt(ordered.length * 1.5)));
@@ -492,6 +512,7 @@ export function SystemDesignCanvas({
       } ${practiceBlockId && saveStatus === "loading" ? "pointer-events-none opacity-60" : ""}`}
       aria-busy={Boolean(practiceBlockId) && saveStatus === "loading"}
       onKeyDown={(event) => {
+        if (locked) return;
         if (isEditingTarget(event.target)) return;
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
           event.preventDefault();
@@ -583,23 +604,27 @@ export function SystemDesignCanvas({
         <CanvasButton
           label="Client"
           icon={<Monitor size={12} />}
+          disabled={locked}
           onClick={() => addNode("client")}
         />
         <CanvasButton
           label="Service"
           icon={<Server size={12} />}
+          disabled={locked}
           onClick={() => addNode("service")}
         />
         <CanvasButton
           label="Data store"
           icon={<Database size={12} />}
+          disabled={locked}
           onClick={() => addNode("database")}
         />
-        <CanvasButton label="Queue" icon={<Layers3 size={12} />} onClick={() => addNode("queue")} />
+        <CanvasButton label="Queue" icon={<Layers3 size={12} />} disabled={locked} onClick={() => addNode("queue")} />
         <label className="relative">
           <span className="sr-only">Add component</span>
           <select
             aria-label="Add component"
+            disabled={locked}
             value=""
             onChange={(event) => {
               if (event.target.value) addNode(event.target.value as NodeKind);
@@ -623,17 +648,17 @@ export function SystemDesignCanvas({
         <CanvasButton
           label={linkFrom ? "Choose target" : "Connect"}
           icon={<ArrowRight size={12} />}
-          disabled={!selectedNodeId}
+          disabled={locked || !selectedNodeId}
           active={Boolean(linkFrom)}
           onClick={() => setLinkFrom((current) => (current ? null : selectedNodeId))}
         />
-        <IconButton label="Undo" disabled={!past.length} onClick={undo}>
+        <IconButton label="Undo" disabled={locked || !past.length} onClick={undo}>
           <Undo2 size={13} />
         </IconButton>
-        <IconButton label="Redo" disabled={!future.length} onClick={redo}>
+        <IconButton label="Redo" disabled={locked || !future.length} onClick={redo}>
           <Redo2 size={13} />
         </IconButton>
-        <IconButton label="Auto layout" disabled={!snapshot.nodes.length} onClick={autoLayout}>
+        <IconButton label="Auto layout" disabled={locked || !snapshot.nodes.length} onClick={autoLayout}>
           <WandSparkles size={13} />
         </IconButton>
         <IconButton
@@ -645,7 +670,7 @@ export function SystemDesignCanvas({
         </IconButton>
         <IconButton
           label="Delete selected"
-          disabled={!selectedNodeId && !selectedEdgeId}
+          disabled={locked || (!selectedNodeId && !selectedEdgeId)}
           onClick={removeSelected}
         >
           <Trash2 size={13} />
@@ -658,7 +683,7 @@ export function SystemDesignCanvas({
         className={`system-design-grid relative touch-none overflow-hidden bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.055)_1px,transparent_1px)] [background-size:20px_20px] outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--workspace-accent)]/50 ${embedded ? "h-[22rem]" : "h-[26rem]"}`}
         aria-label="System design diagram canvas"
         onPointerMove={(event) => {
-          if (!dragging || !canvasRef.current) return;
+          if (locked || !dragging || !canvasRef.current) return;
           const bounds = canvasRef.current.getBoundingClientRect();
           const x = Math.max(
             0,
@@ -795,8 +820,10 @@ export function SystemDesignCanvas({
                 <button
                   type="button"
                   aria-label={`Move ${node.label}`}
+                  disabled={locked}
                   className="system-design-node-head flex h-7 cursor-grab items-center gap-1.5 border-b border-white/[0.06] px-2 text-xs font-medium text-cream/52 active:cursor-grabbing"
                   onPointerDown={(event) => {
+                    if (locked) return;
                     const bounds = event.currentTarget.parentElement?.getBoundingClientRect();
                     if (!bounds) return;
                     event.currentTarget.setPointerCapture(event.pointerId);
@@ -817,6 +844,7 @@ export function SystemDesignCanvas({
                 </button>
                 <input
                   value={node.label}
+                  readOnly={locked}
                   maxLength={120}
                   aria-label={`${node.kind} label`}
                   onClick={(event) => event.stopPropagation()}
@@ -888,6 +916,7 @@ export function SystemDesignCanvas({
           <InspectorField label="Component name">
             <input
               value={selectedNode.label}
+              readOnly={locked}
               maxLength={120}
               onChange={(event) =>
                 updateNode(commit, selectedNode.id, { label: event.target.value })
@@ -898,6 +927,7 @@ export function SystemDesignCanvas({
           <InspectorField label="Responsibility / technology">
             <input
               value={selectedNode.detail}
+              readOnly={locked}
               maxLength={300}
               placeholder="e.g. stateless, Redis, partitioned by tenant"
               onChange={(event) =>
@@ -909,6 +939,7 @@ export function SystemDesignCanvas({
           <button
             type="button"
             onClick={duplicateSelected}
+            disabled={locked}
             className="mt-6 inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[var(--workspace-accent)] hover:bg-[var(--workspace-accent-soft)]"
           >
             <Copy size={12} /> Duplicate
@@ -919,6 +950,7 @@ export function SystemDesignCanvas({
           <InspectorField label="Connection label">
             <input
               value={selectedEdge.label}
+              readOnly={locked}
               maxLength={120}
               placeholder="HTTP, events, reads, writes…"
               onChange={(event) =>
@@ -930,6 +962,7 @@ export function SystemDesignCanvas({
           <InspectorField label="Flow type">
             <select
               value={selectedEdge.mode}
+              disabled={locked}
               onChange={(event) =>
                 updateEdge(commit, selectedEdge.id, {
                   mode: event.target.value as DesignEdge["mode"]
@@ -958,6 +991,7 @@ export function SystemDesignCanvas({
           </span>
           <textarea
             value={snapshot.notes}
+            readOnly={locked}
             maxLength={12_000}
             onChange={(event) => {
               const notes = event.target.value;

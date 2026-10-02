@@ -390,50 +390,12 @@ export function StoryPracticeQuestionWorkspace({
 
           <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
             {panelTab === "description" ? (
-              <div className="space-y-7">
-                <section className="relative">
-                  <p className="relative text-[12.5px] font-semibold text-[var(--workspace-accent)]">
-                    Question {question.order} of {block.questions.length} ·{" "}
-                    {humanizeStoryPracticeKey(question.question.format)}
-                  </p>
-                  <h2 className="relative mt-3 max-w-[36rem] font-display text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.035em] text-cream sm:text-[1.9rem]">
-                    {stageTitle}
-                  </h2>
-                  <p className="relative mt-4 whitespace-pre-wrap text-[14.5px] leading-7 text-cream/66">
-                    {question.question.prompt}
-                  </p>
-                  {question.question.revisionNote ? (
-                    <p
-                      role="note"
-                      className="relative mt-4 rounded-lg bg-[var(--workspace-accent-soft)] px-3 py-2 text-[12px] leading-5 text-cream/72"
-                    >
-                      {question.question.revisionNote}
-                    </p>
-                  ) : null}
-                  <div className="relative mt-5 flex flex-wrap gap-1.5">
-                    {question.question.topicKeys.slice(0, 3).map((topic) => (
-                      <span
-                        key={topic}
-                        className="rounded-md bg-white/[0.045] px-2.5 py-1 text-[12px] font-medium text-cream/52"
-                      >
-                        {humanizeStoryPracticeKey(topic)}
-                      </span>
-                    ))}
-                  </div>
-                </section>
-                <Artifact question={question} />
-                <section className="interview-soft-rule pt-6">
-                  <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
-                    {capitalize(experience.subjectNoun)} context
-                  </p>
-                  <p className="mt-2 text-[13px] font-semibold leading-5 text-cream/72">
-                    {block.story.title}
-                  </p>
-                  <p className="mt-2 text-[12.5px] leading-5 text-cream/46">
-                    {block.selection.reason}
-                  </p>
-                </section>
-              </div>
+              <StoryPracticeQuestionBody
+                question={question}
+                block={block}
+                stageTitle={stageTitle}
+                experience={experience}
+              />
             ) : null}
 
             {panelTab === "hints" ? (
@@ -910,6 +872,66 @@ function LearnConfirmationModal({
       </aside>
     </div>,
     portalRoot
+  );
+}
+
+/** Pure question description shared by the workspace and isolated UI hosts. */
+export function StoryPracticeQuestionBody({
+  question,
+  block,
+  stageTitle,
+  experience
+}: {
+  question: StoryPracticeQuestionView;
+  block: StoryPracticeQuestionBlockView;
+  stageTitle: string;
+  experience: StoryPracticeWorkspaceExperience;
+}) {
+  return (
+    <div className="space-y-7">
+      <section className="relative">
+        <p className="relative text-[12.5px] font-semibold text-[var(--workspace-accent)]">
+          Question {question.order} of {block.questions.length} ·{" "}
+          {humanizeStoryPracticeKey(question.question.format)}
+        </p>
+        <h2 className="relative mt-3 max-w-[36rem] font-display text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.035em] text-cream sm:text-[1.9rem]">
+          {stageTitle}
+        </h2>
+        <p className="relative mt-4 whitespace-pre-wrap text-[14.5px] leading-7 text-cream/66">
+          {question.question.prompt}
+        </p>
+        {question.question.revisionNote ? (
+          <p
+            role="note"
+            className="relative mt-4 rounded-lg bg-[var(--workspace-accent-soft)] px-3 py-2 text-[12px] leading-5 text-cream/72"
+          >
+            {question.question.revisionNote}
+          </p>
+        ) : null}
+        <div className="relative mt-5 flex flex-wrap gap-1.5">
+          {question.question.topicKeys.slice(0, 3).map((topic) => (
+            <span
+              key={topic}
+              className="rounded-md bg-white/[0.045] px-2.5 py-1 text-[12px] font-medium text-cream/52"
+            >
+              {humanizeStoryPracticeKey(topic)}
+            </span>
+          ))}
+        </div>
+      </section>
+      <Artifact question={question} />
+      <section className="interview-soft-rule pt-6">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
+          {capitalize(experience.subjectNoun)} context
+        </p>
+        <p className="mt-2 text-[13px] font-semibold leading-5 text-cream/72">
+          {block.story.title}
+        </p>
+        <p className="mt-2 text-[12.5px] leading-5 text-cream/46">
+          {block.selection.reason}
+        </p>
+      </section>
+    </div>
   );
 }
 
@@ -1670,3 +1692,11 @@ function assertNever(value: never): never {
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
+
+// Pure presentation pieces are also usable without mounting the persistence workspace.
+export {
+  TextInput as StoryPracticeTextInput,
+  ResponseIntro as StoryPracticeResponseIntro,
+  Feedback as StoryPracticeFeedback,
+  ReviewContext as StoryPracticeReviewContext
+};

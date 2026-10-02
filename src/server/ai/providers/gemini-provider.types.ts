@@ -2,6 +2,12 @@ import type { EmbedContentParameters, GenerateContentParameters } from "@google/
 
 export interface GeminiGenerateContentResponse {
   readonly text?: string;
+  /** Token counts for pricing; thinking tokens are billed as output. */
+  readonly usageMetadata?: {
+    readonly promptTokenCount?: number;
+    readonly candidatesTokenCount?: number;
+    readonly thoughtsTokenCount?: number;
+  };
 }
 
 export interface GeminiGenerateContentClient {

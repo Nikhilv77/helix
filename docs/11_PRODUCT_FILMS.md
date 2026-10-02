@@ -1,6 +1,12 @@
 # Product films
 
-Last updated: September 30, 2026
+Last updated: October 3, 2026
+
+The standalone `video/` Remotion authoring folder was removed at the owner's request on
+October 3, 2026. The app still serves the existing home-page exports from
+`public/videos/marketing/`; the final 4K product demo is kept outside the repository.
+The source layout and commands below document the original workflow. Restore or recreate
+an authoring project before using them.
 
 The home page has two short films: the hero film and the "interview" film. This document
 explains how they are made and how to make more in exactly the same style, for example a full

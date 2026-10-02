@@ -23,8 +23,9 @@ labels or borders, or reformat files that were not already formatted.
 
 ## Before you make or change a marketing film
 
-Read [docs/11_PRODUCT_FILMS.md](docs/11_PRODUCT_FILMS.md). The films are Remotion code in
-`video/trailgrad-demo`; new films reuse `src/kit.tsx` so they match the existing ones exactly.
+Read [docs/11_PRODUCT_FILMS.md](docs/11_PRODUCT_FILMS.md). The standalone Remotion authoring
+folder was removed after export. The app serves existing films from `public/videos/marketing/`.
+Restore or recreate an authoring project before editing films, following the documented style.
 
 ## Working rules
 

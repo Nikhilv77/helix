@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AppConfigService } from "../../config/app-config.service";
 import { GenerateStructuredRequest } from "../interfaces/system-designer-ai-provider.interface";
 import { GroqProvider } from "./groq.provider";
+import { configureProviderUsageSink, flushProviderUsage } from "../../usage/provider-usage";
 
 describe("GroqProvider", () => {
   const outputSchema = z.object({ ok: z.boolean() });
@@ -268,5 +269,37 @@ describe("GroqProvider", () => {
       retryable: true
     });
     expect(aborted).toBe(true);
+  });
+
+  it("records billed tokens from the response usage", async () => {
+    const sink = vi.fn().mockResolvedValue(undefined);
+    configureProviderUsageSink(sink);
+    try {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            choices: [{ message: { content: '{"ok":true}' } }],
+            usage: { prompt_tokens: 200, completion_tokens: 40 }
+          })
+        })
+      );
+      const provider = new GroqProvider(createConfig(), "test-key", "test-model");
+      await provider.generateStructured(createRequest());
+      await flushProviderUsage();
+
+      expect(sink).toHaveBeenCalledWith([
+        expect.objectContaining({
+          provider: "groq",
+          model: "test-model",
+          outcome: "success",
+          inputTokens: 200,
+          outputTokens: 40
+        })
+      ]);
+    } finally {
+      configureProviderUsageSink(null);
+    }
   });
 });

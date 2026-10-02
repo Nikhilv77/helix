@@ -19,6 +19,7 @@ import {
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { timeAction } from "@/server/http/action-timing";
 import { rememberAcceptedRun } from "@/features/practice/dsa/server/accepted-run";
+import { recordProviderUsage } from "@/server/usage/provider-usage";
 
 export const dynamic = "force-dynamic";
 
@@ -355,6 +356,7 @@ async function handlePost(request: NextRequest) {
         parsed.data.language === "python"
           ? await modernPythonLanguage(config.judge0Url, headers)
           : languages[parsed.data.language];
+      const judgeStartedAt = Date.now();
       const submissionResponse = await fetch(
         `${config.judge0Url}/submissions?base64_encoded=true&wait=true`,
         {
@@ -374,6 +376,17 @@ async function handlePost(request: NextRequest) {
         }
       );
       const result = (await submissionResponse.json().catch(() => null)) as JudgeResult | null;
+      recordProviderUsage({
+        kind: "code",
+        provider: "judge0",
+        model: language.name,
+        operation: "code.run",
+        ownerId,
+        outcome: submissionResponse.ok && result ? "success" : "failure",
+        errorCode: submissionResponse.ok ? null : `HTTP_${submissionResponse.status}`,
+        durationMs: Date.now() - judgeStartedAt,
+        units: 1
+      });
       if (!submissionResponse.ok || !result) {
         throw new ApiRouteError(502, "CODE_RUN_FAILED", "Judge0 could not execute the submission.");
       }

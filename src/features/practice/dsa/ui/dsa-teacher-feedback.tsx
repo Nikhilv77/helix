@@ -51,11 +51,14 @@ export type DsaTeacherFeedbackState =
 export function DsaTeacherFeedback({
   state,
   onClose,
-  onRetry
+  onRetry,
+  portalRoot: suppliedPortalRoot
 }: {
   state: DsaTeacherFeedbackState;
   onClose: () => void;
   onRetry: () => void;
+  /** An isolated host can keep the real dialog inside its own viewport. */
+  portalRoot?: HTMLElement | null;
 }) {
   const teacher = useWorkspaceTeacher();
   const { state: voiceState, speak, stop } = useMayaVoice();
@@ -78,7 +81,7 @@ export function DsaTeacherFeedback({
 
   // The workspace has nested scrolling panels. Rendering at document.body
   // makes this truly viewport-centered on desktop and mobile.
-  useEffect(() => setPortalRoot(document.body), []);
+  useEffect(() => setPortalRoot(suppliedPortalRoot ?? document.body), [suppliedPortalRoot]);
 
   useEffect(() => {
     setFeedbackVisible(false);

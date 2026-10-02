@@ -15,6 +15,7 @@ import {
   synthesizeGemini
 } from "@/server/voice/gemini-speech";
 import { activeTtsProvider } from "@/lib/avatars/voice-style";
+import { recordProviderUsage } from "@/server/usage/provider-usage";
 
 export const dynamic = "force-dynamic";
 
@@ -100,11 +101,10 @@ export async function GET(request: NextRequest) {
 
     if (useGemini) {
       try {
-        const generated = await synthesizeGemini({
-          text: parsed.data.text,
-          apiKey: config.geminiApiKey,
-          persona
-        });
+        const generated = await meteredGemini(
+          { text: parsed.data.text, apiKey: config.geminiApiKey, persona },
+          ownerId
+        );
         rememberAudio(cacheKey, generated);
         return audioResponse(generated, "miss");
       } catch (error) {
@@ -131,11 +131,10 @@ export async function GET(request: NextRequest) {
             reason: error instanceof ApiRouteError ? error.code : "SPEECH_PROVIDER_FAILED"
           })
         );
-        const upstream = await synthesizeDeepgram({
-          text: parsed.data.text,
-          model: fallbackModel,
-          apiKey: config.deepgramApiKey
-        });
+        const upstream = await synthesizeDeepgram(
+          { text: parsed.data.text, model: fallbackModel, apiKey: config.deepgramApiKey },
+          ownerId
+        );
         return streamDeepgram(upstream, fallbackKey);
       }
     }
@@ -150,16 +149,18 @@ export async function GET(request: NextRequest) {
     }
     let upstream: Response;
     try {
-      upstream = await synthesizeDeepgram({ text: parsed.data.text, model: fallbackModel, apiKey });
+      upstream = await synthesizeDeepgram(
+        { text: parsed.data.text, model: fallbackModel, apiKey },
+        ownerId
+      );
     } catch (error) {
       // With Deepgram as the primary provider, Gemini is the fallback.
       if (!config.geminiApiKey || geminiPaused || parsed.data.delivery === "fast") throw error;
       logger.warn(JSON.stringify({ event: "voice.deepgram_fallback", personaId: persona.id }));
-      const generated = await synthesizeGemini({
-        text: parsed.data.text,
-        apiKey: config.geminiApiKey,
-        persona
-      });
+      const generated = await meteredGemini(
+        { text: parsed.data.text, apiKey: config.geminiApiKey, persona },
+        ownerId
+      );
       return audioResponse(generated, "miss");
     }
     return streamDeepgram(upstream, cacheKey);
@@ -200,7 +201,63 @@ async function streamDeepgram(upstream: Response, cacheKey: string): Promise<Res
   });
 }
 
-async function synthesizeDeepgram(input: {
+/** Gemini speech, recorded for the admin cost view by characters spoken. */
+async function meteredGemini(
+  input: Parameters<typeof synthesizeGemini>[0],
+  ownerId: string
+): ReturnType<typeof synthesizeGemini> {
+  const startedAt = Date.now();
+  try {
+    const generated = await synthesizeGemini(input);
+    recordSpeech("gemini", GEMINI_TTS_MODEL, input.text, ownerId, startedAt, null);
+    return generated;
+  } catch (error) {
+    recordSpeech("gemini", GEMINI_TTS_MODEL, input.text, ownerId, startedAt, error);
+    throw error;
+  }
+}
+
+function recordSpeech(
+  provider: string,
+  model: string,
+  text: string,
+  ownerId: string,
+  startedAt: number,
+  error: unknown
+): void {
+  recordProviderUsage({
+    kind: "speech",
+    provider,
+    model,
+    operation: "voice.speak",
+    ownerId,
+    outcome: error ? "failure" : "success",
+    errorCode: error ? (error instanceof ApiRouteError ? error.code : "SPEECH_PROVIDER_FAILED") : null,
+    durationMs: Date.now() - startedAt,
+    units: error ? 0 : text.length
+  });
+}
+
+async function synthesizeDeepgram(
+  input: {
+    text: string;
+    model: string;
+    apiKey: string;
+  },
+  ownerId: string
+): Promise<Response> {
+  const startedAt = Date.now();
+  try {
+    const response = await requestDeepgram(input);
+    recordSpeech("deepgram", input.model, input.text, ownerId, startedAt, null);
+    return response;
+  } catch (error) {
+    recordSpeech("deepgram", input.model, input.text, ownerId, startedAt, error);
+    throw error;
+  }
+}
+
+async function requestDeepgram(input: {
   text: string;
   model: string;
   apiKey: string;
