@@ -440,4 +440,64 @@ describe("GeminiProvider", () => {
       expect(generateContent).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe("daily quota fallback", () => {
+    const dailyQuotaError = () =>
+      Object.assign(new Error('{"error":{"code":429,"status":"RESOURCE_EXHAUSTED"}}'), {
+        status: 429,
+        details: [
+          { violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }] }
+        ]
+      });
+    const ok = { text: JSON.stringify({ ok: true, message: "done" }) };
+
+    it("moves to the next configured model without retrying a spent one", async () => {
+      const calls: string[] = [];
+      const generateContent = vi.fn((params: GenerateContentParameters) => {
+        calls.push(params.model);
+        return params.model === "quota-reasoning-a"
+          ? Promise.reject(dailyQuotaError())
+          : Promise.resolve(ok);
+      });
+      const provider = new GeminiProvider(
+        createConfig({
+          geminiReasoningModel: "quota-reasoning-a",
+          geminiBackupModel: "quota-backup-a",
+          geminiFastModel: "quota-fast-a",
+          aiMaxRetries: 2
+        }),
+        createClient(generateContent)
+      );
+
+      await expect(
+        provider.generateStructured(createRequest({ modelClass: "reasoning" }))
+      ).resolves.toEqual({ ok: true, message: "done" });
+      expect(calls).toEqual(["quota-reasoning-a", "quota-backup-a"]);
+
+      // A later request skips the spent model straight away.
+      await provider.generateStructured(createRequest({ modelClass: "reasoning" }));
+      expect(calls).toEqual(["quota-reasoning-a", "quota-backup-a", "quota-backup-a"]);
+    });
+
+    it("keeps retrying the same model for an ordinary rate limit", async () => {
+      const calls: string[] = [];
+      const generateContent = vi.fn((params: GenerateContentParameters) => {
+        calls.push(params.model);
+        return calls.length === 1
+          ? Promise.reject(Object.assign(new Error("Too many requests"), { status: 429 }))
+          : Promise.resolve(ok);
+      });
+      const provider = new GeminiProvider(
+        createConfig({
+          geminiReasoningModel: "quota-reasoning-b",
+          geminiFastModel: "quota-fast-b",
+          aiMaxRetries: 1
+        }),
+        createClient(generateContent)
+      );
+
+      await provider.generateStructured(createRequest({ modelClass: "reasoning" }));
+      expect(calls).toEqual(["quota-reasoning-b", "quota-reasoning-b"]);
+    });
+  });
 });

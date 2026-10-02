@@ -2,6 +2,7 @@
 
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
+import { readableCode } from "@/features/practice/shared/domain/readable-code";
 
 // `monaco-editor` is not a direct dependency — @monaco-editor/react carries the
 // types, so the instance is derived from OnMount the way dsa-code-editor does.
@@ -140,7 +141,7 @@ function monacoLanguage(language: string): string {
 }
 
 export function PracticeCodeViewer({
-  code,
+  code: source,
   language,
   highlightLine = null,
   maxLines = 18,
@@ -154,6 +155,9 @@ export function PracticeCodeViewer({
     () => typeof document !== "undefined" && currentThemeIsLight()
   );
 
+  // One-line code is laid out before display. A highlighted line refers to the
+  // authored lines, so code with a highlight is shown exactly as written.
+  const code = highlightLine === null ? readableCode(source) : source;
   const lineCount = code.split("\n").length;
   // 21px per line plus a little breathing room; Monaco needs an explicit height.
   // Long lines wrap, so once mounted the height follows the wrapped content,

@@ -71,10 +71,10 @@ describe("CoreTechnicalOverview", () => {
     const cards = view.container.querySelectorAll("details.dsa-chapter-details");
     expect(cards[0]).toHaveTextContent("Follow the operation");
     expect(selectedCard?.querySelector(".dsa-chapter-body")).not.toBeNull();
-    expect(selectedCard?.className).toContain("workspace-accent-border");
+    expect(selectedCard?.querySelector("summary")).toHaveAttribute("aria-current", "page");
     expect(selectedCard?.className).not.toContain("linear-gradient");
     const firstQuestion = within(library).getByRole("link", { name: /Stage 1/i });
-    expect(firstQuestion.className).toContain("bg-[#111214]");
+    expect(firstQuestion.className).toContain("practice-soft-hover");
     expect(within(firstQuestion).getByText("Guided")).toBeInTheDocument();
     expect(within(firstQuestion).getByText("5 min")).toBeInTheDocument();
     expect(within(firstQuestion).getByText("Solved")).toBeInTheDocument();

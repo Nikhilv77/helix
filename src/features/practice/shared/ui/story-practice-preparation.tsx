@@ -119,14 +119,14 @@ export function StoryPracticePreparation({ experience }: StoryPracticePreparatio
 
   return (
     <div
-      className={`practice-page practice-mobile-overlay fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-[#050607]/72 px-4 py-8 backdrop-blur-[7px] transition-opacity duration-500 motion-reduce:transition-none ${visible ? "opacity-100" : "opacity-0"}`}
+      className={`practice-page practice-mobile-overlay fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-[#050607]/72 px-4 py-8 transition-opacity duration-500 motion-reduce:transition-none ${visible ? "opacity-100" : "opacity-0"}`}
     >
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${experience.slug}-confirm-heading`}
-        className={`relative w-full max-w-[36rem] overflow-visible rounded-[1.85rem] border border-white/[0.09] bg-[linear-gradient(145deg,#1b1c20,#151619)] px-5 py-7 shadow-[0_36px_120px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.045)] transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none sm:px-9 sm:py-9 ${visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-[0.975] opacity-0"}`}
+        className={`relative w-full max-w-[36rem] overflow-visible rounded-[1.85rem] bg-[#17181b] px-5 py-7 transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none sm:px-9 sm:py-9 ${visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-[0.975] opacity-0"}`}
       >
         <h1
           id={`${experience.slug}-confirm-heading`}
@@ -167,17 +167,13 @@ export function StoryPracticePreparation({ experience }: StoryPracticePreparatio
               }
               if (event.key === "Escape") setOpen(false);
             }}
-            className="group relative flex min-h-[6.4rem] w-full items-center gap-4 overflow-hidden rounded-[1.45rem] bg-[#1b1c20] px-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-[background-color,transform,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:bg-[#24252a] hover:shadow-[0_18px_42px_-32px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.055)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] sm:px-6"
+            className="group relative flex min-h-[6.4rem] w-full items-center gap-4 overflow-hidden rounded-[1.45rem] bg-white/[0.045] px-5 text-left transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] sm:px-6"
           >
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--workspace-accent)]/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            />
             <span className="shrink-0 text-[var(--workspace-accent)] transition-transform duration-300 group-hover:scale-110">
               {experience.optionIcon === "design" ? (
-                <Network size={23} strokeWidth={1.8} aria-hidden="true" />
+                <Network size={23} strokeWidth={1.5} aria-hidden="true" />
               ) : (
-                <Code2 size={23} strokeWidth={1.8} aria-hidden="true" />
+                <Code2 size={23} strokeWidth={1.5} aria-hidden="true" />
               )}
             </span>
             <span className="min-w-0 flex-1">
@@ -199,7 +195,7 @@ export function StoryPracticePreparation({ experience }: StoryPracticePreparatio
           <div
             className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${open ? "mt-2 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"}`}
           >
-            <div className="min-h-0 overflow-hidden rounded-[1.15rem] bg-[#101214] shadow-[0_18px_44px_rgba(0,0,0,0.45)]">
+            <div className="min-h-0 overflow-hidden rounded-[1.15rem] bg-white/[0.03]">
               <ul
                 role="listbox"
                 aria-labelledby={`${experience.slug}-option-label`}
@@ -223,7 +219,7 @@ export function StoryPracticePreparation({ experience }: StoryPracticePreparatio
                       setOpen(false);
                       triggerRef.current?.focus();
                     }}
-                    className="flex min-h-16 w-full cursor-pointer items-center justify-between px-5 text-[13px] font-semibold text-cream/78 outline-none transition-colors duration-200 hover:bg-[#202226] focus-visible:bg-[#202226]"
+                    className="flex min-h-16 w-full cursor-pointer items-center justify-between px-5 text-[13px] font-semibold text-cream/78 outline-none practice-soft-hover focus-visible:bg-white/[0.06]"
                   >
                     <span>{option.label}</span>
                     {option.value === optionValue ? (
@@ -243,7 +239,7 @@ export function StoryPracticePreparation({ experience }: StoryPracticePreparatio
         {error ? (
           <p
             role="alert"
-            className="rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-[12.5px] leading-5 text-[#e7bd83]"
+            className="rounded-xl bg-[#e3a15b]/10 px-4 py-3 text-[12.5px] leading-5 text-[#e7bd83]"
           >
             {error}
           </p>

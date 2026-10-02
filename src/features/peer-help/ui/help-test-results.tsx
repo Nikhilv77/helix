@@ -40,7 +40,7 @@ export function HelpTestResults({
         </div>
       </header>
 
-      <div className={`shrink-0 border-b ${HELP_ROOM_PANEL_RULE} bg-black/10 px-4 py-4 sm:px-5`}>
+      <div className={`shrink-0 border-b ${HELP_ROOM_PANEL_RULE} px-4 py-4 sm:px-5`}>
         {running ? (
           <span className="flex items-center gap-2 text-sm text-cream/58">
             <Loader2 size={14} className="animate-spin text-[var(--workspace-accent)]" />
@@ -95,7 +95,7 @@ export function HelpTestResults({
                   {test.passed ? "Passed" : "Failed"}
                 </span>
               </div>
-              <dl className="mt-3 space-y-2 font-mono text-[11px] leading-5">
+              <dl className="mt-3 space-y-2 font-mono text-[12px] leading-5">
                 <TestValue label="Input" value={test.input} />
                 <TestValue label="Expected" value={test.expectedOutput} />
                 <TestValue label="Output" value={test.error || test.actualOutput || "No output"} />
@@ -117,11 +117,9 @@ export function HelpTestResults({
       </div>
 
       {workspace.testOutput ? (
-        <section
-          className={`max-h-48 shrink-0 overflow-hidden border-t ${HELP_ROOM_PANEL_RULE} bg-black/10`}
-        >
+        <section className={`max-h-48 shrink-0 overflow-hidden border-t ${HELP_ROOM_PANEL_RULE}`}>
           <p className="px-4 pb-1 pt-3 text-xs font-semibold text-cream/58">Console output</p>
-          <pre className="thin-scroll max-h-36 overflow-auto whitespace-pre-wrap break-words px-4 pb-4 font-mono text-[11px] leading-5 text-cream/48">
+          <pre className="thin-scroll max-h-36 overflow-auto whitespace-pre-wrap break-words px-4 pb-4 font-mono text-[12px] leading-5 text-cream/48">
             {workspace.testOutput}
           </pre>
         </section>

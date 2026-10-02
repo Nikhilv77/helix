@@ -356,7 +356,7 @@ export function AskSomeone({
     return (
       <>
         <div className="flex w-full flex-wrap items-center gap-2.5">
-          <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-cream/12 bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/75">
+          <span className="inline-flex h-10 items-center gap-2 rounded-xl bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/75">
             <Check size={13} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
             {live.helper?.label ?? "Your Trailmate"} is ready
           </span>
@@ -378,7 +378,7 @@ export function AskSomeone({
     return (
       <>
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-cream/12 bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/75">
+          <span className="inline-flex h-10 items-center gap-2 rounded-xl bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/75">
             {isDelivering ? (
               <>
                 <Loader2
@@ -390,7 +390,7 @@ export function AskSomeone({
                 <span>Delivering your request</span>
                 <span
                   aria-label={`${deliverySeconds} seconds remaining`}
-                  className="min-w-7 rounded-md bg-cream/[0.07] px-1.5 py-0.5 text-center text-[11px] tabular-nums text-cream/55"
+                  className="min-w-7 rounded-md bg-cream/[0.07] px-1.5 py-0.5 text-center text-[12px] tabular-nums text-cream/55"
                 >
                   {deliverySeconds}s
                 </span>

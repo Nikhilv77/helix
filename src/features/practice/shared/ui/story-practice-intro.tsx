@@ -73,7 +73,7 @@ export function StoryPracticeIntro({
           <p className="mt-3 text-[14px] leading-6 text-cream/54">{experience.description}</p>
         </div>
 
-        <div className="w-full rounded-xl border border-white/[0.08] bg-[#141619] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:max-w-[19rem]">
+        <div className="w-full rounded-xl bg-[#17181b] px-5 py-4 sm:max-w-[19rem]">
           <p className="text-[14px] font-medium leading-6 text-cream/72">
             <strong className="font-semibold tabular-nums text-cream">{terminalCount}</strong> of{" "}
             <strong className="font-semibold tabular-nums text-cream">
@@ -101,10 +101,10 @@ export function StoryPracticeIntro({
         </div>
       </header>
 
-      <section className="relative mt-6 flex flex-col overflow-hidden rounded-2xl border border-white/[0.085] bg-[#141619] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:mt-7 md:block md:min-h-[13.5rem]">
+      <section className="relative mt-6 flex flex-col overflow-hidden rounded-2xl bg-[#17181b] sm:mt-7 md:block md:min-h-[13.5rem]">
         <div className="relative z-20 order-2 flex max-w-none flex-col items-start justify-start px-5 py-7 sm:px-7 md:min-h-[13.5rem] md:max-w-[52%] md:justify-center lg:px-8">
           {!hidePathEyebrow ? (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
+            <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
               {capitalize(experience.subjectNoun)} {block.ordinal} · {block.selection.difficulty}
             </p>
           ) : null}
@@ -143,7 +143,7 @@ export function StoryPracticeIntro({
           <MayaStage speaking={speaking} transparent performanceProfile="practice" />
         </div>
 
-        <div className="story-practice-intro-dialogue absolute right-5 top-5 z-20 hidden w-[clamp(14.5rem,22vw,17rem)] max-w-[40%] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.28)] lg:block">
+        <div className="story-practice-intro-dialogue absolute right-5 top-5 z-20 hidden w-[clamp(14.5rem,22vw,17rem)] max-w-[40%] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_14px_36px_-12px_rgba(0,0,0,0.45)] lg:block">
           <span
             aria-hidden
             className="story-practice-intro-dialogue-tail absolute -left-2 top-8 h-4 w-4 rotate-45 border-b border-l border-white/[0.07] bg-[#1a1c20]"
@@ -164,7 +164,7 @@ export function StoryPracticeIntro({
         <button
           type="button"
           onClick={say}
-          className="story-practice-intro-listen absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
+          className="story-practice-intro-listen absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
         >
           {state === "loading" ? (
             <Loader2 size={14} aria-hidden="true" className="motion-safe:animate-spin" />

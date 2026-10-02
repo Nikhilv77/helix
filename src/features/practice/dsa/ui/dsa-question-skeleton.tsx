@@ -14,7 +14,7 @@ export function DsaQuestionSkeleton() {
       <RouteProgress />
 
       <div className="mx-auto flex min-h-0 w-full max-w-[112rem] flex-col gap-2 xl:h-full">
-        <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-white/[0.08] bg-[#141619] px-3 py-2.5 sm:px-4">
+        <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl bg-[#141619] px-3 py-2.5 sm:px-4">
           <div className="skeleton h-9 w-9 !rounded-lg" />
           <Line className="h-4 w-44" />
           <div className="flex gap-1.5">
@@ -25,15 +25,15 @@ export function DsaQuestionSkeleton() {
           <div className="ml-auto flex gap-1">
             <div className="skeleton h-9 w-32 !rounded-lg" />
           </div>
-          <div className="flex w-full gap-2 border-t border-white/[0.06] pt-2.5 xl:w-auto xl:border-0 xl:pt-0">
+          <div className="interview-soft-rule flex w-full gap-2 pt-2.5 xl:w-auto xl:border-0 xl:pt-0">
             <div className="skeleton h-9 w-24 !rounded-lg" />
             <div className="skeleton h-9 w-16 !rounded-lg" />
           </div>
         </header>
 
         <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(22rem,0.82fr)_minmax(34rem,1.18fr)]">
-          <section className="min-h-[34rem] overflow-hidden rounded-xl border border-white/[0.08] bg-[#141619] xl:min-h-0">
-            <div className="flex h-12 items-end gap-5 border-b border-white/[0.07] px-5 pb-3">
+          <section className="min-h-[34rem] overflow-hidden rounded-xl bg-[#141619] xl:min-h-0">
+            <div className="interview-soft-rule-bottom flex h-12 items-end gap-5 px-5 pb-3">
               {Array.from({ length: 4 }, (_, index) => (
                 <Line key={index} className={index === 0 ? "w-20" : "w-12"} />
               ))}
@@ -46,7 +46,7 @@ export function DsaQuestionSkeleton() {
                 <Line className="mt-2 w-4/5" />
               </div>
               {Array.from({ length: 2 }, (_, index) => (
-                <div key={index} className="rounded-xl bg-black/20 p-4">
+                <div key={index} className="interview-soft-rule pt-5">
                   <Line className="w-16" />
                   <Line className="mt-4 w-5/6" />
                   <Line className="mt-2 w-3/5" />
@@ -55,8 +55,8 @@ export function DsaQuestionSkeleton() {
             </div>
           </section>
 
-          <section className="flex min-h-[38rem] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#101214] xl:min-h-0">
-            <div className="flex h-14 items-center gap-3 border-b border-white/[0.07] px-4">
+          <section className="flex min-h-[38rem] flex-col overflow-hidden rounded-xl bg-[#101214] xl:min-h-0">
+            <div className="interview-soft-rule-bottom flex h-14 items-center gap-3 px-4">
               <Line className="w-20" />
               <div className="ml-auto skeleton h-9 w-32 !rounded-lg" />
               <div className="skeleton h-9 w-9 !rounded-lg" />
@@ -69,7 +69,7 @@ export function DsaQuestionSkeleton() {
               <Line className="mt-8 w-3/5" />
               <Line className="mt-3 w-2/5" />
             </div>
-            <div className="flex h-14 items-center justify-between border-t border-white/[0.07] bg-[#141619] px-4">
+            <div className="interview-soft-rule flex h-14 items-center justify-between bg-[#141619] px-4">
               <Line className="w-20" />
               <div className="skeleton h-9 w-28 !rounded-lg" />
             </div>

@@ -34,6 +34,38 @@ export function toGeminiResponseSchema(schema: unknown): unknown {
   return toPrunedJsonSchema(convertZodToJsonSchema(schema, { $refStrategy: "none" }));
 }
 
+/** How long a model whose daily quota ran out is skipped before one retry. */
+const EXHAUSTED_MODEL_COOLDOWN_MS = 30 * 60_000;
+
+/**
+ * Models whose free-tier daily request quota is spent, shared by every
+ * provider instance in the process so later calls skip them at once.
+ */
+const exhaustedModels = new Map<string, number>();
+
+/**
+ * Gemini's daily quota is per model. A 429 whose quota id is a per-day one
+ * cannot succeed by retrying the same model today, but another model may.
+ */
+export function isDailyQuotaExhausted(error: unknown): boolean {
+  const cause = error instanceof AiProviderException ? error.cause : error;
+  if (!isRecord(cause)) return false;
+  const status = cause.status ?? cause.statusCode ?? cause.code;
+  const text = `${String(cause.message ?? "")} ${safeStringify(cause.details)}`;
+  return (
+    (status === 429 || status === "429" || /RESOURCE_EXHAUSTED|\b429\b/.test(text)) &&
+    /PerDay/i.test(text)
+  );
+}
+
+function safeStringify(value: unknown): string {
+  try {
+    return value === undefined ? "" : JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
 export class GeminiProvider implements SystemDesignerAIProvider {
   private readonly logger = new Logger(GeminiProvider.name);
 
@@ -44,8 +76,61 @@ export class GeminiProvider implements SystemDesignerAIProvider {
     private readonly modelOverride: string | null = null
   ) {}
 
+  /**
+   * Tries the requested model, then the other configured Gemini models when a
+   * model's daily quota is spent. Any other failure, or the last model's,
+   * propagates unchanged so callers' own fallbacks (Groq) still apply.
+   */
   async generateStructured<T>(request: GenerateStructuredRequest<T>): Promise<T> {
-    const model = this.selectModel(request.modelClass);
+    const models = this.candidateModels(request.modelClass);
+    for (let index = 0; index < models.length; index += 1) {
+      const model = models[index]!;
+      try {
+        return await this.generateWithModel(request, model);
+      } catch (error) {
+        if (!isDailyQuotaExhausted(error)) throw error;
+        exhaustedModels.set(model, Date.now() + EXHAUSTED_MODEL_COOLDOWN_MS);
+        const next = models[index + 1];
+        this.logger.warn(
+          JSON.stringify({
+            event: "ai.provider.model_quota_exhausted",
+            provider: PROVIDER_NAME,
+            operation: request.operation,
+            modelClass: request.modelClass,
+            model,
+            nextModel: next ?? null
+          })
+        );
+        if (!next) throw error;
+      }
+    }
+    throw new AiProviderException({
+      code: "AI_PROVIDER_ERROR",
+      message: "AI provider request failed",
+      provider: PROVIDER_NAME,
+      operation: request.operation,
+      retryable: true
+    });
+  }
+
+  /** The requested model first, then the other configured models; spent ones last. */
+  private candidateModels(modelClass: GenerateStructuredRequest<unknown>["modelClass"]): string[] {
+    if (this.modelOverride) return [this.modelOverride];
+    const { geminiReasoningModel: reasoning, geminiFastModel: fast } = this.config;
+    const backup = this.config.geminiBackupModel;
+    const ordered = modelClass === "fast" ? [fast, reasoning, backup] : [reasoning, backup, fast];
+    const unique = [...new Set(ordered.filter((model): model is string => Boolean(model)))];
+    const now = Date.now();
+    const available = unique.filter((model) => (exhaustedModels.get(model) ?? 0) <= now);
+    // When every model is spent, still make one call so the error reaches the
+    // caller's fallback instead of failing silently.
+    return available.length ? available : [unique[0]!];
+  }
+
+  private async generateWithModel<T>(
+    request: GenerateStructuredRequest<T>,
+    model: string
+  ): Promise<T> {
     const maxAttempts = request.maxAttempts ?? this.config.aiMaxRetries + 1;
 
     if (request.signal?.aborted) {
@@ -110,7 +195,9 @@ export class GeminiProvider implements SystemDesignerAIProvider {
         return result;
       } catch (error) {
         const mappedError = this.mapError(error, request.operation);
-        const shouldRetry = mappedError.retryable && attempt < maxAttempts;
+        // A spent daily quota cannot recover on this model today.
+        const shouldRetry =
+          mappedError.retryable && attempt < maxAttempts && !isDailyQuotaExhausted(error);
         const providerStatus = isRecord(mappedError.cause)
           ? this.readStatusCode(mappedError.cause)
           : undefined;
@@ -157,11 +244,6 @@ export class GeminiProvider implements SystemDesignerAIProvider {
       operation: request.operation,
       retryable: false
     });
-  }
-
-  private selectModel(modelClass: GenerateStructuredRequest<unknown>["modelClass"]): string {
-    if (this.modelOverride) return this.modelOverride;
-    return modelClass === "fast" ? this.config.geminiFastModel : this.config.geminiReasoningModel;
   }
 
   private generateContent<T>(

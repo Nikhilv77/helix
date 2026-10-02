@@ -106,7 +106,7 @@ export function DsaTopics({
             <div>
               <h2
                 id="dsa-path-heading"
-                className="text-[12px] font-semibold uppercase tracking-[0.14em] text-cream/52"
+                className="text-[1.3rem] font-semibold tracking-[-0.015em] text-cream"
               >
                 Explore all DSA
               </h2>
@@ -116,7 +116,7 @@ export function DsaTopics({
             </div>
             <Link
               href="/dsa-questions"
-              className="group inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.035] px-3 text-xs font-semibold text-cream/62 transition hover:border-[var(--workspace-accent-border)] hover:bg-[var(--workspace-accent-soft)] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+              className="group inline-flex h-9 items-center gap-1.5 rounded-lg text-[13.5px] font-semibold text-[var(--workspace-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
             >
               Open question library
               <ArrowRight
@@ -158,6 +158,10 @@ function RecommendationBlock({
   panel: "overview" | "transcript";
   allowEarlyAssessmentStart: boolean;
 }) {
+  const nextSlug = recommendation.questions.find((candidate) => {
+    const status = statusBySlug?.get(candidate.slug);
+    return status !== "COMPLETED" && status !== "SKIPPED";
+  })?.slug;
   return (
     <section aria-labelledby="recommended-now-heading">
       <div className="flex flex-col gap-4 rounded-[1.4rem] bg-[#17181b] px-5 py-5 sm:px-6 sm:py-6">
@@ -179,7 +183,7 @@ function RecommendationBlock({
                 </p>
               </div>
 
-              <div className="shrink-0 rounded-xl bg-[#111214] px-4 py-3 text-[12px] leading-5 text-cream/56">
+              <div className="shrink-0 text-[13px] leading-5 text-cream/52 sm:text-right">
                 <p className="font-semibold text-cream/78">
                   {recommendation.questions.length} questions ·{" "}
                   {formatDuration(recommendation.minutes)}
@@ -191,6 +195,27 @@ function RecommendationBlock({
               </div>
             </div>
 
+            <nav className="flex gap-1.5" aria-label="Jump to a question in this block">
+              {recommendation.questions.map((question, index) => {
+                const status = statusBySlug?.get(question.slug) ?? null;
+                const solved = status === "COMPLETED";
+                const current = question.slug === nextSlug;
+                return (
+                  <Link
+                    key={question.slug}
+                    href={`/dsa-questions/${question.slug}`}
+                    aria-label={`Question ${index + 1}: ${question.title}, ${current ? "current progress" : solved ? "completed" : "not started"}`}
+                    aria-current={current ? "step" : undefined}
+                    className="group/step relative flex min-h-11 min-w-0 flex-1 items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
+                  >
+                    <span
+                      className={`relative z-10 block h-1.5 w-full rounded-full transition duration-200 group-hover/step:-translate-y-0.5 ${solved ? "bg-[var(--workspace-accent)]" : "bg-[#303236] group-hover/step:bg-[#3a3c41]"}`}
+                    />
+                  </Link>
+                );
+              })}
+            </nav>
+
             <ul className="grid gap-2.5 lg:grid-cols-2">
               {recommendation.questions.map((question, index) => (
                 <QuestionRow
@@ -198,13 +223,7 @@ function RecommendationBlock({
                   question={question}
                   index={index}
                   status={statusBySlug?.get(question.slug) ?? null}
-                  next={
-                    question.slug ===
-                    recommendation.questions.find((candidate) => {
-                      const status = statusBySlug?.get(candidate.slug);
-                      return status !== "COMPLETED" && status !== "SKIPPED";
-                    })?.slug
-                  }
+                  next={question.slug === nextSlug}
                 />
               ))}
             </ul>
@@ -226,13 +245,11 @@ function RecommendationBlock({
 function BlockHistoryNavigation({ history }: { history: DsaBlockHistoryView }) {
   return (
     <nav
-      className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4"
+      className="interview-soft-rule-bottom flex flex-wrap items-center justify-between gap-3 pb-4"
       aria-label="DSA block history"
     >
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/38">
-          Practice history
-        </p>
+        <p className="text-[12px] text-cream/42">Practice history</p>
         <p className="mt-1 text-sm font-semibold text-cream/75">
           Block {history.selected.ordinal} of {history.totalBlocks}
           {history.selected.current ? " · Current" : " · Completed"}
@@ -242,24 +259,24 @@ function BlockHistoryNavigation({ history }: { history: DsaBlockHistoryView }) {
         {history.previousBlockId ? (
           <Link
             href={`/practice/dsa?block=${encodeURIComponent(history.previousBlockId)}&panel=overview`}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/62 hover:text-cream"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-cream/62 practice-soft-hover hover:text-cream"
           >
             <ArrowLeft size={13} aria-hidden="true" /> Previous
           </Link>
         ) : (
-          <span className="inline-flex min-h-9 items-center rounded-lg border border-white/[0.04] px-3 text-xs text-cream/24">
+          <span className="inline-flex min-h-9 items-center rounded-lg px-3 text-[13px] text-cream/24">
             Previous
           </span>
         )}
         {history.nextBlockId ? (
           <Link
             href={`/practice/dsa?block=${encodeURIComponent(history.nextBlockId)}&panel=overview`}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/62 hover:text-cream"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-cream/62 practice-soft-hover hover:text-cream"
           >
             Next <ArrowRight size={13} aria-hidden="true" />
           </Link>
         ) : (
-          <span className="inline-flex min-h-9 items-center rounded-lg border border-white/[0.04] px-3 text-xs text-cream/24">
+          <span className="inline-flex min-h-9 items-center rounded-lg px-3 text-[13px] text-cream/24">
             Next
           </span>
         )}
@@ -284,23 +301,23 @@ function BlockTranscript({ history }: { history: DsaBlockHistoryView }) {
         </div>
         <Link
           href={`/practice/dsa?block=${encodeURIComponent(history.selected.id)}&panel=overview`}
-          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/65"
+          className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-semibold text-cream/65 practice-soft-hover hover:text-cream"
         >
           <BackLinkIcon size={13} /> Return to overview
         </Link>
       </div>
       {turns?.length ? (
-        <ol className="mt-5 space-y-3">
+        <ol className="mt-3">
           {turns.map((turn, index) => (
             <li
               key={`${turn.speaker}-${turn.startMs}-${index}`}
-              className="rounded-xl bg-[#111214] px-4 py-3"
+              className={`py-4 ${index > 0 ? "interview-soft-rule" : ""}`}
             >
               <div className="flex items-center justify-between gap-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.11em] text-[var(--workspace-accent)]">
+                <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                   {turn.speaker === "agent" ? "Teacher" : "Candidate"}
                 </p>
-                <time className="font-mono text-[10px] tabular-nums text-cream/35">
+                <time className="text-[12px] tabular-nums text-cream/42">
                   {formatTranscriptTime(turn.startMs)}
                 </time>
               </div>
@@ -311,10 +328,7 @@ function BlockTranscript({ history }: { history: DsaBlockHistoryView }) {
           ))}
         </ol>
       ) : (
-        <div
-          role="status"
-          className="mt-5 rounded-xl border border-white/[0.07] bg-[#111214] px-4 py-5 text-sm leading-6 text-cream/48"
-        >
+        <div role="status" className="mt-5 text-sm leading-6 text-cream/48">
           No saved transcript is available for this assessment.
         </div>
       )}
@@ -366,7 +380,7 @@ function ChapterBlock({
         <span
           aria-hidden="true"
           className={[
-            "grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/[0.045] text-[13px] font-semibold tabular-nums",
+            "grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.1] text-[13px] font-semibold tabular-nums",
             current ? "text-[var(--workspace-accent)]" : done ? "text-cream/70" : "text-cream/48"
           ].join(" ")}
         >
@@ -379,7 +393,7 @@ function ChapterBlock({
               {chapter.title}
             </span>
             {current && !done ? (
-              <span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+              <span className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                 In progress
               </span>
             ) : null}
@@ -462,12 +476,6 @@ function QuestionStepper({
             aria-current={isCurrent ? "step" : undefined}
             className="dsa-question-step group/step relative min-w-0 flex-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
           >
-            {isCurrent ? (
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -inset-x-1 top-1/2 h-4 -translate-y-1/2 rounded-full bg-[var(--workspace-accent)] opacity-30 blur-md"
-              />
-            ) : null}
             <span
               className={[
                 "dsa-question-step-bar relative z-10 block h-1.5 w-full rounded-full transition duration-200 group-hover/step:-translate-y-0.5 group-hover/step:brightness-125",
@@ -499,9 +507,9 @@ function QuestionRow({
     <li className="min-w-0">
       <Link
         href={`/dsa-questions/${question.slug}`}
-        className="dsa-question-row group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] bg-[#111214] p-4 transition duration-200 hover:-translate-y-0.5 hover:bg-[#141518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+        className="dsa-question-row group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] p-4 practice-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
       >
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-[12px] font-semibold tabular-nums text-cream/50">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/[0.1] text-[12px] font-semibold tabular-nums text-cream/50">
           {index + 1}
         </span>
 
@@ -513,17 +521,15 @@ function QuestionRow({
               {question.title}
             </span>
             {completed ? (
-              <span className="rounded-full bg-[var(--workspace-accent-soft)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
+              <span className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                 Solved
               </span>
             ) : skipped ? (
-              <span className="rounded-full border border-[#e3a15b]/15 bg-[#e3a15b]/10 px-2.5 py-1 text-[10px] font-semibold text-[#e7bd83]">
+              <span className="text-[12.5px] font-semibold text-[#e7bd83]">
                 Skipped · Learn &amp; retry
               </span>
             ) : next ? (
-              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-cream/52">
-                Up next
-              </span>
+              <span className="text-[12.5px] font-medium text-cream/52">Up next</span>
             ) : null}
           </span>
           <span className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 text-[12.5px] text-cream/50">

@@ -289,13 +289,13 @@ export function DsaQuestionWorkspace({
   }
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#101214] xl:h-full">
+    <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl bg-[#101214] xl:h-full">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-[#141619] px-3 py-2 sm:px-4">
         <p className="text-[13.5px] text-cream/38 font-semibold">Need another perspective?</p>
         {askSomeone}
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2 sm:px-4">
+      <div className="interview-soft-rule-bottom flex shrink-0 flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-4">
         <div className="flex items-center gap-2 text-[13.5px] font-semibold text-cream/88">
           <Code2 size={15} aria-hidden="true" className="text-[var(--workspace-accent)]" />
           Solution
@@ -342,7 +342,7 @@ export function DsaQuestionWorkspace({
         <RunOutput examples={examples} result={result} running={running} error={error} />
       ) : null}
 
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/[0.07] bg-[#141619] px-3 py-2 sm:px-4">
+      <div className="interview-soft-rule flex shrink-0 flex-wrap items-center gap-2 bg-[#141619] px-3 py-2 sm:px-4">
         <button
           type="button"
           onClick={() => setOutputOpen((open) => !open)}
@@ -367,7 +367,7 @@ export function DsaQuestionWorkspace({
                 {result.tests.filter((test) => test.passed).length}/{result.tests.length}
               </span>
               {result.tests.some((test) => test.visible === false) ? (
-                <span className="text-[11.5px] text-cream/38">
+                <span className="text-[12px] text-cream/42">
                   · {result.tests.filter((test) => test.visible === false).length} hidden
                 </span>
               ) : null}
@@ -434,7 +434,7 @@ function RunOutput({
 }) {
   return (
     <section
-      className="thin-scroll max-h-[16rem] shrink-0 overflow-y-auto border-t border-white/[0.07] bg-black/10 px-4 py-4 sm:px-5"
+      className="thin-scroll max-h-[16rem] shrink-0 overflow-y-auto interview-soft-rule px-4 py-4 sm:px-5"
       aria-live="polite"
       aria-busy={running}
     >
@@ -466,7 +466,7 @@ function RunOutput({
         ) : (
           <span className="flex items-center gap-2 text-[13px] text-cream/50">
             <span
-              className="h-2 w-2 rounded-full shadow-[0_0_12px_var(--workspace-accent)]"
+              className="h-2 w-2 rounded-full"
               style={{ background: "var(--workspace-accent)" }}
             />
             Ready to run

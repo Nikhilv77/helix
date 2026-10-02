@@ -435,8 +435,14 @@ export class AppliedEngineeringPracticeService {
     const input = appliedEngineeringLearnInputSchema.parse(rawInput);
     const learned = await this.prisma.$transaction(async (tx) => {
       await lock(tx, input.questionId);
+      // Like Core Technical, any practising path accepts Learn, including a
+      // library path; only the current path can unlock an assessment.
       const question = await tx.appliedEngineeringBlockQuestion.findFirst({
-        where: { id: input.questionId, ownerId, block: { isCurrent: true } },
+        where: {
+          id: input.questionId,
+          ownerId,
+          block: { status: AppliedEngineeringBlockStatus.PRACTISING }
+        },
         select: questionReadSelect
       });
       if (!question) throw questionNotFound();
@@ -473,7 +479,7 @@ export class AppliedEngineeringPracticeService {
         id: questionId,
         ownerId,
         status: AppliedEngineeringQuestionStatus.ACTIVE,
-        block: { isCurrent: true, status: AppliedEngineeringBlockStatus.PRACTISING }
+        block: { status: AppliedEngineeringBlockStatus.PRACTISING }
       },
       select: { id: true, blockId: true, contentFingerprint: true, privateSnapshot: true }
     });
@@ -775,6 +781,7 @@ async function makeAssessmentReadyIfTerminal(
   const block = await tx.appliedEngineeringBlock.findUnique({
     where: { id_ownerId: { id: blockId, ownerId } },
     select: {
+      isCurrent: true,
       contentFingerprint: true,
       selectionSnapshot: true,
       incidentVersion: { select: { incidentKey: true } },
@@ -795,6 +802,10 @@ async function makeAssessmentReadyIfTerminal(
     }
   });
   if (!block) throw questionNotFound();
+  // Loose library practice saves question progress without creating a second
+  // assessment-bearing path. If this block is promoted later, activation will
+  // unlock its assessment when every saved question is already terminal.
+  if (!block.isCurrent) return;
   const assessmentSnapshot = buildAppliedEngineeringAssessmentSnapshot({
     blockContentFingerprint: block.contentFingerprint,
     selectionSnapshot: block.selectionSnapshot,

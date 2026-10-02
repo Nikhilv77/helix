@@ -14,6 +14,7 @@ import type {
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
 import { AssessmentResultsScorecard } from "@/features/practice/shared/ui/assessment-results-scorecard";
+import { CoreTechnicalBlockAssessmentPreview } from "@/features/practice/core-technical/ui/core-technical-block-assessment-preview";
 import { humanizeStoryPracticeKey } from "./presentation";
 import {
   openAppliedEngineeringAssessmentRoom,
@@ -136,6 +137,46 @@ export function StoryPracticeAssessment({
   }, [grading, router]);
   const waitingForGrade = grading && !gradingSlow && !error && pending !== "finalize";
 
+  // Tracks that run their checkpoint in a dedicated room show the same card as
+  // Core Technical. Grading keeps its own view below: it polls for the report
+  // and offers a retry, which that card does not.
+  if (
+    usesSharedVoiceRoom &&
+    !dedicatedRoom &&
+    (status === "LOCKED" ||
+      status === "READY" ||
+      status === "IN_PROGRESS" ||
+      (status === "COMPLETED" && report))
+  ) {
+    return (
+      <CoreTechnicalBlockAssessmentPreview
+        id={status === "COMPLETED" ? "report" : "assessment"}
+        block={{ ...block, assessment }}
+        terminalCount={terminalCount}
+        allowEarlyStart={allowEarlyStart}
+        label={`${experience.label} ${status === "COMPLETED" ? "report" : "assessment"}`}
+        readyDescription={experience.defenceDescription}
+        metrics={experience.measures.map((measure) => [measure, measure] as const)}
+        onOpen={openSharedRoom}
+        completedContent={
+          report && assessment ? (
+            <Report
+              block={block}
+              assessment={assessment}
+              headingRef={headingRef}
+              pending={pending === "continue"}
+              error={error}
+              onContinue={() => void continueStory()}
+              experience={experience}
+              teacherName={teacher.name}
+              teacherPortrait={teacherPortrait}
+            />
+          ) : null
+        }
+      />
+    );
+  }
+
   if (!assessment || status === "LOCKED") {
     if (assessment && allowEarlyStart && block.isCurrent) {
       return (
@@ -204,7 +245,7 @@ export function StoryPracticeAssessment({
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Assessment in progress
         </p>
         <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
@@ -239,7 +280,7 @@ export function StoryPracticeAssessment({
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Assessment complete
         </p>
         <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
@@ -291,7 +332,7 @@ export function StoryPracticeAssessment({
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Assessment in progress
         </p>
         <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
@@ -335,7 +376,7 @@ export function StoryPracticeAssessment({
     <AssessmentFrame id="assessment" label={`${experience.label} assessment`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+          <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
             Block assessment
           </p>
           <h3
@@ -374,8 +415,8 @@ export function StoryPracticeAssessment({
           {snapshot.prompts.map((prompt) => {
             const inputId = `assessment-prompt-${prompt.order}`;
             return (
-              <li key={prompt.id} className="rounded-xl bg-[#141619] px-4 py-5 sm:px-5">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/36">
+              <li key={prompt.id} className="interview-soft-rule py-5 first:border-t-0 first:pt-1">
+                <p className="text-[12px] text-cream/42">
                   Prompt {prompt.order} · {humanizeStoryPracticeKey(prompt.kind)}
                 </p>
                 <label
@@ -399,12 +440,12 @@ export function StoryPracticeAssessment({
                   maxLength={4_000}
                   rows={5}
                   aria-describedby={`${inputId}-count`}
-                  className="mt-4 min-h-32 w-full resize-y rounded-lg border border-white/[0.08] bg-[#111214] px-3.5 py-3 text-[13px] leading-6 text-cream outline-none placeholder:text-cream/28 focus:border-[var(--workspace-accent-border)] focus:ring-2 focus:ring-[var(--workspace-accent-soft)] read-only:cursor-default read-only:text-cream/56"
+                  className="practice-soft-field mt-4 min-h-32 w-full resize-none rounded-lg bg-white/[0.035] px-3.5 py-3 text-[13px] leading-6 text-cream outline-none placeholder:text-cream/28 focus:ring-2 focus:ring-[var(--workspace-accent-soft)] read-only:cursor-default read-only:text-cream/56"
                   placeholder={experience.answerPlaceholder}
                 />
                 <p
                   id={`${inputId}-count`}
-                  className="mt-1.5 text-right text-[10px] tabular-nums text-cream/54"
+                  className="mt-1.5 text-right text-[12px] tabular-nums text-cream/48"
                 >
                   {(answers[prompt.id] ?? "").length}/4000
                 </p>
@@ -443,6 +484,28 @@ export function StoryPracticeAssessment({
       ) : null}
     </AssessmentFrame>
   );
+
+  /** Starts or resumes the checkpoint and opens its room; errors surface on the card. */
+  async function openSharedRoom() {
+    if (!assessment || !block.isCurrent) throw new Error("This assessment is not open yet.");
+    const key = `${experience.slug}-assessment-start:${assessment.id}`;
+    const requestId = replaySafeRequestId(key, assessment.id);
+    const data = await post<{ assessment: PublicAssessment; sessionId?: string }>(
+      `${experience.apiBase}/assessment/start`,
+      { assessmentId: assessment.id, requestId },
+      experience.label
+    );
+    window.sessionStorage.removeItem(key);
+    setAssessment(experience.adaptAssessment(data.assessment));
+    if (!data.sessionId) throw new Error("The assessment room could not be prepared.");
+    if (experience.slug === "architecture-design") {
+      openArchitectureDesignAssessmentRoom(data.sessionId);
+    } else if (experience.slug === "applied-engineering") {
+      openAppliedEngineeringAssessmentRoom(data.sessionId);
+    } else {
+      openInterviewRoom(data.sessionId);
+    }
+  }
 
   async function startAssessment() {
     if (!assessment || pendingRef.current || !block.isCurrent) return;
@@ -596,15 +659,13 @@ function ReadyAssessment({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-        Assessment ready
-      </p>
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">Assessment ready</p>
       <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
         Your 1:1 with {teacherName} is ready
       </h3>
       <p className="mt-2 text-[14px] leading-6 text-cream/58">{description}</p>
       {early ? (
-        <p className="mt-1 text-[11px] leading-5 text-cream/36">
+        <p className="mt-1 text-[12px] leading-5 text-cream/42">
           Development preview: unfinished questions will be recorded as Learned with zero mastery.
         </p>
       ) : null}
@@ -633,18 +694,16 @@ function ReadyAssessment({
 
 function AssessmentMeasures({ measures }: { measures: readonly string[] }) {
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/[0.055] pt-3">
-      <p className="mr-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/35">
-        Measures
-      </p>
+    <div className="interview-soft-rule mt-3 flex flex-wrap items-center gap-1.5 pt-3">
+      <p className="mr-1 text-[12px] text-cream/42">Measures</p>
       <div className="flex flex-wrap gap-1.5">
         {measures.map((label) => (
           <div
             key={label}
-            className="flex min-h-7 items-center gap-1.5 rounded-lg border border-white/[0.055] bg-white/[0.025] px-2.5 py-1"
+            className="flex min-h-7 items-center gap-1.5 rounded-lg bg-white/[0.045] px-2.5 py-1"
           >
             <Check size={10} className="text-[var(--workspace-accent)]" aria-hidden="true" />
-            <p className="text-[10px] font-medium leading-4 text-cream/48">{label}</p>
+            <p className="text-[12px] font-medium leading-4 text-cream/55">{label}</p>
           </div>
         ))}
       </div>
@@ -685,7 +744,7 @@ function AssessmentPreviewFrame({
     <aside
       id={id}
       aria-label={label}
-      className="story-assessment-preview relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+      className="story-assessment-preview relative overflow-hidden rounded-[1.15rem] bg-white/[0.025]"
     >
       <div className="grid min-w-0 sm:grid-cols-[9.5rem_minmax(0,1fr)] lg:grid-cols-[11.5rem_minmax(0,1fr)]">
         <div className="story-assessment-portrait relative h-36 overflow-hidden bg-[#08090a] sm:h-auto sm:min-h-[12.5rem]">
@@ -700,7 +759,7 @@ function AssessmentPreviewFrame({
             className="story-assessment-portrait-image bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
           />
           <div className="story-assessment-portrait-vignette absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,transparent_32%,rgba(4,5,6,0.18)_64%,rgba(4,5,6,0.72)_100%)]" />
-          <div className="story-assessment-portrait-fade absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(14,16,17,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
+          <div className="story-assessment-portrait-fade absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(29,30,33,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
           <div className="absolute inset-y-[12%] right-0 w-px bg-[linear-gradient(180deg,transparent,var(--workspace-accent),transparent)] opacity-55" />
           <span className="absolute left-3 top-3 h-5 w-5 border-l border-t border-[color:var(--workspace-accent-border)]" />
           <span className="absolute bottom-3 right-3 h-5 w-5 border-b border-r border-white/20" />
@@ -726,7 +785,7 @@ function AssessmentFrame({
     <aside
       id={id}
       aria-label={label}
-      className="story-assessment-frame relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] sm:px-6"
+      className="story-assessment-frame relative overflow-hidden rounded-[1.15rem] bg-white/[0.025] px-5 py-5 sm:px-6"
     >
       {children}
     </aside>
@@ -749,13 +808,11 @@ function AssessmentHeader({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-          {eyebrow}
-        </p>
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">{eyebrow}</p>
         <h3 className="mt-2 font-display text-[1.25rem] font-semibold text-cream">{title}</h3>
         <p className="mt-2 max-w-[36rem] text-[13px] leading-5 text-cream/52">{description}</p>
       </div>
-      <span className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/55">
+      <span className="inline-flex min-h-9 shrink-0 items-center gap-2 text-[13px] font-semibold text-cream/55">
         {icon}
         {badge}
       </span>
@@ -767,7 +824,7 @@ function StateBadge({ label, loading }: { label: string; loading: boolean }) {
   return (
     <span
       role="status"
-      className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/55"
+      className="inline-flex min-h-9 shrink-0 items-center gap-2 text-[13px] font-semibold text-cream/55"
     >
       {loading ? (
         <Loader2 size={13} className="motion-safe:animate-spin" aria-hidden="true" />
@@ -834,14 +891,14 @@ function Report({
       headingRef={headingRef}
     >
       {report.deterministicEvidence.implementationScoreCapped ? (
-        <p className="mt-4 rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-sm leading-5 text-[#e7bd83]">
+        <p className="mt-4 rounded-xl bg-[#e3a15b]/10 px-4 py-3 text-sm leading-5 text-[#e7bd83]">
           The implementation score cap was preserved because accepted runner evidence was
           incomplete.
         </p>
       ) : null}
 
       {transcript ? (
-        <details className="smooth-disclosure mt-5 rounded-xl border border-white/[0.07] px-4 py-4">
+        <details className="smooth-disclosure interview-soft-rule mt-5 pt-2">
           <summary className="min-h-11 cursor-pointer text-[13px] font-semibold leading-[2.75rem] text-cream/68 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]">
             Review your safe transcript
           </summary>
@@ -862,10 +919,10 @@ function Report({
 
       {nextItem ? (
         <section
-          className="mt-6 rounded-xl bg-[#141619] px-4 py-5 sm:px-5"
+          className="interview-soft-rule mt-6 pt-5"
           aria-labelledby={`next-${experience.slug}-heading`}
         >
-          <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--workspace-accent)]">
+          <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
             Recommended next {experience.subjectNoun}
           </p>
           <h4
@@ -875,7 +932,7 @@ function Report({
             {nextItem.selectedStory.title}
           </h4>
           <p className="mt-2 text-[12.5px] leading-5 text-cream/52">{nextItem.reason}</p>
-          <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-cream/36">
+          <p className="mt-3 text-[12px] text-cream/42">
             {humanizeStoryPracticeKey(nextItem.selectedStory.difficulty)} ·{" "}
             {nextItem.selectedStory.emphasizedConceptKeys.map(humanizeStoryPracticeKey).join(" · ")}
           </p>
@@ -883,10 +940,10 @@ function Report({
       ) : continuation && continuation.kind !== "continue" ? (
         <section
           role="status"
-          className="mt-6 rounded-xl bg-[#141619] px-4 py-5 sm:px-5"
+          className="interview-soft-rule mt-6 pt-5"
           aria-labelledby={`terminal-${experience.slug}-heading`}
         >
-          <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--workspace-accent)]">
+          <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
             {continuation.kind === "ready" ? "Interview readiness reached" : "Preparation complete"}
           </p>
           <h4
@@ -937,7 +994,7 @@ function ActionError({ message }: { message: string }) {
   return (
     <p
       role="alert"
-      className="mt-5 rounded-lg border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-[13px] leading-5 text-[#e7bd83]"
+      className="mt-5 rounded-lg bg-[#e3a15b]/10 px-4 py-3 text-[13px] leading-5 text-[#e7bd83]"
     >
       {message}
     </p>

@@ -87,12 +87,12 @@ describe("story-practice assessment state parity", () => {
 
       if (status === "LOCKED") {
         expect(
-          screen.getByRole("heading", { name: "1 question left to unlock" })
+          screen.getByRole("heading", { name: "1 question until your 1:1" })
         ).toBeInTheDocument();
       } else if (status === "READY") {
         expect(screen.getByRole("button", { name: /Start assessment/i })).toBeInTheDocument();
       } else if (status === "IN_PROGRESS") {
-        expect(screen.getByRole("button", { name: /Continue assessment/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Resume assessment/i })).toBeInTheDocument();
       } else if (status === "FINALIZING") {
         // Grading runs on the server; the page waits instead of offering a retry.
         expect(screen.getByText(/Grading your answers/i)).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe("story-practice assessment state parity", () => {
       />
     );
     expect(screen.getAllByRole("textbox")).toHaveLength(5);
-    expect(screen.queryByRole("button", { name: /Continue assessment/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Resume assessment/i })).toBeNull();
     legacy.unmount();
 
     const roomBlock = block("IN_PROGRESS");
@@ -127,7 +127,7 @@ describe("story-practice assessment state parity", () => {
         experience={ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE}
       />
     );
-    expect(screen.getByRole("button", { name: /Continue assessment/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Resume assessment/i })).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

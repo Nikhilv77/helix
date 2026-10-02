@@ -63,7 +63,7 @@ export function StoryPracticeOverview({
           />
         </div>
 
-        <aside className="rounded-[1.45rem] border border-white/[0.085] bg-[#141619] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:px-6 xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:mt-[9.3rem]">
+        <aside className="rounded-[1.45rem] bg-[#17181b] px-5 py-5 sm:px-6 xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:mt-[9.3rem]">
           <h2 className="font-display text-[1.2rem] font-semibold leading-6 tracking-[-0.025em] text-cream">
             Follow the evidence.
           </h2>
@@ -97,7 +97,7 @@ export function StoryPracticeOverview({
                   {block.selection.reason}
                 </p>
               </div>
-              <div className="shrink-0 rounded-xl bg-[#111214] px-4 py-3 text-[12px] leading-5 text-cream/56">
+              <div className="shrink-0 text-[13px] leading-5 text-cream/52 sm:text-right">
                 <p className="font-semibold text-cream/78">
                   {block.questions.length} questions · {block.story.expectedMinutes} min
                 </p>
@@ -129,7 +129,7 @@ export function StoryPracticeOverview({
                     className="group/step relative flex min-h-11 min-w-0 flex-1 items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
                   >
                     <span
-                      className={`relative z-10 block h-1.5 w-full rounded-full transition duration-200 group-hover/step:-translate-y-0.5 ${terminal ? "bg-[var(--workspace-accent)] shadow-[0_0_14px_var(--workspace-accent)]" : "bg-[#303236] group-hover/step:bg-[#3a3c41]"}`}
+                      className={`relative z-10 block h-1.5 w-full rounded-full transition duration-200 group-hover/step:-translate-y-0.5 ${terminal ? "bg-[var(--workspace-accent)]" : "bg-[#303236] group-hover/step:bg-[#3a3c41]"}`}
                     />
                   </Link>
                 );
@@ -264,7 +264,7 @@ export function StoryPracticePathLibrary({
     <section className="mt-9" aria-labelledby={`${experience.slug}-library-heading`}>
       <h2
         id={`${experience.slug}-library-heading`}
-        className="text-[12px] font-semibold uppercase tracking-[0.14em] text-cream/52"
+        className="text-[1.3rem] font-semibold tracking-[-0.015em] text-cream"
       >
         Explore all {experience.label}
       </h2>
@@ -385,10 +385,10 @@ function StoryLibraryCard({
           ? "In progress"
           : "Not started"
     : "Not started";
-  const className = `group overflow-hidden rounded-[1.2rem] border bg-[#17181b] transition duration-200 ${selected ? "border-[var(--workspace-accent-border)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_0_0_1px_var(--workspace-accent-soft),0_18px_48px_rgba(0,0,0,0.24)]" : card.history ? "border-white/[0.075] hover:border-white/[0.14] hover:bg-[#191a1e]" : "border-white/[0.055] bg-[#141518] hover:border-white/[0.11]"}`;
+  const className = `group overflow-hidden rounded-[1.2rem] bg-[#17181b] transition duration-200 ${selected ? "" : "hover:bg-[#191a1e]"}`;
   const summary = (
     <>
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/[0.05] font-mono text-[12px] font-semibold tabular-nums text-[var(--workspace-accent)]">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/[0.1] text-[13px] font-semibold tabular-nums text-[var(--workspace-accent)]">
         {index + 1}
       </span>
       <span className="min-w-0 flex-1">
@@ -397,7 +397,7 @@ function StoryLibraryCard({
             {card.title}
           </span>
           <span
-            className={`rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] ${card.history?.isCurrent ? "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]" : "bg-white/[0.05] text-cream/40"}`}
+            className={`text-[12.5px] font-semibold ${card.history?.isCurrent ? "text-[var(--workspace-accent)]" : "text-cream/42"}`}
           >
             {status}
           </span>
@@ -474,7 +474,7 @@ function StoryLibraryCard({
       >
         {summary}
       </summary>
-      <div className="dsa-chapter-body border-t border-white/[0.06] px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
+      <div className="dsa-chapter-body interview-soft-rule mx-5 pb-3 pt-3 sm:pb-4">
         <ul className="grid gap-2.5 lg:grid-cols-2">
           {questions.map((question) => (
             <LibraryQuestionRow
@@ -493,7 +493,7 @@ function StoryLibraryCard({
           ))}
         </ul>
         {startError ? (
-          <p role="alert" className="px-1 pt-3 text-[11px] leading-5 text-[#e7bd83]">
+          <p role="alert" className="px-1 pt-3 text-[12px] leading-5 text-[#e7bd83]">
             {startError}
           </p>
         ) : null}
@@ -572,7 +572,7 @@ function LibraryQuestionRow({
   const learned = question.status === "LEARNED";
   const body = (
     <>
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-[12px] font-semibold tabular-nums text-cream/50">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/[0.1] text-[12px] font-semibold tabular-nums text-cream/50">
         {question.order}
       </span>
       <span className="min-w-0 flex-1">
@@ -581,8 +581,8 @@ function LibraryQuestionRow({
             {question.title}
           </span>
           {completed || learned ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--workspace-accent-soft)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
-              <Check size={10} aria-hidden="true" /> {completed ? "Solved" : "Learned"}
+            <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-[var(--workspace-accent)]">
+              <Check size={12} aria-hidden="true" /> {completed ? "Solved" : "Learned"}
             </span>
           ) : null}
         </span>
@@ -614,14 +614,13 @@ function LibraryQuestionRow({
       ) : null}
     </>
   );
-  const rowClass =
-    "group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] bg-[#111214] p-4";
+  const rowClass = "group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] p-4";
   return (
     <li className="min-w-0">
       {question.id && blockId ? (
         <Link
           href={`${routeBase}/questions/${encodeURIComponent(question.id)}?block=${encodeURIComponent(blockId)}`}
-          className={`${rowClass} transition duration-200 hover:-translate-y-0.5 hover:bg-[#141518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]`}
+          className={`${rowClass} practice-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]`}
         >
           {body}
         </Link>
@@ -650,13 +649,11 @@ function HistoryNavigation({
 }) {
   return (
     <nav
-      className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4"
+      className="interview-soft-rule-bottom flex flex-wrap items-center justify-between gap-3 pb-4"
       aria-label={`${experience.label} ${experience.subjectNoun} history`}
     >
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/38">
-          {capitalize(experience.subjectNoun)} history
-        </p>
+        <p className="text-[12px] text-cream/42">{capitalize(experience.subjectNoun)} history</p>
         <p className="mt-1 text-sm font-semibold text-cream/75">
           {capitalize(experience.subjectNoun)} {history.selected.ordinal} of {history.totalBlocks}
           {history.selected.isCurrent
@@ -700,7 +697,7 @@ function HistoryLink({
   const label = direction === "previous" ? "Previous" : "Next";
   if (!blockId) {
     return (
-      <span className="inline-flex min-h-9 items-center rounded-lg border border-white/[0.04] px-3 text-xs text-cream/24">
+      <span className="inline-flex min-h-9 items-center rounded-lg px-3 text-[13px] text-cream/24">
         {label}
       </span>
     );
@@ -708,7 +705,7 @@ function HistoryLink({
   return (
     <Link
       href={`${routeBase}?block=${encodeURIComponent(blockId)}`}
-      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/62 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-cream/62 practice-soft-hover hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
     >
       {direction === "previous" ? <LinkPendingIcon direction="back" size={13} /> : null}
       {label}
@@ -740,9 +737,9 @@ function QuestionRow({
     <li className="min-w-0">
       <Link
         href={`${routeBase}/questions/${encodeURIComponent(question.id)}?block=${encodeURIComponent(blockId)}`}
-        className="group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] bg-[#111214] p-4 transition duration-200 hover:-translate-y-0.5 hover:bg-[#141518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+        className="group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] p-4 practice-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
       >
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-[12px] font-semibold tabular-nums text-cream/50">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/[0.1] text-[12px] font-semibold tabular-nums text-cream/50">
           {question.order}
         </span>
         <span className="min-w-0 flex-1">
@@ -788,23 +785,17 @@ function StatusPill({
   subtle?: boolean;
 }) {
   const tone = learned
-    ? "border border-[#e3a15b]/15 bg-[#e3a15b]/10 text-[#e7bd83]"
+    ? "text-[#e7bd83]"
     : subtle
-      ? "bg-white/[0.06] text-cream/52"
-      : "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]";
-  return (
-    <span
-      className={`rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] ${tone}`}
-    >
-      {label}
-    </span>
-  );
+      ? "font-medium text-cream/52"
+      : "text-[var(--workspace-accent)]";
+  return <span className={`text-[12.5px] font-semibold ${tone}`}>{label}</span>;
 }
 
 function CoachStep({ number, title }: { number: string; title: string }) {
   return (
     <li className="flex items-baseline gap-3">
-      <span className="font-mono text-[9px] font-semibold text-[var(--workspace-accent)]">
+      <span className="text-[12px] font-semibold tabular-nums text-[var(--workspace-accent)]">
         {number}
       </span>
       <span className="text-[13px] font-medium leading-5 text-cream/76">{title}</span>

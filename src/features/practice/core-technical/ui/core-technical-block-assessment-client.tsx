@@ -1,5 +1,8 @@
 "use client";
 
+import { EvidenceProse, isProseEvidence } from "@/features/practice/shared/ui/evidence-prose";
+import { PracticeCodeViewer } from "@/features/practice/shared/ui/practice-code-viewer";
+import { readableCode } from "@/features/practice/shared/domain/readable-code";
 import { AssessmentRoomLoading } from "@/features/practice/shared/ui/assessment-room-loading";
 import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
@@ -201,17 +204,17 @@ export function CoreTechnicalBlockAssessmentClient({
 
   useEffect(() => {
     if (transfer) {
-      const defaultJs = transfer.starterCode.javascript?.trim() ?? "";
+      const defaultJs = readableCode(transfer.starterCode.javascript?.trim() ?? "");
       setDrafts({
         javascript: defaultJs,
         python: transfer.starterCode.python ?? "",
-        cpp: transfer.starterCode.cpp ?? "",
-        java: transfer.starterCode.java ?? ""
+        cpp: readableCode(transfer.starterCode.cpp ?? ""),
+        java: readableCode(transfer.starterCode.java ?? "")
       });
     } else if (currentQuestion?.codeSnippet) {
       setDrafts((prev) => ({
         ...prev,
-        javascript: currentQuestion.codeSnippet ?? ""
+        javascript: readableCode(currentQuestion.codeSnippet ?? "")
       }));
     }
   }, [transfer?.slug, currentQuestion?.codeSnippet]);
@@ -467,12 +470,12 @@ export function CoreTechnicalBlockAssessmentClient({
       className="practice-paper"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 pb-4">
-        <header className="flex min-h-14 items-center justify-between gap-4 rounded-2xl border border-white/[0.075] bg-[#0d0f11] px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:px-5">
+        <header className="flex min-h-14 items-center justify-between gap-4 rounded-2xl bg-[#0d0f11] px-4 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href={room.home}
               aria-label="Leave assessment"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] text-cream/52 transition hover:bg-white/[0.05] hover:text-cream"
+              className="practice-soft-hover grid h-9 w-9 shrink-0 place-items-center rounded-xl text-cream/52 transition-colors hover:text-cream"
             >
               <BackLinkIcon size={16} />
             </Link>
@@ -487,7 +490,7 @@ export function CoreTechnicalBlockAssessmentClient({
               count={questionCount}
               done={isDone}
             />
-            <div className="flex h-9 items-center gap-2 rounded-xl border border-white/[0.07] bg-black/20 px-3 font-mono text-sm tabular-nums text-cream/75">
+            <div className="flex h-9 items-center gap-2 rounded-xl bg-white/[0.05] px-3 text-[14px] font-semibold tabular-nums tracking-[0.02em] text-cream/80">
               <Clock3 size={13} className="text-[var(--workspace-accent)]" />
               {formatClock(remainingMs)}
             </div>
@@ -519,7 +522,7 @@ export function CoreTechnicalBlockAssessmentClient({
             {transitionText ? (
               <p
                 role="status"
-                className="mb-3 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-sm text-cream/70"
+                className="mb-3 flex items-center gap-2 rounded-xl bg-white/[0.035] px-4 py-2.5 text-sm text-cream/70"
               >
                 <Check size={14} className="shrink-0 text-[var(--workspace-accent)]" />
                 {transitionText} Question {currentIndex + 1} of {questionCount}.
@@ -622,8 +625,8 @@ function TeacherRail({
   onReplay: () => void;
 }) {
   return (
-    <aside className="flex min-h-[18rem] flex-col overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d0f11] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] lg:min-h-0">
-      <div className="relative h-40 shrink-0 overflow-hidden border-b border-white/[0.055] bg-black/20">
+    <aside className="flex min-h-[18rem] flex-col overflow-hidden rounded-2xl bg-[#0d0f11] lg:min-h-0">
+      <div className="relative h-40 shrink-0 overflow-hidden bg-black/20">
         <div className="absolute inset-x-[-22%] bottom-[-10%] top-0">
           <MayaStage
             speaking={voiceState === "speaking"}
@@ -633,7 +636,7 @@ function TeacherRail({
         </div>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(13,15,17,0.88)_100%)]" />
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/76 backdrop-blur-xl">
+          <div className="flex items-center gap-2 rounded-full bg-black/45 px-2.5 py-1.5 text-[12px] font-medium text-cream/76">
             <span
               className={`h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] ${voiceState === "speaking" ? "animate-pulse" : ""}`}
             />
@@ -643,7 +646,7 @@ function TeacherRail({
             type="button"
             onClick={onReplay}
             disabled={!latest || voiceState === "loading"}
-            className="grid h-8 w-8 place-items-center rounded-full border border-white/[0.07] bg-black/45 text-cream/55 backdrop-blur-xl transition hover:text-cream disabled:opacity-30"
+            className="grid h-8 w-8 place-items-center rounded-full bg-black/45 text-cream/55 transition hover:text-cream disabled:opacity-30"
             aria-label={awaitingGesture ? "Play teacher guidance" : "Replay latest guidance"}
           >
             {voiceState === "unavailable" ? <VolumeX size={13} /> : <Volume2 size={13} />}
@@ -657,13 +660,13 @@ function TeacherRail({
         {turns.slice(runGuidance ? -3 : -4).map((turn, index, visibleTurns) => (
           <div
             key={turnKey(turn)}
-            className={`${index === visibleTurns.length - 1 && !runGuidance ? "opacity-100" : "opacity-40"} ${index ? "border-t border-white/[0.05] pt-3" : ""}`}
+            className={`${index === visibleTurns.length - 1 && !runGuidance ? "opacity-100" : "opacity-40"} ${index ? "interview-soft-rule pt-3" : ""}`}
           >
             <p className="text-sm leading-relaxed text-cream/80">{turn.text}</p>
           </div>
         ))}
         {runGuidance ? (
-          <div className="border-t border-white/[0.05] pt-3">
+          <div className="interview-soft-rule pt-3">
             <p className="text-sm leading-relaxed text-cream/80">{runGuidance}</p>
           </div>
         ) : null}
@@ -694,13 +697,13 @@ function ReviewCheckpoint({
   onSubmit: () => void;
 }) {
   return (
-    <section className="grid h-full min-h-[38rem] overflow-hidden rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] xl:grid-cols-[minmax(0,1.12fr)_minmax(22rem,0.88fr)]">
+    <section className="grid h-full min-h-[38rem] overflow-hidden rounded-2xl bg-[#111215] xl:grid-cols-[minmax(0,1.12fr)_minmax(22rem,0.88fr)]">
       <ReviewReference question={question} />
 
       <div className="thin-scroll flex min-h-[34rem] flex-col overflow-y-auto border-t border-white/[0.06] px-6 py-7 sm:px-8 lg:px-9 xl:border-l xl:border-t-0">
         <div>
           <div className="flex items-center justify-between gap-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+            <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
               {stageLabel}
             </p>
             <span className="font-mono text-sm tabular-nums text-cream/50">
@@ -728,7 +731,7 @@ function ReviewCheckpoint({
           })}
         </div>
 
-        <div className="mt-auto flex items-end justify-between gap-4 border-t border-white/[0.06] pt-5">
+        <div className="mt-auto flex items-end justify-between gap-4 interview-soft-rule pt-5">
           <p className="max-w-xl text-sm leading-relaxed text-cream/50">
             Select the mechanism reasoning you would defend in a technical interview.
           </p>
@@ -797,7 +800,7 @@ function WrittenCheckpoint({
   const ready = answer.trim().length >= WRITTEN_ANSWER_MIN_LENGTH;
   const prompts = useMemo(() => writtenAnswerPrompts(question.expects), [question.expects]);
   return (
-    <section className="grid h-full min-h-[38rem] overflow-hidden rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] xl:grid-cols-[minmax(0,1fr)_minmax(24rem,1fr)]">
+    <section className="grid h-full min-h-[38rem] overflow-hidden rounded-2xl bg-[#111215] xl:grid-cols-[minmax(0,1fr)_minmax(24rem,1fr)]">
       <ReviewReference
         question={question}
         evidenceLabel={evidenceLabel}
@@ -812,7 +815,7 @@ function WrittenCheckpoint({
 
       <div className="thin-scroll flex min-h-[34rem] flex-col overflow-y-auto border-t border-white/[0.06] px-6 py-7 sm:px-8 lg:px-9 xl:border-l xl:border-t-0">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+          <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
             {stageLabel}
           </p>
           <span className="font-mono text-sm tabular-nums text-cream/50">
@@ -824,8 +827,8 @@ function WrittenCheckpoint({
         </h1>
 
         {followUp ? (
-          <div className="mt-5 rounded-xl border border-[color:var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+          <div className="mt-5 rounded-xl bg-[var(--workspace-accent-soft)] px-4 py-3">
+            <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
               Follow-up
             </p>
             <p className="mt-1.5 text-sm leading-6 text-cream/85">{followUp}</p>
@@ -853,7 +856,7 @@ function WrittenCheckpoint({
         {error ? <p className="mt-3 text-sm text-[#ffb4b4]">{error}</p> : null}
         <div aria-hidden="true" className="h-5 shrink-0" />
 
-        <div className="mt-auto flex items-end justify-between gap-4 border-t border-white/[0.06] pt-5">
+        <div className="mt-auto flex items-end justify-between gap-4 interview-soft-rule pt-5">
           <p className="max-w-xl text-sm leading-relaxed text-cream/50">
             Answer in your own words, as you would in a technical interview.
           </p>
@@ -928,9 +931,9 @@ function ArchitectureCheckpoint({
   };
 
   return (
-    <section className="grid min-h-[38rem] overflow-hidden rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] xl:h-full xl:min-h-0 xl:grid-cols-[minmax(22rem,0.9fr)_minmax(0,1.1fr)]">
+    <section className="grid min-h-[38rem] overflow-hidden rounded-2xl bg-[#111215] xl:h-full xl:min-h-0 xl:grid-cols-[minmax(22rem,0.9fr)_minmax(0,1.1fr)]">
       <article className="thin-scroll min-h-0 overflow-y-auto overscroll-contain border-b border-white/[0.06] bg-[#0f1113] p-6 sm:p-7 xl:border-b-0 xl:border-r">
-        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+        <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">
           Question {index + 1} of {count}
         </p>
         <h2 className="mt-3 font-display text-2xl font-semibold tracking-[-0.025em] text-cream">
@@ -941,21 +944,25 @@ function ArchitectureCheckpoint({
           scenario actually proves.
         </p>
 
-        <section className="mt-6 overflow-hidden rounded-xl border border-white/[0.08] bg-black/20">
-          <div className="border-b border-white/[0.07] px-4 py-3">
+        <section className="mt-6 overflow-hidden rounded-xl bg-white/[0.035]">
+          <div className="interview-soft-rule-bottom px-4 py-3">
             <p className="text-sm font-semibold text-cream/78">{evidence.title}</p>
             <p className="mt-1 text-sm text-cream/38">Read-only scenario artifact</p>
           </div>
           {evidenceBlocks.some((block) => block.kind === "code") ? (
             <StoryPracticeArtifactBlocks blocks={evidenceBlocks} label={evidence.title} comfortable />
           ) : (
-            <pre className="whitespace-pre-wrap break-words px-4 py-4 font-mono text-sm leading-7 text-cream/66">
-              {evidence.content}
-            </pre>
+            isProseEvidence(evidence.content) ? (
+              <EvidenceProse text={evidence.content} className="px-4 py-4" />
+            ) : (
+              <pre className="whitespace-pre-wrap break-words px-4 py-4 font-mono text-sm leading-7 text-cream/66">
+                {evidence.content}
+              </pre>
+            )
           )}
         </section>
 
-        <section className="mt-5 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-4">
+        <section className="interview-soft-rule mt-6 pt-5">
           <p className="text-sm font-semibold text-cream/72">What a strong answer establishes</p>
           <ul className="mt-3 space-y-2">
             {architectureAssessmentExpectations(question.stage).map((expectation) => (
@@ -973,7 +980,7 @@ function ArchitectureCheckpoint({
 
       <div className="thin-scroll flex min-h-[34rem] flex-col overflow-y-auto overscroll-contain px-6 py-7 sm:px-8 lg:px-9 xl:min-h-0">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+          <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">
             {isMcq ? "Decision check" : "Complete design response"}
           </p>
           <span className="font-mono text-sm tabular-nums text-cream/50">
@@ -1014,7 +1021,7 @@ function ArchitectureCheckpoint({
 
         {requiresDesignResponse ? (
           <>
-            <section className="mt-7 border-t border-white/[0.07] pt-6">
+            <section className="mt-7 interview-soft-rule pt-6">
               <p className="text-sm font-semibold text-cream/78">
                 {hasDecision ? "2. Design prompt" : "1. Design prompt"}
               </p>
@@ -1023,8 +1030,8 @@ function ArchitectureCheckpoint({
               </h1>
             </section>
 
-            <section className="mt-6 shrink-0 overflow-hidden rounded-xl border border-white/[0.08] bg-black/15">
-              <div className="border-b border-white/[0.07] px-4 py-3">
+            <section className="mt-6 shrink-0">
+              <div className="pb-3">
                 <p className="text-sm font-semibold text-cream/78">
                   {hasDecision ? "3. Architecture canvas" : "2. Architecture canvas"}
                 </p>
@@ -1032,8 +1039,7 @@ function ArchitectureCheckpoint({
                   Map ownership, storage, sync and async edges, and the failure-isolation boundary.
                 </p>
               </div>
-              {/* Same inset as the Practice question page; the embedded canvas has no side padding. */}
-              <div className="px-4 pb-4">
+              <div>
                 <SystemDesignCanvas storageKey={sessionId} sessionId={sessionId} embedded />
               </div>
             </section>
@@ -1041,9 +1047,9 @@ function ArchitectureCheckpoint({
             <p className="mt-6 text-sm font-semibold text-cream/78">
               {hasDecision ? "4. Written defence" : "3. Written defence"}
             </p>
-            <div className="mt-3 shrink-0 overflow-hidden rounded-xl border border-white/[0.09] bg-black/20 focus-within:border-[var(--workspace-accent-border)]">
-              <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] px-4 py-3">
-                <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cream/32">
+            <div className="mt-3 shrink-0 overflow-hidden rounded-xl bg-white/[0.035] focus-within:ring-1 focus-within:ring-[var(--workspace-accent-border)]">
+              <div className="flex flex-wrap items-center gap-1.5 interview-soft-rule-bottom px-4 py-3">
+                <span className="mr-1 text-[12px] text-cream/42">
                   Add a prompt
                 </span>
                 {ARCHITECTURE_DEFENCE_PROMPTS.map((prompt) => {
@@ -1058,7 +1064,7 @@ function ArchitectureCheckpoint({
                       aria-label={
                         alreadyAdded ? `${prompt.label} prompt added` : `Add ${prompt.label} prompt`
                       }
-                      className="rounded-md border border-white/[0.07] bg-white/[0.035] px-2.5 py-1.5 text-[11px] font-medium text-cream/52 transition hover:border-white/[0.13] hover:bg-white/[0.065] hover:text-cream disabled:cursor-not-allowed disabled:text-cream/28"
+                      className="rounded-md bg-white/[0.045] px-2.5 py-1.5 text-[12px] font-medium text-cream/52 transition hover:bg-white/[0.065] hover:text-cream disabled:cursor-not-allowed disabled:text-cream/28"
                     >
                       {alreadyAdded ? <Check size={11} className="mr-1 inline" /> : "+ "}
                       {prompt.label}
@@ -1073,18 +1079,18 @@ function ArchitectureCheckpoint({
                 maxLength={5_200}
                 rows={10}
                 placeholder="Walk through the canvas from ingress to outcome. Explain boundaries, failure behavior, production consequences, and the trade-offs you chose…"
-                className="min-h-[15rem] w-full resize-y bg-transparent px-5 py-4 text-sm leading-7 text-cream outline-none placeholder:text-cream/28"
+                className="structured-answer-input block min-h-[15rem] w-full resize-none bg-transparent px-5 py-4 text-sm leading-7 text-cream outline-none placeholder:text-cream/28"
               />
-              <div className="flex items-center justify-between border-t border-white/[0.06] px-4 py-2 text-sm text-cream/35">
+              <div className="flex items-center justify-between interview-soft-rule px-4 py-2.5 text-[12px] text-cream/42">
                 <span>Your response is saved when you continue.</span>
-                <span className="font-mono tabular-nums">{answer.length}/5200</span>
+                <span className="tabular-nums">{answer.length}/5200</span>
               </div>
             </div>
           </>
         ) : null}
 
         {error ? <p className="mt-4 text-sm leading-6 text-[#ffb4b4]">{error}</p> : null}
-        <div className="mt-auto flex items-center justify-between gap-4 border-t border-white/[0.06] pt-5">
+        <div className="mt-auto flex items-center justify-between gap-4 interview-soft-rule pt-5">
           <p className="max-w-xl text-sm leading-6 text-cream/48">
             {isMcq
               ? "Choose the production decision you would defend."
@@ -1107,6 +1113,10 @@ function ArchitectureCheckpoint({
   );
 }
 
+/**
+ * Read-only code in the room. The shared viewer sizes itself to its content,
+ * wrapped lines included, so nothing is clipped and no space is left empty.
+ */
 function MonacoCodeCard({
   code,
   language = "javascript",
@@ -1116,31 +1126,24 @@ function MonacoCodeCard({
   language?: string;
   label?: string;
 }) {
-  const lineCount = Math.max(1, code.trim().split("\n").length);
-  const height = Math.min(360, Math.max(120, lineCount * 23 + 28));
-
-  const editorLang: DsaEditorLanguage = language.toLowerCase().includes("py")
-    ? "python"
-    : language.toLowerCase().includes("cpp") || language.toLowerCase().includes("c++")
-      ? "cpp"
-      : language.toLowerCase().includes("java")
-        ? "java"
-        : "javascript";
-
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b0d10] shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
-      <div style={{ height }}>
-        <DsaCodeEditor
-          language={editorLang}
-          value={code.trim()}
-          readOnly
-          autoFocus={false}
-          wordWrap="on"
-          ariaLabel={`${label} code excerpt in Monaco`}
-        />
-      </div>
+    <div className="w-full overflow-hidden rounded-xl">
+      <PracticeCodeViewer
+        code={code.trim()}
+        language={language}
+        maxLines={28}
+        ariaLabel={`${label} code excerpt, read only`}
+        embedded
+      />
     </div>
   );
+}
+
+/** Evidence snippets are usually JavaScript; SQL pseudocode is labelled as SQL. */
+function evidenceCodeLanguage(code: string): { language: string; label: string } {
+  return code.split("\n").some((line) => SQL_LINE.test(line))
+    ? { language: "sql", label: "SQL" }
+    : { language: "javascript", label: "JavaScript" };
 }
 
 function splitAssessmentEvidence(value: string | undefined): {
@@ -1185,7 +1188,7 @@ function renderInlineMarkdown(text: string) {
       return (
         <code
           key={index}
-          className="rounded-md border border-white/[0.09] bg-[#14161a] px-1.5 py-0.5 font-mono text-[13px] font-medium text-[var(--workspace-accent)]"
+          className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[13px] font-medium text-[var(--workspace-accent)]"
         >
           {code}
         </code>
@@ -1193,6 +1196,23 @@ function renderInlineMarkdown(text: string) {
     }
     return part;
   });
+}
+
+const SQL_LINE = /^\s*(select|insert|update|delete|with|explain|create|alter|drop|begin|commit|rollback)\b/i;
+const CODE_LINE =
+  /^\s*(--|\/\/|#|\$ |\.\.\.|\[[A-Z]+\]|\d{1,2}:\d{2}|\d{4}-\d{2}-\d{2})|[;{}]\s*(--.*)?$|=>|\w\(.*\)/;
+
+/**
+ * Evidence often carries a query log, code, or log lines without a markdown
+ * fence. A paragraph whose lines are mostly code-like is shown as code: SQL
+ * when any line is a statement, otherwise plain monospace.
+ */
+function unfencedCodeLanguage(paragraph: string): "sql" | "plaintext" | null {
+  const lines = paragraph.split("\n").filter((line) => line.trim());
+  if (lines.length < 2) return null;
+  const codeLike = lines.filter((line) => SQL_LINE.test(line) || CODE_LINE.test(line)).length;
+  if (codeLike / lines.length < 0.6) return null;
+  return lines.some((line) => SQL_LINE.test(line)) ? "sql" : "plaintext";
 }
 
 function RichMarkdown({ text, className = "" }: { text: string; className?: string }) {
@@ -1238,11 +1258,24 @@ function RichMarkdown({ text, className = "" }: { text: string; className?: stri
         const paragraphs = block.text.split(/\n\n+/).filter(Boolean);
         return (
           <div key={`prose-${idx}`} className="space-y-3">
-            {paragraphs.map((para, pIdx) => (
-              <p key={`p-${pIdx}`} className="whitespace-pre-wrap leading-7 text-cream/75">
-                {renderInlineMarkdown(para)}
-              </p>
-            ))}
+            {paragraphs.map((para, pIdx) => {
+              const codeLanguage = unfencedCodeLanguage(para);
+              return codeLanguage ? (
+                <div key={`p-${pIdx}`} className="overflow-hidden rounded-xl">
+                  <PracticeCodeViewer
+                    code={para.replace(/^\n+|\n+$/g, "")}
+                    language={codeLanguage}
+                    maxLines={16}
+                    ariaLabel={`${codeLanguage === "sql" ? "SQL" : "Log"} evidence, read only`}
+                    embedded
+                  />
+                </div>
+              ) : (
+                <p key={`p-${pIdx}`} className="whitespace-pre-wrap leading-7 text-cream/75">
+                  {renderInlineMarkdown(para)}
+                </p>
+              );
+            })}
           </div>
         );
       })}
@@ -1268,11 +1301,11 @@ function ReviewReference({
   return (
     <article className="thin-scroll min-h-0 overflow-y-auto bg-[#0f1113] p-6 sm:p-7">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
-          {evidenceLabel ?? "Governing Runtime Mechanism"}
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
+          {evidenceLabel ?? "Governing runtime mechanism"}
         </p>
         {reference?.difficulty ? (
-          <span className="rounded-full border border-white/[0.07] bg-white/[0.035] px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.1em] text-cream/45">
+          <span className="text-[12.5px] font-medium capitalize text-cream/48">
             {reference.difficulty}
           </span>
         ) : null}
@@ -1300,9 +1333,15 @@ function ReviewReference({
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-cream/85">Code Evidence</h3>
-            <span className="font-mono text-xs text-cream/45">JavaScript</span>
+            <span className="text-[12px] text-cream/45">
+              {evidenceCodeLanguage(codeSnippet).label}
+            </span>
           </div>
-          <MonacoCodeCard code={codeSnippet} language="javascript" label="Code Evidence" />
+          <MonacoCodeCard
+            code={codeSnippet}
+            language={evidenceCodeLanguage(codeSnippet).language}
+            label="Code Evidence"
+          />
         </section>
       ) : null}
 
@@ -1310,17 +1349,17 @@ function ReviewReference({
       {example ? (
         <section className="mt-6">
           <h3 className="mb-2 text-sm font-semibold text-cream/85">Concrete Invariant Example</h3>
-          <div className="w-full overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b0d10] p-3.5 font-mono text-sm leading-6 space-y-2 shadow-sm">
-            <div className="flex items-start gap-3 rounded-lg border border-white/[0.04] bg-black/30 px-3 py-2">
-              <span className="select-none pt-0.5 text-xs font-semibold uppercase tracking-wider text-[var(--workspace-accent)]">
+          <div className="w-full overflow-hidden rounded-xl bg-white/[0.035] p-3.5 font-mono text-sm leading-6 space-y-2">
+            <div className="flex items-start gap-3 px-1 py-1">
+              <span className="select-none pt-0.5 text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                 Action
               </span>
               <code className="flex-1 break-words font-mono text-sm text-cream/90">
                 {example.input}
               </code>
             </div>
-            <div className="flex items-start gap-3 rounded-lg border border-white/[0.04] bg-black/30 px-3 py-2">
-              <span className="select-none pt-0.5 text-xs font-semibold uppercase tracking-wider text-cream/45">
+            <div className="flex items-start gap-3 px-1 py-1">
+              <span className="select-none pt-0.5 text-[12.5px] font-semibold text-cream/55">
                 State
               </span>
               <code className="flex-1 break-words font-mono text-sm text-cream/90">
@@ -1328,7 +1367,7 @@ function ReviewReference({
               </code>
             </div>
             {example.explanation ? (
-              <div className="border-t border-white/[0.05] bg-black/15 px-3.5 py-2.5 font-sans text-sm leading-relaxed text-cream/65">
+              <div className="interview-soft-rule px-1 pt-2.5 font-sans text-sm leading-relaxed text-cream/65">
                 {renderInlineMarkdown(example.explanation)}
               </div>
             ) : null}
@@ -1374,10 +1413,10 @@ function ReviewOption({
     <button
       type="button"
       onClick={() => onSelect(option)}
-      className={`group relative flex w-full items-start gap-3.5 rounded-xl border p-4 text-left transition ${
+      className={`group relative flex w-full items-start gap-3.5 rounded-xl p-4 text-left transition ${
         active
-          ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent-soft)]"
-          : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
+          ? "bg-[var(--workspace-accent-soft)]"
+          : "bg-white/[0.03] hover:bg-white/[0.06]"
       }`}
     >
       <span
@@ -1461,8 +1500,8 @@ function CodeCheckpoint({
 }) {
   return (
     <div className="grid h-full min-h-[38rem] gap-3 xl:grid-cols-[minmax(20rem,0.92fr)_minmax(0,1.08fr)]">
-      <article className="thin-scroll flex min-h-0 flex-col overflow-y-auto rounded-2xl border border-white/[0.075] bg-[#111215] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+      <article className="thin-scroll flex min-h-0 flex-col overflow-y-auto rounded-2xl bg-[#111215] p-6">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Practical Transfer Implementation
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-cream">
@@ -1499,19 +1538,19 @@ function CodeCheckpoint({
               {question.dsaTransferQuestion.examples.map((example, index) => (
                 <div
                   key={`${example.input}-${index}`}
-                  className="w-full overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b0d10] shadow-sm"
+                  className="w-full overflow-hidden rounded-xl bg-white/[0.035]"
                 >
                   <div className="space-y-2 p-3.5 font-mono text-sm leading-6">
-                    <div className="flex items-start gap-3 rounded-lg border border-white/[0.04] bg-black/30 px-3 py-2">
-                      <span className="select-none pt-0.5 text-xs font-semibold uppercase tracking-wider text-[var(--workspace-accent)]">
+                    <div className="flex items-start gap-3 px-1 py-1">
+                      <span className="select-none pt-0.5 text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                         Input
                       </span>
                       <code className="flex-1 break-words font-mono text-sm text-cream/90">
                         {example.input}
                       </code>
                     </div>
-                    <div className="flex items-start gap-3 rounded-lg border border-white/[0.04] bg-black/30 px-3 py-2">
-                      <span className="select-none pt-0.5 text-xs font-semibold uppercase tracking-wider text-cream/45">
+                    <div className="flex items-start gap-3 px-1 py-1">
+                      <span className="select-none pt-0.5 text-[12.5px] font-semibold text-cream/55">
                         Output
                       </span>
                       <code className="flex-1 break-words font-mono text-sm text-cream/90">
@@ -1520,7 +1559,7 @@ function CodeCheckpoint({
                     </div>
                   </div>
                   {example.explanation ? (
-                    <div className="border-t border-white/[0.05] bg-black/15 px-3.5 py-2.5 font-sans text-sm leading-relaxed text-cream/65">
+                    <div className="interview-soft-rule px-1 pt-2.5 font-sans text-sm leading-relaxed text-cream/65">
                       {renderInlineMarkdown(example.explanation)}
                     </div>
                   ) : null}
@@ -1557,13 +1596,13 @@ function CodeCheckpoint({
             maxLength={2_000}
             placeholder="Document runtime trade-offs or assumptions..."
             rows={3}
-            className="mt-2 w-full resize-none rounded-xl border border-white/[0.06] bg-black/25 p-3.5 text-sm leading-6 text-cream/85 outline-none placeholder:text-cream/30 focus:border-[var(--workspace-accent)]"
+            className="practice-soft-field mt-2 w-full resize-none rounded-xl bg-white/[0.035] p-3.5 text-sm leading-6 text-cream/85 outline-none placeholder:text-cream/30 focus:ring-1 focus:ring-[var(--workspace-accent-border)]"
           />
         </div>
       </article>
 
-      <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-        <div className="flex min-h-14 shrink-0 items-center justify-between border-b border-white/[0.06] bg-black/20 px-4 py-2">
+      <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-[#111215]">
+        <div className="flex min-h-14 shrink-0 items-center justify-between interview-soft-rule-bottom px-4 py-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-cream">
             <Code2 size={15} className="text-[var(--workspace-accent)]" />
             <span>Solution</span>
@@ -1578,7 +1617,7 @@ function CodeCheckpoint({
               type="button"
               onClick={onRun}
               disabled={running || !code.trim()}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--workspace-accent)] px-4 text-sm font-semibold text-[#0a0a0b] shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition hover:brightness-105 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--workspace-accent)] px-4 text-sm font-semibold text-[#0a0a0b] transition hover:brightness-105 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {running ? (
                 <Loader2 size={14} className="animate-spin text-[#0a0a0b]" aria-hidden="true" />
@@ -1602,7 +1641,7 @@ function CodeCheckpoint({
 
         <ResultPanel result={result} running={running} stale={codeChangedAfterRun} />
 
-        <div className="border-t border-white/[0.06] p-4">
+        <div className="interview-soft-rule p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             {!skipConfirmationVisible ? (
               <button
@@ -1615,7 +1654,7 @@ function CodeCheckpoint({
               </button>
             ) : (
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-[11px] text-cream/46">This records 0 points.</span>
+                <span className="mr-1 text-[12px] text-cream/46">This records 0 points.</span>
                 <button
                   type="button"
                   onClick={onHideSkipConfirmation}
@@ -1627,14 +1666,14 @@ function CodeCheckpoint({
                   type="button"
                   onClick={onSkip}
                   disabled={sending}
-                  className="rounded-lg border border-white/[0.08] bg-white/[0.06] px-2.5 py-2 text-xs font-semibold text-cream hover:bg-white/[0.1]"
+                  className="rounded-lg bg-white/[0.06] px-2.5 py-2 text-xs font-semibold text-cream hover:bg-white/[0.1]"
                 >
                   Skip
                 </button>
               </div>
             )}
             <div className="flex items-center gap-3">
-              <p className="hidden text-[11px] text-cream/35 sm:block">
+              <p className="hidden text-[12px] text-cream/42 sm:block">
                 {canSubmit
                   ? "Latest code run will be used as evidence"
                   : "Run the code before submitting"}
@@ -1667,11 +1706,11 @@ function ResultPanel({
   stale: boolean;
 }) {
   return (
-    <div className="max-h-56 overflow-y-auto border-t border-white/[0.06] bg-black/10 px-4 py-3">
+    <div className="max-h-56 overflow-y-auto interview-soft-rule px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold text-cream/68">Test Evidence</p>
         <p
-          className={`text-[11px] font-semibold ${
+          className={`text-[12px] font-semibold ${
             result?.accepted && !stale ? "text-[var(--workspace-accent)]" : "text-cream/38"
           }`}
         >
@@ -1717,10 +1756,10 @@ function CompletionPanel({ teacherName, returnHref }: { teacherName: string; ret
   return (
     <div className="mx-auto grid min-h-[65vh] max-w-2xl place-items-center text-center">
       <div>
-        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-[color:var(--workspace-accent-border)] bg-[color:var(--workspace-accent-muted)] text-[var(--workspace-accent)]">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-[color:var(--workspace-accent-border)] text-[var(--workspace-accent)]">
           <CheckCircle2 size={30} />
         </div>
-        <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+        <p className="mt-6 text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Checkpoint Complete
         </p>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.035em] text-cream">

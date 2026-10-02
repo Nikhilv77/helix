@@ -181,14 +181,10 @@ export function ChapterSession({
   const percent = Math.round(detail?.progressPercent ?? 0);
 
   return (
-    <div className="mx-auto w-full max-w-[94rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
+    <div className="practice-chapter-page practice-page mx-auto w-full max-w-[94rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <Breadcrumb title={brief.title} />
 
       <section className="relative isolate">
-        <div
-          aria-hidden="true"
-          className="practice-accent-glow pointer-events-none absolute left-[18%] top-[9rem] -z-10 h-72 w-72 -translate-x-1/2 opacity-55"
-        />
         <div className="grid gap-4 lg:grid-cols-[minmax(18rem,21rem)_minmax(0,1fr)] lg:items-stretch">
           <MayaColumn
             teacherName={teacher.name}
@@ -307,16 +303,14 @@ function MayaColumn({
           </span>
           <div>
             <p className="text-[14px] font-semibold leading-tight text-cream">{teacherName}</p>
-            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-cream/45">
-              Taking this session
-            </p>
+            <p className="text-[12px] text-cream/45">Taking this session</p>
           </div>
         </div>
         <button
           type="button"
           onClick={onToggleMute}
           aria-label={muted ? `Unmute ${teacherName}` : `Mute ${teacherName}`}
-          className="grid h-8 w-8 place-items-center rounded-lg text-cream/55 transition hover:bg-cream/[0.1] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40"
+          className="grid h-8 w-8 place-items-center rounded-lg text-cream/55 practice-soft-hover transition-colors hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40"
         >
           {muted ? (
             <VolumeX size={15} aria-hidden="true" />
@@ -340,10 +334,8 @@ function MayaColumn({
           </button>
         ) : (
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] transition ${
-              speaking
-                ? "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
-                : "bg-cream/[0.07] text-cream/45"
+            className={`inline-flex items-center gap-1.5 text-[12.5px] font-semibold ${
+              speaking ? "text-[var(--workspace-accent)]" : "text-cream/45"
             }`}
           >
             <span
@@ -391,7 +383,7 @@ function BriefPanel({
               key={index}
               className={`h-1.5 rounded-full transition-all ${
                 index === step
-                  ? "w-6 bg-[var(--workspace-accent)] shadow-[0_0_12px_var(--workspace-accent-soft)]"
+                  ? "w-6 bg-[var(--workspace-accent)]"
                   : index < step
                     ? "w-1.5 bg-cream/45"
                     : "w-1.5 bg-cream/20"
@@ -400,13 +392,9 @@ function BriefPanel({
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden items-center gap-1.5 text-[11.5px] font-medium text-cream/30 sm:flex">
-            <kbd className="rounded border border-cream/15 px-1.5 py-0.5 font-sans text-[10px]">
-              ←
-            </kbd>
-            <kbd className="rounded border border-cream/15 px-1.5 py-0.5 font-sans text-[10px]">
-              →
-            </kbd>
+          <span className="hidden items-center gap-1.5 text-[12px] font-medium text-cream/38 sm:flex">
+            <kbd className="rounded bg-cream/[0.07] px-1.5 py-0.5 font-sans text-[12px]">←</kbd>
+            <kbd className="rounded bg-cream/[0.07] px-1.5 py-0.5 font-sans text-[12px]">→</kbd>
             to move
           </span>
           <button
@@ -422,9 +410,7 @@ function BriefPanel({
       {/* Centred, because the opening and closing beats carry no bullet list and
           top-aligning them left a large hole above the footer. */}
       <div key={beat.id} className="fade-slide mt-6 flex min-h-0 flex-1 flex-col justify-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/50">
-          {beat.eyebrow}
-        </p>
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">{beat.eyebrow}</p>
         <h1 className="mt-2 font-display text-[1.75rem] font-semibold leading-9 tracking-tight text-cream sm:text-[2rem] sm:leading-10">
           {beat.title}
         </h1>
@@ -450,7 +436,7 @@ function BriefPanel({
           type="button"
           onClick={onBack}
           disabled={step === 0}
-          className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold text-cream/60 transition hover:bg-cream/[0.08] hover:text-cream disabled:pointer-events-none disabled:opacity-35"
+          className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold text-cream/60 practice-soft-hover transition-colors hover:text-cream disabled:pointer-events-none disabled:opacity-35"
         >
           <ArrowLeft size={15} aria-hidden="true" />
           Back
@@ -458,7 +444,7 @@ function BriefPanel({
         <button
           type="button"
           onClick={onReplay}
-          className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold text-cream/60 transition hover:bg-cream/[0.08] hover:text-cream"
+          className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold text-cream/60 practice-soft-hover transition-colors hover:text-cream"
         >
           {voiceState === "loading" ? (
             <Loader2 size={15} aria-hidden="true" className="animate-spin" />
@@ -470,7 +456,7 @@ function BriefPanel({
         <button
           type="button"
           onClick={onNext}
-          className="ml-auto inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-5 text-[14px] font-semibold text-[#171a16] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="ml-auto inline-flex h-11 items-center gap-2 rounded-xl bg-cream px-5 text-[14px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           {isLast ? "Start solving" : "Continue"}
           <ArrowRight size={15} aria-hidden="true" />
@@ -502,9 +488,7 @@ function SolvePanel({
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/50">
-            Your turn
-          </p>
+          <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">Your turn</p>
           <h1 className="mt-2 font-display text-[1.75rem] font-semibold leading-9 tracking-tight text-cream">
             {brief.title}
           </h1>
@@ -512,7 +496,7 @@ function SolvePanel({
         <button
           type="button"
           onClick={onReplayBriefing}
-          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-[12.5px] font-semibold text-cream/58 transition hover:bg-cream/[0.06] hover:text-cream"
+          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-[12.5px] font-semibold text-cream/58 practice-soft-hover transition-colors hover:text-cream"
         >
           <Sparkles size={14} aria-hidden="true" />
           Replay briefing
@@ -558,7 +542,7 @@ function SolvePanel({
         <div className="mt-5 pt-2">
           <Link
             href={`/dsa-questions/${nextSlug}`}
-            className="group flex h-11 w-full items-center justify-between gap-3 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-4 text-[14px] font-semibold text-[#171a16] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="group flex h-11 w-full items-center justify-between gap-3 rounded-xl bg-cream px-4 text-[14px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <span className="min-w-0 truncate">
               {detail?.completedQuestions
@@ -605,7 +589,7 @@ function QuestionRow({
       <Link
         href={`/dsa-questions/${slug}`}
         className={`practice-question-row group flex items-center gap-3 rounded-xl p-3.5 ${
-          isNext ? "border-[var(--workspace-accent-border)] bg-cream/[0.04]" : ""
+          isNext ? "bg-[var(--workspace-accent-soft)]" : ""
         }`}
       >
         <span
@@ -636,7 +620,7 @@ function QuestionRow({
               {title}
             </span>
             {skipped ? (
-              <span className="shrink-0 rounded-full border border-[#e3a15b]/15 bg-[#e3a15b]/10 px-2 py-0.5 text-[10px] font-semibold text-[#e7bd83]">
+              <span className="shrink-0 text-[12px] font-semibold text-[#e7bd83]">
                 Skipped · Learn &amp; retry
               </span>
             ) : null}
@@ -645,7 +629,7 @@ function QuestionRow({
             <span className="text-cream/50">{difficulty}</span>
             <span aria-hidden="true">·</span>
             <span className="inline-flex items-center gap-1">
-              <Clock size={10} aria-hidden="true" />
+              <Clock size={12} aria-hidden="true" />
               {minutes}m
             </span>
             {isNext ? (
@@ -669,8 +653,8 @@ function QuestionRow({
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="practice-glass-soft rounded-2xl p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-cream/45">{label}</p>
+    <div className="rounded-2xl bg-[#17181b] p-5">
+      <p className="text-[12.5px] font-medium text-cream/48">{label}</p>
       <p className="mt-2 font-display text-[1.6rem] font-semibold tracking-tight text-cream">
         {value}
       </p>

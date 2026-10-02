@@ -35,29 +35,19 @@ export function PracticeSkeleton() {
           className="order-1 md:order-2 md:mt-12 lg:mt-14"
           aria-label="Loading practice sessions"
         >
-          <div className="grid gap-y-4">
-            {Array.from({ length: 5 }, (_, index) => (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+            {Array.from({ length: 4 }, (_, index) => (
               <div
                 key={index}
-                className="grid min-h-[13rem] gap-6 rounded-[2rem] bg-[#17181b] p-7 md:grid-cols-[5rem_minmax(0,1fr)_auto] md:gap-7 lg:grid-cols-[6rem_minmax(0,1fr)_auto] lg:p-8"
+                className="flex min-h-[19rem] flex-col rounded-2xl bg-[#17181b] p-5 sm:p-6"
               >
-                <span className="h-20 w-20 rounded-[1.45rem] bg-white/[0.045] lg:h-24 lg:w-24" />
-                <div className="min-w-0 self-center">
-                  <SkeletonLine className="h-6 w-52 max-w-full" />
-                  <SkeletonLine className="mt-5 h-3 w-full max-w-[38rem]" />
-                  <SkeletonLine className="mt-2 h-3 w-3/4 max-w-[28rem]" />
-                  <div className="mt-5 flex gap-2">
-                    <SkeletonLine className="h-6 w-20" />
-                    <SkeletonLine className="h-6 w-28" />
-                  </div>
-                </div>
-                <div className="flex items-end justify-between gap-5 md:flex-col md:items-end md:self-stretch">
-                  <div className="flex gap-2">
-                    <SkeletonLine className="h-6 w-16" />
-                    <SkeletonLine className="h-6 w-20" />
-                  </div>
-                  <SkeletonLine className="h-4 w-28" />
-                </div>
+                <span className="h-24 w-24 rounded-full bg-white/[0.045]" />
+                <SkeletonLine className={`mt-5 h-4 ${index % 2 ? "w-3/4" : "w-2/3"}`} />
+                <SkeletonLine className="mt-3 h-3 w-full" />
+                <SkeletonLine className="mt-2 h-3 w-4/5" />
+                <SkeletonLine className="mt-4 h-3 w-28" />
+                <SkeletonLine className="mt-2 h-3 w-24" />
+                <SkeletonLine className="mt-auto h-3.5 w-32" />
               </div>
             ))}
           </div>
@@ -83,7 +73,7 @@ export function DsaPracticeSkeleton() {
                 <SkeletonLine className="h-8 w-44" />
                 <SkeletonLine className="mt-4 h-3 w-80 max-w-full" />
               </div>
-              <div className="w-full rounded-xl border border-white/[0.08] bg-[#141619] px-5 py-4 sm:max-w-[19rem]">
+              <div className="w-full rounded-xl bg-[#17181b] px-5 py-4 sm:max-w-[19rem]">
                 <SkeletonLine className="h-4 w-52 max-w-full" />
                 <SkeletonLine className="mt-3 h-1.5 w-full" />
               </div>

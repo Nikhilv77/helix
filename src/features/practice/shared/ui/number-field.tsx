@@ -42,7 +42,7 @@ export function NumberField({
   const fill = value === undefined ? 0 : ((value - min) / (max - min || 1)) * 100;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+    <div className="rounded-xl bg-white/[0.03] p-4">
       <span id={labelId} className="block text-sm font-semibold text-cream/85">
         {label}
       </span>

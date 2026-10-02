@@ -9,11 +9,8 @@ type LearningGuide = NonNullable<
 
 export function StoryPracticeLearningGuide({ guide }: { guide: LearningGuide }) {
   return (
-    <section
-      className="mt-5 border-t border-white/[0.07] pt-5"
-      aria-labelledby="learning-guide-heading"
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+    <section className="interview-soft-rule mt-5 pt-5" aria-labelledby="learning-guide-heading">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
         Learn the mechanism
       </p>
       <h3
@@ -25,7 +22,7 @@ export function StoryPracticeLearningGuide({ guide }: { guide: LearningGuide }) 
       <div className="mt-5">
         <LearningMarkdown markdown={guide.markdown} />
       </div>
-      <figure className="mt-7 border-t border-white/[0.07] pt-5">
+      <figure className="interview-soft-rule mt-7 pt-5">
         <figcaption className="text-[12.5px] font-semibold leading-5 text-cream/72">
           {guide.diagram.title}
         </figcaption>
@@ -39,10 +36,10 @@ export function StoryPracticeLearningGuide({ guide }: { guide: LearningGuide }) 
               className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center"
             >
               <div className="min-w-0 flex-1 border-l-2 border-[var(--workspace-accent)] py-1 pl-3.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-cream/72">
+                <p className="text-[12.5px] font-semibold text-cream/72">
                   {index + 1}. {step.label}
                 </p>
-                <p className="mt-1.5 text-[11.5px] leading-5 text-cream/46">{step.detail}</p>
+                <p className="mt-1.5 text-[12px] leading-5 text-cream/46">{step.detail}</p>
               </div>
               {index < guide.diagram.steps.length - 1 ? (
                 <>

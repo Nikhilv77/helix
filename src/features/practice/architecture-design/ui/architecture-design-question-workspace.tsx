@@ -94,10 +94,10 @@ function ArchitectureCanvasSection({ blockId, order }: { blockId: string; order:
   return (
     <section
       aria-labelledby="canvas-task-heading"
-      className="overflow-hidden rounded-xl border border-white/[0.08] bg-black/15"
+      className="overflow-hidden"
     >
-      <div className="px-5 pb-4 pt-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--workspace-accent)]">
+      <div className="pb-4">
+        <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">
           Canvas task
         </p>
         <h3 id="canvas-task-heading" className="mt-2 text-base font-semibold text-cream/82">
@@ -105,7 +105,7 @@ function ArchitectureCanvasSection({ blockId, order }: { blockId: string; order:
         </h3>
         <p className="mt-2 max-w-[52rem] text-sm leading-6 text-cream/55">{canvasTask(order)}</p>
       </div>
-      <div className="border-t border-white/[0.07] px-4 pb-4">
+      <div>
         <SystemDesignCanvas practiceBlockId={blockId} embedded />
       </div>
     </section>
@@ -157,12 +157,12 @@ function ArchitectureKnowledgeCheck({
   }
 
   return (
-    <section className="rounded-xl border border-white/[0.08] bg-black/15 px-5 py-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+    <section>
+      <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">
         Quick check
       </p>
       <h3 className="mt-2 text-base font-semibold leading-7 text-cream/82">{check.prompt}</h3>
-      <div className="mt-4 space-y-2 border-y border-white/[0.07] py-2">
+      <div className="interview-soft-rule interview-soft-rule-bottom mt-4 space-y-2 py-2">
         {check.choices.map((choice, index) => {
           const chosen = selected === index;
           const correct = result?.correctChoiceIndex === index;
@@ -178,16 +178,16 @@ function ArchitectureKnowledgeCheck({
               disabled={Boolean(result)}
               className={`grid w-full grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-3 rounded-xl px-3 py-4 text-left text-sm leading-6 transition ${
                 correct
-                  ? "bg-emerald-400/[0.08] text-cream/82 ring-1 ring-inset ring-emerald-300/15"
+                  ? "bg-[var(--workspace-accent)]/[0.14] text-cream/82"
                   : chosen
-                    ? "bg-[var(--workspace-accent-soft)] text-cream/78 ring-1 ring-inset ring-[var(--workspace-accent-border)]"
+                    ? "bg-[var(--workspace-accent-soft)] text-cream/78"
                     : "text-cream/52 hover:bg-white/[0.035]"
               }`}
             >
               <span
                 className={`grid h-8 w-8 place-items-center rounded-full border text-xs font-semibold transition ${
                   correct
-                    ? "border-emerald-300/50 bg-emerald-300/15 text-emerald-200"
+                    ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent)] text-[#111318]"
                     : chosen
                       ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent)] text-[#111318]"
                       : "border-white/[0.12] bg-white/[0.025] text-cream/48"
@@ -204,7 +204,7 @@ function ArchitectureKnowledgeCheck({
         <div className="mt-4 border-l-2 border-white/[0.12] pl-3">
           <p className="flex items-center gap-2 text-sm font-semibold text-cream/78">
             {result.correct ? (
-              <CheckCircle2 size={14} className="text-emerald-300" aria-hidden="true" />
+              <CheckCircle2 size={14} className="text-[var(--workspace-accent)]" aria-hidden="true" />
             ) : (
               <XCircle size={14} className="text-amber-300" aria-hidden="true" />
             )}

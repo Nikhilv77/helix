@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { Atom, Clock3, CodeXml, Network, Server, Wrench } from "lucide-react";
+import { Atom, Check, CodeXml, Network, Server, Wrench } from "lucide-react";
 import { LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
 import { DocumentTitle } from "@/components/document-title";
 import { PracticeWeeklyActivityChart } from "@/components/workspace/shared/practice-weekly-activity-chart";
@@ -74,10 +74,7 @@ export function PracticeSessionsView({
         aria-label="Practice overview"
       >
         {storyProgressFailed ? (
-          <p
-            role="alert"
-            className="mb-5 rounded-xl border border-orange-400/25 bg-orange-400/[0.06] px-4 py-3 text-sm text-cream/75"
-          >
+          <p role="alert" className="mb-5 rounded-xl bg-[#17181b] px-4 py-3 text-sm text-cream/75">
             Your saved practice progress is temporarily unavailable. Your answers are safe; refresh
             to try again.
           </p>
@@ -85,10 +82,7 @@ export function PracticeSessionsView({
         {/* With other tracks still listed, the empty-state message never shows, so a
             failed roadmap (DSA) needs its own notice above the cards. */}
         {generationFailed && displaySessions.length > 0 ? (
-          <p
-            role="alert"
-            className="mb-5 rounded-xl border border-orange-400/25 bg-orange-400/[0.06] px-4 py-3 text-sm text-cream/75"
-          >
+          <p role="alert" className="mb-5 rounded-xl bg-[#17181b] px-4 py-3 text-sm text-cream/75">
             We couldn’t prepare your practice path. Your saved progress is safe; refresh to try
             again.
           </p>
@@ -143,32 +137,41 @@ export function PracticeSessionsView({
         </div>
       </section>
 
-      <section
-        className="relative isolate order-1 md:order-2 md:mt-12 lg:mt-14"
-        aria-label="Practice sessions"
-      >
-        <div className="relative z-10 grid gap-y-4">
-          {displaySessions.length ? (
-            displaySessions.map((session, index) => (
-              <PracticeSessionCard
+      <section className="order-1 md:order-2 md:mt-12 lg:mt-14" aria-label="Practice sessions">
+        {displaySessions.length ? (
+          <div
+            className={`grid gap-4 sm:grid-cols-2 lg:gap-5 ${trackGridColumns(displaySessions.length)}`}
+          >
+            {displaySessions.map((session, index) => (
+              <TrackTile
                 key={session.key}
-                session={session}
-                delay={index * 70}
-                dsaRecommendation={session.key === "dsa" ? dsaRecommendation : null}
-                dsaBlockCompletedQuestions={session.key === "dsa" ? dsaBlockCompletedQuestions : 0}
+                delay={80 + index * 60}
+                roomy={displaySessions.length <= 4}
+                track={describeTrack(
+                  session,
+                  dsaRecommendation,
+                  dsaBlockCompletedQuestions,
+                  session.key === "core-technical"
+                    ? coreTechnicalTotals
+                    : session.key === "applied-engineering"
+                      ? appliedEngineeringTotals
+                      : session.key.endsWith("architecture-design")
+                        ? architectureDesignTotals
+                        : null
+                )}
               />
-            ))
-          ) : (
-            <p
-              className="col-span-full rounded-2xl bg-[#17181b] px-5 py-8 text-center text-sm leading-6 text-cream/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]"
-              role={generationFailed ? "alert" : "status"}
-            >
-              {generationFailed
-                ? "We couldn’t prepare your practice path. Your saved progress is safe; refresh to try again."
-                : "Your teacher is still preparing your practice path. Please check back in a moment."}
-            </p>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p
+            className="rounded-2xl bg-[#17181b] px-5 py-8 text-center text-sm leading-6 text-cream/60"
+            role={generationFailed ? "alert" : "status"}
+          >
+            {generationFailed
+              ? "We couldn’t prepare your practice path. Your saved progress is safe; refresh to try again."
+              : "Your teacher is still preparing your practice path. Please check back in a moment."}
+          </p>
+        )}
       </section>
     </main>
   );
@@ -217,18 +220,35 @@ function formatDuration(minutes: number): string {
   return remainder ? `${hours} hr ${remainder} min` : `${hours} hr`;
 }
 
-function PracticeSessionCard({
-  session,
-  delay,
-  dsaRecommendation = null,
-  dsaBlockCompletedQuestions = 0
-}: {
-  session: PracticeDisplaySession;
-  delay: number;
-  dsaRecommendation?: DsaRecommendation | null;
-  dsaBlockCompletedQuestions?: number;
-}) {
-  const SessionIcon =
+interface TrackView {
+  key: string;
+  icon: typeof CodeXml;
+  title: string;
+  purpose: string;
+  meta: string | null;
+  href: string | null;
+  statusLabel: string;
+  actionLabel: string;
+  /** Ring fill, 0–100; null when the track cannot be opened yet. */
+  percent: number | null;
+  complete: boolean;
+}
+
+function describeTrack(
+  session: PracticeDisplaySession,
+  dsaRecommendation: DsaRecommendation | null,
+  dsaBlockCompletedQuestions: number,
+  /** Every block's questions for tracks that are worked one block at a time. */
+  allBlocks: { totalQuestions: number; completedQuestions: number } | null
+): TrackView {
+  const recommendation = session.key === "dsa" ? dsaRecommendation : null;
+  // Progress is the whole track, never just the current block.
+  const useAllBlocks = Boolean(allBlocks && allBlocks.totalQuestions > 0);
+  const completedQuestions = useAllBlocks
+    ? allBlocks!.completedQuestions
+    : session.completedQuestions;
+  const totalQuestions = useAllBlocks ? allBlocks!.totalQuestions : session.totalQuestions;
+  const icon =
     session.key === "backend-core-technical"
       ? Server
       : session.key.endsWith("core-technical")
@@ -238,15 +258,15 @@ function PracticeSessionCard({
           : session.key.endsWith("architecture-design")
             ? Network
             : CodeXml;
-  const href = session.href;
-  const available = session.availability === "available" && Boolean(href);
+  const href = session.availability === "available" ? (session.href ?? null) : null;
+  const available = Boolean(href);
   const availabilityLabel = "availabilityLabel" in session ? session.availabilityLabel : null;
   const statusLabel = available
-    ? dsaRecommendation
-      ? `${session.completedQuestions} solved overall · ${dsaBlockCompletedQuestions}/${dsaRecommendation.questions.length} current block`
-      : session.completedQuestions > 0
-        ? `${session.completedQuestions}/${session.totalQuestions} complete`
-        : `${session.totalQuestions} questions`
+    ? recommendation
+      ? `${session.completedQuestions} solved overall · ${dsaBlockCompletedQuestions}/${recommendation.questions.length} current block`
+      : completedQuestions > 0
+        ? `${completedQuestions}/${totalQuestions} complete`
+        : `${totalQuestions} questions`
     : session.availability === "available"
       ? `${session.totalQuestions} questions · workspace coming next`
       : (availabilityLabel ?? "Question bank coming next");
@@ -257,80 +277,84 @@ function PracticeSessionCard({
     : availabilityLabel
       ? "Unavailable"
       : "Coming soon";
+  const meta = [
+    session.durationMinutes ? `${session.durationMinutes} min` : null,
+    session.difficulty
+      ? session.difficulty.slice(0, 1).toUpperCase() + session.difficulty.slice(1)
+      : null
+  ].filter(Boolean);
+  // DSA's ring is everything solved against the full question library.
+  const [done, total] = recommendation?.availableQuestions
+    ? [session.completedQuestions, recommendation.availableQuestions]
+    : [completedQuestions, totalQuestions];
+  const percent =
+    available && total > 0 ? Math.min(100, Math.round((done / total) * 100)) : available ? 0 : null;
 
-  const unavailable = !available || !href;
+  return {
+    key: session.key,
+    icon,
+    title: session.title,
+    purpose: session.purpose,
+    meta: meta.length ? meta.join(" · ") : null,
+    href,
+    statusLabel,
+    actionLabel,
+    percent,
+    complete: total > 0 && done >= total
+  };
+}
+
+/** One track as a small tile led by its progress ring. */
+/** At most three tracks per row; any extra tracks start the next row. */
+function trackGridColumns(count: number): string {
+  return count <= 2 ? "" : "lg:grid-cols-3";
+}
+
+function TrackTile({ track, delay, roomy }: { track: TrackView; delay: number; roomy: boolean }) {
+  const Icon = track.icon;
   const content = (
     <>
-      <span className="interview-session-icon flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.45rem] lg:h-24 lg:w-24">
-        <SessionIcon size={40} strokeWidth={1.45} aria-hidden="true" />
-      </span>
-
-      <div className="min-w-0">
-        <h2 className="max-w-[28rem] font-display text-[1.5rem] font-semibold leading-[1.2] tracking-normal text-cream sm:text-[1.65rem]">
-          {session.title}
-        </h2>
-        <p className="mt-4 max-w-[42rem] text-base leading-7 text-cream/72">{session.purpose}</p>
-
-        {statusLabel ? (
-          <span className="mt-5 inline-block rounded-full border border-[color-mix(in_srgb,var(--workspace-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_9%,transparent)] px-3 py-1.5 text-[11px] font-medium text-cream/68">
-            {statusLabel}
-          </span>
-        ) : null}
-
-        {session.covers.length ? (
-          <ul className="mt-5 flex flex-wrap gap-2" aria-label="Session topics">
-            {session.covers.slice(0, 4).map((topic) => (
-              <li
-                key={topic}
-                className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[11px] text-cream/48"
-              >
-                {topic}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-
-      <div className="flex shrink-0 flex-wrap items-end gap-5 md:flex-col md:items-end md:justify-between md:self-stretch">
-        {session.durationMinutes || session.difficulty ? (
-          <div className="flex flex-wrap items-center gap-2 md:justify-end">
-            {session.durationMinutes ? (
-              <span className="pill inline-flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/55">
-                <Clock3 size={11} aria-hidden="true" /> {session.durationMinutes} min
-              </span>
-            ) : null}
-            {session.difficulty ? (
-              <span className="pill px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/55">
-                {session.difficulty}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-
-        <span className="interview-session-link inline-flex items-center gap-2 text-base font-medium text-cream/88 transition-colors group-hover:text-cream">
-          {actionLabel}
-          {!unavailable ? (
-            <span className="inline-flex transition-transform duration-300 group-hover:translate-x-1">
-              {/* Becomes a spinner while the track page loads. */}
-              <LinkPendingIcon direction="forward" size={17} />
-            </span>
-          ) : null}
+      <div className="flex items-start justify-between gap-3">
+        <ProgressRing percent={track.percent} complete={track.complete} />
+        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-white/[0.1] text-cream/80">
+          <Icon size={28} strokeWidth={1.5} aria-hidden="true" />
         </span>
       </div>
+      <h2
+        className={`mt-5 line-clamp-2 font-semibold ${roomy ? "text-[1.15rem]" : "text-[1.05rem]"} leading-snug tracking-[-0.01em] text-cream`}
+      >
+        {track.title}
+      </h2>
+      <p className="mt-2 line-clamp-2 text-[13.5px] leading-5 text-cream/58">{track.purpose}</p>
+      {track.meta ? <p className="mt-3 text-[13px] text-cream/48">{track.meta}</p> : null}
+      <p className="mt-1 text-[12.5px] leading-5 text-cream/42">{track.statusLabel}</p>
+      <span
+        className={`mt-auto inline-flex items-center gap-1.5 pt-5 text-[14px] font-semibold ${
+          track.href ? "text-[var(--workspace-accent)]" : "text-cream/48"
+        }`}
+      >
+        {track.actionLabel}
+        {track.href ? (
+          <LinkPendingIcon
+            direction="forward"
+            size={15}
+            className="transition-transform duration-200 group-hover:translate-x-0.5"
+          />
+        ) : null}
+      </span>
     </>
   );
-  const className = [
-    "interview-session-card workspace-deferred-card workspace-deferred-card-compact group relative grid min-h-[13rem] gap-6 rounded-[2rem] p-7 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 md:grid-cols-[5rem_minmax(0,1fr)_auto] md:gap-7 lg:grid-cols-[6rem_minmax(0,1fr)_auto] lg:p-8",
-    unavailable ? "cursor-not-allowed opacity-45" : ""
-  ].join(" ");
-  const style = { "--interview-delay": `${delay}ms` } as CSSProperties;
+  const className = `practice-reveal group flex flex-col rounded-2xl bg-[#17181b] ${
+    roomy ? "min-h-[21rem] p-6 sm:p-7" : "min-h-[19rem] p-5 sm:p-6"
+  }`;
+  const style = { "--practice-delay": `${delay}ms` } as CSSProperties;
 
-  if (unavailable || !href) {
+  if (!track.href) {
     return (
       <article
         aria-disabled="true"
-        aria-label={`${session.title}. ${statusLabel}. ${actionLabel}`}
-        className={className}
+        aria-label={`${track.title}. ${track.statusLabel}. ${track.actionLabel}`}
+        className={`${className} cursor-not-allowed opacity-50`}
         style={style}
       >
         {content}
@@ -339,8 +363,74 @@ function PracticeSessionCard({
   }
 
   return (
-    <Link href={href} className={className} style={style}>
+    <Link
+      href={track.href}
+      className={`${className} transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] motion-reduce:transition-none`}
+      style={style}
+    >
       {content}
     </Link>
+  );
+}
+
+/**
+ * A thick track with a rounded accent arc. pathLength="100" lets the arc read
+ * straight off the percent.
+ */
+function ProgressRing({ percent, complete }: { percent: number | null; complete: boolean }) {
+  const value = complete ? 100 : (percent ?? 0);
+  const arc = `${value} 100`;
+  return (
+    <span
+      className="relative grid h-24 w-24 shrink-0 place-items-center"
+      role="progressbar"
+      aria-label="Track progress"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={value}
+    >
+      <svg
+        viewBox="0 0 96 96"
+        className="absolute inset-0 h-full w-full -rotate-90"
+        aria-hidden="true"
+      >
+        <circle
+          className="practice-ring-track"
+          cx="48"
+          cy="48"
+          r="39"
+          fill="none"
+          strokeWidth="10"
+        />
+        {value > 0 ? (
+          <circle
+            cx="48"
+            cy="48"
+            r="39"
+            fill="none"
+            stroke="var(--workspace-accent)"
+            strokeWidth="10"
+            strokeLinecap="round"
+            pathLength="100"
+            strokeDasharray={arc}
+          />
+        ) : null}
+      </svg>
+      {complete ? (
+        <Check
+          size={30}
+          strokeWidth={1.8}
+          aria-hidden="true"
+          className="text-[var(--workspace-accent)]"
+        />
+      ) : (
+        <span
+          className="text-[1.45rem] font-semibold leading-none tracking-[-0.02em] tabular-nums text-cream"
+          aria-hidden="true"
+        >
+          {percent === null ? "–" : `${value}%`}
+        </span>
+      )}
+    </span>
   );
 }

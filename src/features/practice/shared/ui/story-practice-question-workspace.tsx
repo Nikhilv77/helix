@@ -1,6 +1,7 @@
 "use client";
 
 import { BackLinkIcon, LinkPendingIcon } from "@/components/workspace/shared/back-link-icon";
+import { expandCompactCode, readableCode } from "@/features/practice/shared/domain/readable-code";
 import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 import Link from "next/link";
@@ -300,7 +301,7 @@ export function StoryPracticeQuestionWorkspace({
 
   return (
     <section className="mx-auto flex min-h-0 w-full max-w-[112rem] flex-col gap-2 xl:h-full">
-      <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-white/[0.08] bg-[#141619] px-3 py-2.5 sm:px-4">
+      <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl bg-[#141619] px-3 py-2.5 sm:px-4">
         <Link
           href={`${experience.routeBase}?block=${encodeURIComponent(block.id)}`}
           aria-label={`Back to ${experience.label} ${experience.subjectNoun}`}
@@ -315,7 +316,7 @@ export function StoryPracticeQuestionWorkspace({
             <h1 className="truncate text-[16px] font-semibold tracking-[-0.015em] text-cream sm:text-[17px]">
               {stageTitle}
             </h1>
-            <div className="flex flex-wrap items-center gap-1.5 text-[11.5px] font-medium text-cream/44">
+            <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-cream/44">
               <span className="rounded-md bg-white/[0.045] px-2 py-1 capitalize">
                 {block.selection.difficulty}
               </span>
@@ -334,7 +335,7 @@ export function StoryPracticeQuestionWorkspace({
             <button
               type="button"
               onClick={() => setReviewOpen(true)}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.045] px-3 text-[12.5px] font-semibold text-cream/68 transition hover:bg-white/[0.08] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-white/[0.045] px-3 text-[12.5px] font-semibold text-cream/68 transition hover:bg-white/[0.08] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
             >
               <Sparkles size={13} aria-hidden="true" className="text-[var(--workspace-accent)]" />
               Review answer
@@ -356,11 +357,11 @@ export function StoryPracticeQuestionWorkspace({
       </header>
 
       <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(22rem,0.82fr)_minmax(34rem,1.18fr)]">
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#141619] xl:h-full">
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl bg-[#141619] xl:h-full">
           <div
             role="tablist"
             aria-label={`${experience.label} question reference`}
-            className="story-practice-tabs thin-scroll flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.07] px-2 pt-2"
+            className="story-practice-tabs thin-scroll interview-soft-rule-bottom flex shrink-0 items-center gap-1 overflow-x-auto px-2 pt-2"
           >
             {panelTabs.map((item) => {
               const selected = item.id === panelTab;
@@ -375,7 +376,7 @@ export function StoryPracticeQuestionWorkspace({
                 >
                   {item.label}
                   {item.id === "hints" ? (
-                    <span className="ml-1.5 text-[11px] tabular-nums text-cream/34">
+                    <span className="ml-1.5 text-[12px] tabular-nums text-cream/42">
                       {question.revealedHints.length}/{question.question.hintCount}
                     </span>
                   ) : null}
@@ -390,8 +391,8 @@ export function StoryPracticeQuestionWorkspace({
           <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
             {panelTab === "description" ? (
               <div className="space-y-7">
-                <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111214] px-5 py-5 sm:px-6 sm:py-6">
-                  <p className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+                <section className="relative">
+                  <p className="relative text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                     Question {question.order} of {block.questions.length} ·{" "}
                     {humanizeStoryPracticeKey(question.question.format)}
                   </p>
@@ -404,7 +405,7 @@ export function StoryPracticeQuestionWorkspace({
                   {question.question.revisionNote ? (
                     <p
                       role="note"
-                      className="relative mt-4 rounded-lg border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] px-3 py-2 text-[12px] leading-5 text-cream/72"
+                      className="relative mt-4 rounded-lg bg-[var(--workspace-accent-soft)] px-3 py-2 text-[12px] leading-5 text-cream/72"
                     >
                       {question.question.revisionNote}
                     </p>
@@ -413,7 +414,7 @@ export function StoryPracticeQuestionWorkspace({
                     {question.question.topicKeys.slice(0, 3).map((topic) => (
                       <span
                         key={topic}
-                        className="rounded-md border border-white/[0.06] bg-black/20 px-2.5 py-1 text-[10.5px] font-medium text-cream/42"
+                        className="rounded-md bg-white/[0.045] px-2.5 py-1 text-[12px] font-medium text-cream/52"
                       >
                         {humanizeStoryPracticeKey(topic)}
                       </span>
@@ -421,8 +422,8 @@ export function StoryPracticeQuestionWorkspace({
                   </div>
                 </section>
                 <Artifact question={question} />
-                <section className="rounded-xl bg-black/20 px-4 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+                <section className="interview-soft-rule pt-6">
+                  <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                     {capitalize(experience.subjectNoun)} context
                   </p>
                   <p className="mt-2 text-[13px] font-semibold leading-5 text-cream/72">
@@ -462,7 +463,7 @@ export function StoryPracticeQuestionWorkspace({
                   ))}
                 </ol>
                 {!mutable && question.revealedHints.length === 0 ? (
-                  <div className="mt-5 rounded-xl border border-white/[0.07] bg-black/20 px-4 py-4">
+                  <div className="mt-5 rounded-xl bg-white/[0.035] px-4 py-4">
                     <p className="text-[13px] leading-6 text-cream/52">
                       No hints were opened before this question was completed. The full reasoning is
                       available in the answer debrief.
@@ -483,7 +484,7 @@ export function StoryPracticeQuestionWorkspace({
                     type="button"
                     onClick={() => void revealHint()}
                     disabled={pending !== null}
-                    className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[13px] font-semibold text-cream/72 transition hover:bg-white/[0.065] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] disabled:opacity-55"
+                    className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white/[0.045] text-[13px] font-semibold text-cream/72 transition hover:bg-white/[0.065] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] disabled:opacity-55"
                   >
                     {pending === "hint" ? (
                       <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
@@ -502,7 +503,7 @@ export function StoryPracticeQuestionWorkspace({
                 {attempt ? <Feedback question={question} experience={experience} /> : null}
                 {answer ? <AuthorizedAnswer question={question} /> : null}
                 {!attempt && !answer ? (
-                  <div className="rounded-xl border border-white/[0.07] bg-black/20 px-4 py-5">
+                  <div className="rounded-xl bg-white/[0.035] px-4 py-5">
                     <FileText size={17} className="text-cream/38" aria-hidden="true" />
                     <h2 className="mt-4 text-[14px] font-semibold text-cream/78">
                       Review unlocks after your attempt
@@ -518,13 +519,13 @@ export function StoryPracticeQuestionWorkspace({
           </div>
         </section>
 
-        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#101214] xl:h-full">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl bg-[#101214] xl:h-full">
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-[#141619] px-3 py-2 sm:px-4">
             <p className="truncate text-[13.5px] font-semibold text-cream/38">
               Question {question.order} of {block.questions.length} · {block.story.title}
             </p>
             {mutable ? (
-              <span role="status" className="text-[11px] text-cream/38">
+              <span role="status" className="text-[12px] text-cream/42">
                 {draftState === "saving"
                   ? "Saving draft…"
                   : draftState === "unsaved"
@@ -534,7 +535,7 @@ export function StoryPracticeQuestionWorkspace({
             ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2 sm:px-4">
+          <div className="interview-soft-rule-bottom flex shrink-0 flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-4">
             <div className="flex items-center gap-2 text-[13.5px] font-semibold text-cream/88">
               {workKind === "code" ? (
                 <Code2 size={15} aria-hidden="true" className="text-[var(--workspace-accent)]" />
@@ -556,7 +557,7 @@ export function StoryPracticeQuestionWorkspace({
             experience.capabilities.runCode &&
             !(question.status === "LEARNED" && !attempt) ? (
               <div className="flex items-center gap-2">
-                <span className="hidden text-[11px] font-medium text-cream/36 sm:inline">
+                <span className="hidden text-[12px] font-medium text-cream/42 sm:inline">
                   {experience.environmentLabel}
                 </span>
                 <button
@@ -593,7 +594,7 @@ export function StoryPracticeQuestionWorkspace({
             {question.status === "LEARNED" && !attempt ? (
               // Nothing was submitted: show the revealed answer, not an empty editor.
               <div className="p-4 sm:p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+                <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                   The answer
                 </p>
                 <p className="mb-4 mt-1.5 text-[13px] leading-6 text-cream/55">
@@ -659,10 +660,10 @@ export function StoryPracticeQuestionWorkspace({
 
           {workKind === "code" ? (
             <div
-              className={`flex min-h-11 shrink-0 items-center border-t px-4 text-sm leading-5 sm:px-5 ${
+              className={`flex min-h-11 shrink-0 items-center px-4 text-sm leading-5 sm:px-5 ${
                 error
-                  ? "border-[#e3a15b]/20 bg-[#e3a15b]/10 text-[#e7bd83]"
-                  : "border-white/[0.07] bg-black/10 text-cream/46"
+                  ? "bg-[#e3a15b]/10 text-[#e7bd83]"
+                  : "interview-soft-rule text-cream/46"
               }`}
               role={error ? "alert" : "status"}
               aria-live="polite"
@@ -685,14 +686,14 @@ export function StoryPracticeQuestionWorkspace({
           ) : error ? (
             <p
               role="alert"
-              className="mx-4 mb-4 rounded-lg border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-sm leading-5 text-[#e7bd83] sm:mx-5"
+              className="mx-4 mb-4 rounded-lg bg-[#e3a15b]/10 px-4 py-3 text-sm leading-5 text-[#e7bd83] sm:mx-5"
             >
               {error}
             </p>
           ) : null}
 
           {workKind === "code" && testCasesOpen ? (
-            <div className="thin-scroll max-h-[16rem] shrink-0 overflow-y-auto border-t border-white/[0.07] bg-black/10 px-4 py-4 sm:px-5">
+            <div className="thin-scroll max-h-[16rem] shrink-0 overflow-y-auto interview-soft-rule px-4 py-4 sm:px-5">
               {run ? (
                 <RunResult run={run} />
               ) : (
@@ -706,7 +707,7 @@ export function StoryPracticeQuestionWorkspace({
           ) : null}
 
           {workKind === "code" ? (
-            <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/[0.07] bg-[#141619] px-3 py-2 sm:px-4">
+            <div className="flex shrink-0 flex-wrap items-center gap-2 interview-soft-rule bg-[#141619] px-3 py-2 sm:px-4">
               <button
                 type="button"
                 onClick={() => setTestCasesOpen((open) => !open)}
@@ -726,7 +727,7 @@ export function StoryPracticeQuestionWorkspace({
                       {run.result.publicTests.filter(({ passed }) => passed).length}/
                       {run.result.publicTests.length}
                     </span>
-                    <span className="text-[11.5px] text-cream/38">
+                    <span className="text-[12px] text-cream/42">
                       · {run.result.hiddenTests.total} hidden
                     </span>
                   </>
@@ -745,7 +746,7 @@ export function StoryPracticeQuestionWorkspace({
             </div>
           ) : null}
 
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] bg-[#141619] px-3 py-2 sm:px-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 interview-soft-rule bg-[#141619] px-3 py-2 sm:px-4">
             <nav
               className="flex items-center gap-1"
               aria-label={`${experience.label} question navigation`}
@@ -847,71 +848,64 @@ function LearnConfirmationModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-start justify-center px-4 pt-[max(1rem,8vh)] sm:px-6">
-      <div aria-hidden="true" className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" />
+      <div aria-hidden="true" className="absolute inset-0 bg-black/70" />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="learn-confirmation-title"
-        className="practice-paper relative w-full max-w-[34rem] overflow-hidden rounded-2xl border border-[#e3a15b]/30 bg-[#171614] shadow-[0_30px_100px_rgba(0,0,0,0.7)]"
+        className="practice-paper relative w-full max-w-[27rem] overflow-hidden rounded-[1.5rem] bg-[#17181b] p-6 shadow-[0_32px_100px_-22px_rgba(0,0,0,0.8)] sm:p-7"
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e3a15b]/80 to-transparent" />
-        <div className="px-5 pb-5 pt-6 sm:px-6 sm:pb-6">
-          <div className="flex items-start gap-4">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#e3a15b]/25 bg-[#e3a15b]/10 text-[#efb978]">
-              <AlertTriangle size={20} aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold uppercase tracking-[0.1em] text-[#efb978]">
-                Learning mode
-              </p>
-              <h2
-                id="learn-confirmation-title"
-                className="mt-1.5 font-display text-2xl font-semibold tracking-[-0.03em] text-cream"
-              >
-                Reveal the guided answer?
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-cream/62">
-                This reveals the guided answer and unlocks progress, but contributes zero Practice
-                mastery. The question will be recorded as Learned rather than solved.
-              </p>
-            </div>
-          </div>
+        <span className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.1] text-cream/70">
+          <AlertTriangle size={18} strokeWidth={1.6} aria-hidden="true" />
+        </span>
+        <p className="mt-5 text-[13px] font-medium text-[var(--workspace-accent)]">
+          Learning mode
+        </p>
+        <h2
+          id="learn-confirmation-title"
+          className="mt-1.5 text-[1.55rem] font-semibold leading-tight tracking-[-0.035em] text-cream sm:text-[1.7rem]"
+        >
+          Reveal the guided answer?
+        </h2>
+        <p className="mt-3 max-w-sm text-[0.9rem] leading-[1.6] text-cream/62">
+          This reveals the guided answer and unlocks progress, but contributes zero Practice
+          mastery. The question will be recorded as Learned rather than solved.
+        </p>
 
-          {error ? (
-            <p
-              role="alert"
-              className="mt-4 rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/[0.07] px-4 py-3 text-sm leading-5 text-[#efc38d]"
-            >
-              {error}
-            </p>
-          ) : null}
+        {error ? (
+          <p
+            role="alert"
+            className="mt-4 rounded-xl bg-[#e3a15b]/[0.07] px-4 py-3 text-sm leading-5 text-[#efc38d]"
+          >
+            {error}
+          </p>
+        ) : null}
 
-          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={pending}
-              autoFocus
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.045] px-4 text-sm font-semibold text-cream/68 transition hover:bg-white/[0.08] hover:text-cream disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              disabled={pending}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#17181a] transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
-            >
-              {pending ? (
-                <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
-              ) : null}
-              {pending
-                ? "Opening guide…"
-                : codeQuestion
-                  ? "Reveal answer and continue"
-                  : "Confirm Learn"}
-            </button>
-          </div>
+        <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            autoFocus
+            className="practice-soft-hover inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-medium text-cream/68 transition-colors hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={pending}
+            className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-[var(--workspace-accent)] px-5 text-sm font-semibold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] disabled:cursor-wait disabled:opacity-60"
+          >
+            {pending ? (
+              <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
+            ) : null}
+            {pending
+              ? "Opening guide…"
+              : codeQuestion
+                ? "Reveal answer and continue"
+                : "Confirm Learn"}
+          </button>
         </div>
       </aside>
     </div>,
@@ -948,7 +942,7 @@ function ChoiceInput({
       {choices.map((option, index) => (
         <label
           key={`${index}:${option}`}
-          className={`group flex min-h-[4.25rem] cursor-pointer items-center gap-3.5 rounded-xl border px-4 py-3.5 text-[13.5px] leading-5 transition duration-200 ${selected === index ? "border-[var(--workspace-accent-border)] bg-[linear-gradient(110deg,var(--workspace-accent-soft),rgba(255,255,255,0.025))] text-cream/88 shadow-[inset_3px_0_0_var(--workspace-accent)]" : "border-white/[0.075] bg-[#111214] text-cream/60 hover:-translate-y-0.5 hover:border-white/[0.13] hover:bg-white/[0.035] hover:text-cream/82"}`}
+          className={`group flex min-h-[4.25rem] cursor-pointer items-center gap-3.5 rounded-xl px-4 py-3.5 text-[13.5px] leading-5 transition duration-200 ${selected === index ? "bg-[var(--workspace-accent-soft)] text-cream/88" : "bg-white/[0.03] text-cream/60 hover:bg-white/[0.06] hover:text-cream/82"}`}
         >
           <input
             type="radio"
@@ -959,7 +953,7 @@ function ChoiceInput({
           />
           <span
             aria-hidden="true"
-            className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border font-mono text-[11px] font-semibold transition ${selected === index ? "border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]" : "border-white/[0.07] bg-white/[0.035] text-cream/34 group-hover:text-cream/62"}`}
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[12px] font-semibold transition ${selected === index ? "bg-[var(--workspace-accent)] text-[#101113]" : "bg-white/[0.06] text-cream/56 group-hover:text-cream/72"}`}
           >
             {String.fromCharCode(65 + index)}
           </span>
@@ -1022,8 +1016,8 @@ function ResponseIntro({
 }) {
   const guidance = experience.responseGuidance(format) ?? responseGuidance(format);
   return (
-    <div className="mb-5 border-b border-white/[0.06] pb-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
+    <div className="interview-soft-rule-bottom mb-5 pb-5">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
         Your response
       </p>
       <h3 className="mt-2 font-display text-[1.45rem] font-semibold leading-tight tracking-[-0.03em] text-cream sm:text-[1.65rem]">
@@ -1111,7 +1105,7 @@ function RunResult({ run }: { run: LocalRun }) {
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-[11.5px] text-cream/45">
+      <p className="mt-3 text-[12px] text-cream/45">
         Hidden tests: {result.hiddenTests.passed}/{result.hiddenTests.total} ·{" "}
         {Math.round(result.durationMs)} ms
         {result.peakMemoryMb !== null ? ` · ${Math.round(result.peakMemoryMb)} MB` : ""}
@@ -1142,10 +1136,10 @@ function Feedback({
           : "Incorrect";
   return (
     <section
-      className="rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] px-5 py-5"
+      className="interview-soft-rule pt-5 first:border-t-0 first:pt-0"
       aria-labelledby="attempt-feedback-heading"
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
         Answer review
       </p>
       <h2
@@ -1168,7 +1162,7 @@ function Feedback({
         />
       </dl>
       {question.question.interviewConnection ? (
-        <div className="mt-5 border-t border-white/[0.07] pt-4">
+        <div className="interview-soft-rule mt-5 pt-4">
           <h3 className="text-[12px] font-semibold text-cream/72">Interview connection</h3>
           <p className="mt-2 text-[13px] leading-6 text-cream/54">
             {question.question.interviewConnection}
@@ -1182,7 +1176,7 @@ function Feedback({
 function FeedbackItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.11em] text-cream/34">
+      <dt className="text-[12.5px] font-semibold text-cream/62">
         {label}
       </dt>
       <dd className="mt-1.5 text-[12.5px] leading-5 text-cream/58">{value}</dd>
@@ -1195,7 +1189,7 @@ function AuthorizedAnswer({ question }: { question: StoryPracticeQuestionView })
   return (
     <details
       open
-      className="smooth-disclosure rounded-xl border border-white/[0.075] bg-[#111214] px-4 py-4"
+      className="smooth-disclosure interview-soft-rule pt-3 first:border-t-0 first:pt-0"
     >
       <summary className="flex min-h-11 cursor-pointer items-center text-[13px] font-semibold text-cream/72 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]">
         Correct answer and explanation
@@ -1205,13 +1199,13 @@ function AuthorizedAnswer({ question }: { question: StoryPracticeQuestionView })
         <p className="mt-3 text-[12.5px] leading-6 text-cream/48">{answer.explanation}</p>
         {answer.learningGuide ? <StoryPracticeLearningGuide guide={answer.learningGuide} /> : null}
         {answer.referenceSolution ? (
-          <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.075] bg-[#0b0d10]">
-            <div className="flex h-10 items-center justify-between border-b border-white/[0.065] bg-[#15181d] px-3.5">
-              <span className="inline-flex items-center gap-2 text-[11px] font-semibold text-cream/58">
+          <div className="mt-4 overflow-hidden rounded-xl bg-[#0b0d10]">
+            <div className="flex h-10 items-center justify-between bg-[#15181d] px-3.5">
+              <span className="inline-flex items-center gap-2 text-[12px] font-semibold text-cream/58">
                 <Code2 size={12} aria-hidden="true" className="text-[var(--workspace-accent)]" />
                 Reference solution
               </span>
-              <span className="text-[9.5px] font-semibold uppercase tracking-[0.11em] text-cream/28">
+              <span className="text-[12px] text-cream/38">
                 JavaScript · read only
               </span>
             </div>
@@ -1273,18 +1267,17 @@ function StoryPracticeReviewModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
       role="presentation"
     >
-      <div aria-hidden="true" className="absolute inset-0 bg-black/75 backdrop-blur-[3px]" />
+      <div aria-hidden="true" className="absolute inset-0 bg-black/75" />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="story-review-title"
-        className="practice-paper relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[58rem] flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.11] bg-[#141719] shadow-[0_32px_120px_rgba(0,0,0,0.68)]"
+        className="practice-paper relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[58rem] flex-col overflow-hidden rounded-[1.35rem] bg-[#17181b]"
       >
-        <header className="relative shrink-0 overflow-hidden border-b border-white/[0.075] bg-[#0c0e0f] px-5 py-4 sm:px-6 sm:py-5">
-          <div className="practice-accent-glow pointer-events-none absolute inset-x-[15%] bottom-[-120%] h-[180%] opacity-55" />
+        <header className="interview-soft-rule-bottom relative shrink-0 overflow-hidden px-5 py-4 sm:px-6 sm:py-5">
           <div className="relative flex items-start justify-between gap-5">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2 text-sm font-semibold uppercase tracking-[0.1em] text-cream/42">
+              <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold text-cream/48">
                 <span className="text-[var(--workspace-accent)]">Answer debrief</span>
                 <span aria-hidden="true">·</span>
                 <span>{experience.label}</span>
@@ -1314,7 +1307,7 @@ function StoryPracticeReviewModal({
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 sm:px-6">
           {attempt ? (
             <section
-              className="grid gap-5 border-b border-white/[0.07] py-5 sm:grid-cols-2 sm:gap-0"
+              className="interview-soft-rule-bottom grid gap-5 py-5 sm:grid-cols-2 sm:gap-0"
               aria-label="Answer feedback"
             >
               <div className="sm:pr-6">
@@ -1342,17 +1335,17 @@ function StoryPracticeReviewModal({
             </section>
           ) : null}
 
-          <section className="border-b border-white/[0.07] py-5">
+          <section className="interview-soft-rule-bottom py-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
+                <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">
                   {question.question.artifact.kind === "code"
                     ? "Question and code"
                     : "Question and evidence"}
                 </p>
                 <h3 className="mt-1 text-sm font-semibold text-cream/82">{stageTitle}</h3>
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/34">
+              <span className="text-[12px] text-cream/42">
                 Read only
               </span>
             </div>
@@ -1380,14 +1373,14 @@ function StoryPracticeReviewModal({
           </section>
 
           {answer ? (
-            <section className="border-b border-white/[0.07] py-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
+            <section className="interview-soft-rule-bottom py-5">
+              <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">
                 Strong interview answer
               </p>
               <p className="mt-3 text-sm font-semibold leading-6 text-cream/86">{answer.concise}</p>
               <p className="mt-2 text-sm leading-6 text-cream/58">{answer.explanation}</p>
               {answer.referenceSolution ? (
-                <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.07] bg-[#0b0d10]">
+                <div className="mt-4 overflow-hidden rounded-xl bg-[#0b0d10]">
                   <PracticeCodeViewer
                     code={readableCode(answer.referenceSolution)}
                     language={question.question.artifact.language ?? "javascript"}
@@ -1421,7 +1414,7 @@ function ReviewInsight({
         <span
           className={`h-1.5 w-1.5 rounded-full ${tone === "positive" ? "bg-[var(--workspace-accent)]" : "bg-[#e3a15b]"}`}
         />
-        <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-cream/42">{label}</h3>
+        <h3 className="text-sm font-semibold text-cream/62">{label}</h3>
       </div>
       <p className="mt-2.5 text-sm leading-6 text-cream/66">{value}</p>
     </article>
@@ -1431,7 +1424,7 @@ function ReviewInsight({
 function ReviewDetail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm font-semibold uppercase tracking-[0.1em] text-cream/42">{label}</p>
+      <p className="text-sm font-semibold text-cream/62">{label}</p>
       <p className="mt-2 text-sm leading-6 text-cream/62">{value}</p>
     </div>
   );
@@ -1445,8 +1438,8 @@ function ReviewContext({
   stageTitle: string;
 }) {
   return (
-    <section className="rounded-[1.15rem] border border-white/[0.075] bg-[#111214] px-5 py-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+    <section className="interview-soft-rule pt-5 first:border-t-0 first:pt-0">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
         Question reviewed
       </p>
       <h2 className="mt-2 font-display text-[1.25rem] font-semibold tracking-[-0.02em] text-cream">
@@ -1455,7 +1448,7 @@ function ReviewContext({
       <p className="mt-3 whitespace-pre-wrap text-[13.5px] leading-6 text-cream/62">
         {question.question.prompt}
       </p>
-      <div className="mt-5 border-t border-white/[0.06] pt-5">
+      <div className="interview-soft-rule mt-5 pt-5">
         <Artifact question={question} />
       </div>
     </section>
@@ -1526,63 +1519,8 @@ function withoutFormatting(value: string): string {
   return value.replace(/\s+/g, "");
 }
 
-function readableCode(value: string): string {
-  return value.includes("\n") ? value : expandCompactCode(value);
-}
 
 /** Formats legacy one-line starter code without changing its tokens. */
-function expandCompactCode(source: string): string {
-  const lines: string[] = [];
-  let current = "";
-  let indent = 0;
-  let quote: "'" | '"' | "`" | null = null;
-  let escaped = false;
-
-  const pushLine = () => {
-    const content = current.trim();
-    if (content) lines.push(`${"  ".repeat(indent)}${content}`);
-    current = "";
-  };
-
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index]!;
-    if (quote) {
-      current += character;
-      if (escaped) escaped = false;
-      else if (character === "\\") escaped = true;
-      else if (character === quote) quote = null;
-      continue;
-    }
-    if (character === "'" || character === '"' || character === "`") {
-      quote = character;
-      current += character;
-      continue;
-    }
-    if (character === "{") {
-      current = `${current.trimEnd()} {`;
-      pushLine();
-      indent += 1;
-      continue;
-    }
-    if (character === "}") {
-      pushLine();
-      indent = Math.max(0, indent - 1);
-      current = "}";
-      const next = source.slice(index + 1).trimStart()[0];
-      if (next !== ";" && next !== "," && next !== ")" && next !== "]") pushLine();
-      continue;
-    }
-    if (character === ";") {
-      current += character;
-      pushLine();
-      continue;
-    }
-    current += character;
-  }
-  pushLine();
-  return lines.join("\n");
-}
-
 function initialRun(question: StoryPracticeQuestionView): LocalRun | null {
   const run = question.latestRun;
   return run ? { id: run.id, code: run.code, result: run.result, createdAt: run.createdAt } : null;

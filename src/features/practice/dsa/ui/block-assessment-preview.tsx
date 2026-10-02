@@ -92,7 +92,7 @@ export function BlockAssessmentPreview({
     <>
       <aside
         aria-label="Block assessment"
-        className={`dsa-assessment-card ${nudging ? "assessment-card-nudge" : ""} relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]`}
+        className={`dsa-assessment-card ${nudging ? "assessment-card-nudge" : ""} relative overflow-hidden rounded-[1.15rem] bg-white/[0.025]`}
       >
         <div
           className={
@@ -124,11 +124,11 @@ export function BlockAssessmentPreview({
                 className="dsa-assessment-portrait-image bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
               />
               <div className="dsa-assessment-portrait-vignette absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,transparent_32%,rgba(4,5,6,0.18)_64%,rgba(4,5,6,0.72)_100%)]" />
-              <div className="dsa-assessment-portrait-fade absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(14,16,17,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
+              <div className="dsa-assessment-portrait-fade absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(29,30,33,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
               <div className="absolute inset-y-[12%] right-0 w-px bg-[linear-gradient(180deg,transparent,var(--workspace-accent),transparent)] opacity-55" />
               <span className="absolute left-3 top-3 h-5 w-5 border-l border-t border-[color:var(--workspace-accent-border)]" />
               <span className="absolute bottom-3 right-3 h-5 w-5 border-b border-r border-white/20" />
-              <div className="dsa-assessment-portrait-label absolute bottom-3 left-3 rounded-full border border-white/10 bg-[#090a0b]/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/78">
+              <div className="dsa-assessment-portrait-label absolute bottom-3 left-3 rounded-full bg-[#090a0b]/90 px-2.5 py-1 text-[12px] font-medium text-cream/78">
                 {teacher.name} · 1:1 coach
               </div>
             </button>
@@ -251,10 +251,10 @@ function LockedAssessment({
       >
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-4">
-            <span className="text-[11px] font-semibold text-cream/70">
+            <span className="text-[12.5px] font-semibold text-cream/70">
               {remainingQuestions} {remainingQuestions === 1 ? "problem" : "problems"} left
             </span>
-            <span className="text-[10px] text-cream/36 transition group-hover/progress:text-cream/52">
+            <span className="text-[12px] text-cream/42 transition group-hover/progress:text-cream/60">
               Unlock assessment
             </span>
           </span>
@@ -284,9 +284,7 @@ function ReadyAssessment({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-        Assessment ready
-      </p>
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">Assessment ready</p>
       <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
         Your 1:1 with {teacherName} is ready
       </h3>
@@ -320,7 +318,7 @@ function ReadyAssessment({
 function InProgressAssessment({ sessionId }: { sessionId: string | null }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
         Assessment in progress
       </p>
       <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
@@ -372,7 +370,7 @@ function CompletedAssessment({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-white/[0.09] bg-[#08090a]">
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#08090a]">
             <Image
               src={teacherPortrait}
               alt={`${teacherName}, your assessment teacher`}
@@ -387,7 +385,7 @@ function CompletedAssessment({
             <div className="absolute inset-y-2 right-0 w-px bg-[linear-gradient(180deg,transparent,var(--workspace-accent),transparent)] opacity-60" />
           </div>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+            <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">
               Assessment complete
             </p>
             <h3 className="mt-1 font-display text-[1.65rem] font-semibold text-cream">
@@ -396,8 +394,7 @@ function CompletedAssessment({
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2.5">
-          <div className="relative min-w-[5.5rem] overflow-hidden rounded-2xl border border-[color:var(--workspace-accent-border)] bg-white/[0.025] px-4 py-0.5">
-            <span className="absolute inset-y-3 left-0 w-px bg-[var(--workspace-accent)]" />
+          <div className="relative min-w-[5.5rem] px-1 py-0.5">
             <p className="mt-0.5 flex items-end gap-1 leading-none">
               <span className="font-display text-5xl font-semibold tabular-nums text-cream">
                 {report.overall}
@@ -418,10 +415,7 @@ function CompletedAssessment({
 
       <dl className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         {METRICS.map(([key, label]) => (
-          <div
-            key={key}
-            className="rounded-xl border border-white/[0.055] bg-white/[0.025] px-3 py-2.5"
-          >
+          <div key={key} className="py-1.5">
             <dt className="text-sm leading-5 text-cream/52">{label}</dt>
             <dd className="mt-1 text-xl font-semibold leading-none tabular-nums text-cream">
               {report.metrics[key]}/100
@@ -430,7 +424,7 @@ function CompletedAssessment({
         ))}
       </dl>
 
-      <div className="mt-4 grid gap-4 border-t border-white/[0.06] pt-4 lg:grid-cols-[1.2fr_0.8fr_1.4fr]">
+      <div className="interview-soft-rule mt-4 grid gap-4 pt-4 lg:grid-cols-[1.2fr_0.8fr_1.4fr]">
         <div>
           <p className="text-base font-semibold leading-6 text-cream/78">{report.teacherSummary}</p>
           <p className="mt-1.5 text-sm leading-5 text-cream/52">
@@ -448,7 +442,7 @@ function CompletedAssessment({
       </div>
 
       {block.assessment?.prompts.length ? (
-        <div className="mt-4 border-t border-white/[0.06] pt-3">
+        <div className="interview-soft-rule mt-4 pt-3">
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm font-medium text-cream/52">
               {block.assessment.prompts.length} assessment questions
@@ -458,7 +452,7 @@ function CompletedAssessment({
               aria-expanded={questionsVisible}
               aria-controls={`assessment-questions-${block.id}`}
               onClick={() => setQuestionsVisible((visible) => !visible)}
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-sm font-semibold text-cream/72 transition hover:bg-white/[0.04] hover:text-cream"
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-cream/72 practice-soft-hover hover:text-cream"
             >
               {questionsVisible ? "Show less" : "View more"}
               <ChevronDown
@@ -473,7 +467,7 @@ function CompletedAssessment({
               {block.assessment.prompts.map((prompt, index) => (
                 <li
                   key={`${prompt.kind}-${index}`}
-                  className="rounded-xl border border-white/[0.055] bg-black/20 px-3.5 py-3 text-sm leading-6 text-cream/62"
+                  className="py-1.5 text-sm leading-6 text-cream/62"
                 >
                   <span className="mr-1.5 text-cream/32">{index + 1}.</span> {prompt.title}
                 </li>
@@ -488,20 +482,18 @@ function CompletedAssessment({
 
 function MetricPreview() {
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/[0.055] pt-3">
-      <p className="mr-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/35">
-        Measures
-      </p>
+    <div className="interview-soft-rule mt-3 flex flex-wrap items-center gap-1.5 pt-3">
+      <p className="mr-1 text-[12px] text-cream/42">Measures</p>
       <div className="flex flex-wrap gap-1.5">
         {METRICS.map(([, label]) => (
           <div
             key={label}
-            className="flex min-h-7 items-center gap-1.5 rounded-lg border border-white/[0.055] bg-white/[0.025] px-2.5 py-1"
+            className="flex min-h-7 items-center gap-1.5 rounded-lg bg-white/[0.045] px-2.5 py-1"
           >
             <span className="text-[var(--workspace-accent)]" aria-hidden="true">
-              <Check size={10} />
+              <Check size={12} />
             </span>
-            <p className="text-[10px] font-medium leading-4 text-cream/48">{label}</p>
+            <p className="text-[12px] font-medium leading-4 text-cream/55">{label}</p>
           </div>
         ))}
       </div>
@@ -512,14 +504,14 @@ function MetricPreview() {
 function ReportList({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <p className="text-sm font-semibold uppercase tracking-[0.1em] text-cream/46">{title}</p>
+      <p className="text-sm font-semibold text-cream/62">{title}</p>
       {items.length ? (
         <ul className="mt-2 flex flex-wrap gap-1.5">
           {items.map((item) => (
             <li
               key={item}
               title={item}
-              className="rounded-lg border border-white/[0.055] bg-white/[0.025] px-2.5 py-1.5 text-sm font-medium leading-5 text-cream/62"
+              className="rounded-lg bg-white/[0.045] px-2.5 py-1.5 text-sm font-medium leading-5 text-cream/62"
             >
               {conciseReportItem(item)}
             </li>

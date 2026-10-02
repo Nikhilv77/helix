@@ -1498,6 +1498,8 @@ html[data-theme="light"] .interviews-skeleton .interviews-skeleton-card {
 
 html.light .interviews-page .interview-roadmap-card,
 html[data-theme="light"] .interviews-page .interview-roadmap-card,
+html.light .practice-page .interview-roadmap-card,
+html[data-theme="light"] .practice-page .interview-roadmap-card,
 html.light .interviews-page .interviews-active-row,
 html[data-theme="light"] .interviews-page .interviews-active-row {
   background: #ffffff;
@@ -1505,17 +1507,23 @@ html[data-theme="light"] .interviews-page .interviews-active-row {
 }
 
 html.light .interviews-page a.interview-roadmap-card:hover,
-html[data-theme="light"] .interviews-page a.interview-roadmap-card:hover {
+html[data-theme="light"] .interviews-page a.interview-roadmap-card:hover,
+html.light .practice-page a.interview-roadmap-card:hover,
+html[data-theme="light"] .practice-page a.interview-roadmap-card:hover {
   background: #ffffff;
 }
 
 html.light .interviews-page .interview-roadmap-progress,
-html[data-theme="light"] .interviews-page .interview-roadmap-progress {
+html[data-theme="light"] .interviews-page .interview-roadmap-progress,
+html.light .practice-page .interview-roadmap-progress,
+html[data-theme="light"] .practice-page .interview-roadmap-progress {
   background: rgba(15, 23, 42, 0.08) !important;
 }
 
 html.light .interviews-page .interview-roadmap-rule,
-html[data-theme="light"] .interviews-page .interview-roadmap-rule {
+html[data-theme="light"] .interviews-page .interview-roadmap-rule,
+html.light .practice-page .interview-roadmap-rule,
+html[data-theme="light"] .practice-page .interview-roadmap-rule {
   border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 70%, transparent) 1 !important;
 }
 
@@ -1580,24 +1588,24 @@ html[data-theme="light"] .report-section-divider::before {
   background: rgba(31, 32, 36, 0.58);
 }
 
-/* Practice uses the live interview room's panel language. */
+/* Practice panels are flat cards, like the rest of the workspace: one fill,
+   no border, no accent wash, no shadow or blur. */
 .practice-glass {
-  border: 1px solid color-mix(in srgb, var(--workspace-accent) 24%, transparent);
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--workspace-accent) 13%, transparent),
-    rgba(24, 25, 28, 0.98) 42%
-  );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(24px);
+  background: #17181b;
 }
 
 .practice-glass-soft {
-  border: 1px solid rgba(255, 255, 255, 0.045);
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+html.light .practice-glass,
+html[data-theme="light"] .practice-glass {
+  background: #ffffff;
+}
+
+html.light .practice-glass-soft,
+html[data-theme="light"] .practice-glass-soft {
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .practice-accent-glow {
@@ -1646,19 +1654,13 @@ html[data-theme="light"] .report-section-divider::before {
   transform: translateY(-1px);
 }
 
-.practice-question-row {
-  border: 1px solid rgba(255, 255, 255, 0.045);
-  background: rgba(255, 255, 255, 0.03);
-  transition:
-    border-color 180ms ease,
-    background 180ms ease,
-    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+.practice-question-row:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.practice-question-row:hover {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
-  transform: translateY(-1px);
+html.light .practice-question-row:hover,
+html[data-theme="light"] .practice-question-row:hover {
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .practice-editor-shell {
@@ -6838,7 +6840,7 @@ html[data-theme="light"] .interview-workspace-page .interview-live-glass {
 }
 
 /* Live interview room: flat panels and quiet chrome, matching Resume Roast.
-   Practice assessment rooms (.practice-paper) keep their own recipe. */
+   Practice assessment rooms (.practice-paper) share the same recipe. */
 .path-rail-track {
   background: rgba(255, 255, 255, 0.1);
 }
@@ -6848,13 +6850,13 @@ html[data-theme="light"] .path-rail-track {
   background: rgba(15, 23, 42, 0.08);
 }
 
-.interview-workspace-page:not(.practice-paper) .interview-panel-shell {
+.interview-workspace-page .interview-panel-shell {
   border-color: transparent;
   box-shadow: none;
 }
 
-html.light .interview-workspace-page:not(.practice-paper) .interview-panel-shell,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .interview-panel-shell,
+html.light .interview-workspace-page .interview-panel-shell,
+html[data-theme="light"] .interview-workspace-page .interview-panel-shell,
 html.light .interview-workspace-page .interview-live-header,
 html[data-theme="light"] .interview-workspace-page .interview-live-header {
   border-color: transparent !important;
@@ -6870,41 +6872,41 @@ html[data-theme="light"] .interview-workspace-page .interview-live-end:hover {
 /* Inside every live round: DSA examples and test cases read as a list split
    by faded hairlines, not grey cards holding white boxes; only the code
    values keep a soft fill. Multiple-choice options are a soft fill only. */
-.interview-workspace-page:not(.practice-paper) .dsa-live-example,
-.interview-workspace-page:not(.practice-paper) .dsa-live-test-case,
-html.light .interview-workspace-page:not(.practice-paper) .dsa-live-example,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-example,
-html.light .interview-workspace-page:not(.practice-paper) .dsa-live-test-case,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-test-case {
+.interview-workspace-page .dsa-live-example,
+.interview-workspace-page .dsa-live-test-case,
+html.light .interview-workspace-page .dsa-live-example,
+html[data-theme="light"] .interview-workspace-page .dsa-live-example,
+html.light .interview-workspace-page .dsa-live-test-case,
+html[data-theme="light"] .interview-workspace-page .dsa-live-test-case {
   border-radius: 0;
   background: transparent !important;
   box-shadow: none !important;
   padding-inline: 0;
 }
 
-.interview-workspace-page:not(.practice-paper) .dsa-live-example + .dsa-live-example,
-.interview-workspace-page:not(.practice-paper) .dsa-live-test-case + .dsa-live-test-case {
+.interview-workspace-page .dsa-live-example + .dsa-live-example,
+.interview-workspace-page .dsa-live-test-case + .dsa-live-test-case {
   border-top: 1px solid;
   border-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 70%, transparent) 1;
 }
 
-html.light .interview-workspace-page:not(.practice-paper) .dsa-live-example + .dsa-live-example,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-example + .dsa-live-example,
-html.light .interview-workspace-page:not(.practice-paper) .dsa-live-test-case + .dsa-live-test-case,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-test-case + .dsa-live-test-case {
+html.light .interview-workspace-page .dsa-live-example + .dsa-live-example,
+html[data-theme="light"] .interview-workspace-page .dsa-live-example + .dsa-live-example,
+html.light .interview-workspace-page .dsa-live-test-case + .dsa-live-test-case,
+html[data-theme="light"] .interview-workspace-page .dsa-live-test-case + .dsa-live-test-case {
   border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 70%, transparent) 1;
 }
 
-html.light .interview-workspace-page:not(.practice-paper) .dsa-live-example-code,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .dsa-live-example-code {
+html.light .interview-workspace-page .dsa-live-example-code,
+html[data-theme="light"] .interview-workspace-page .dsa-live-example-code {
   background: rgba(15, 23, 42, 0.04) !important;
   box-shadow: none !important;
 }
 
-html.light .interview-workspace-page:not(.practice-paper) .interview-answer-option,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .interview-answer-option,
-html.light .interview-workspace-page:not(.practice-paper) .interview-panel-card,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .interview-panel-card {
+html.light .interview-workspace-page .interview-answer-option,
+html[data-theme="light"] .interview-workspace-page .interview-answer-option,
+html.light .interview-workspace-page .interview-panel-card,
+html[data-theme="light"] .interview-workspace-page .interview-panel-card {
   box-shadow: none !important;
 }
 
@@ -7071,6 +7073,75 @@ html[data-theme="light"] .interview-mic-dialog {
 html.light .interview-soft-rule,
 html[data-theme="light"] .interview-soft-rule {
   border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 70%, transparent) 1;
+}
+
+/* The same faded hairline, drawn under a block instead of above it. */
+.interview-soft-rule-bottom {
+  border-bottom: 1px solid;
+  border-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 70%, transparent) 1;
+}
+
+html.light .interview-soft-rule-bottom,
+html[data-theme="light"] .interview-soft-rule-bottom {
+  border-image: linear-gradient(90deg, rgba(15, 23, 42, 0.09), rgba(15, 23, 42, 0.09) 70%, transparent) 1;
+}
+
+/* Practice icons are light (stroke 1.5). Lucide renders stroke-width="2" by
+   default, so only icons left on that default are thinned; an icon that asks
+   for its own weight (1.8 for an active item) keeps it. */
+:is(.practice-page, .practice-question-page, .practice-skeleton, .practice-chapter-page, .interview-workspace-page.practice-paper)
+  svg.lucide[stroke-width="2"] {
+  stroke-width: 1.5;
+}
+
+/* A soft fill on hover for flat Practice rows and quiet buttons. It is a class,
+   not `hover:bg-white/…`, because the light theme paints any class containing
+   `bg-white/` at rest. */
+.practice-soft-hover:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+html.light .practice-soft-hover:hover,
+html[data-theme="light"] .practice-soft-hover:hover {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+/* A standalone soft-fill text field (notes, written answers). The light theme
+   paints every textarea white with an outline; these stay one soft fill. */
+html.light
+  :is(.practice-page, .practice-question-page, .practice-paper, .interview-workspace-page)
+  textarea.practice-soft-field,
+html[data-theme="light"]
+  :is(.practice-page, .practice-question-page, .practice-paper, .interview-workspace-page)
+  textarea.practice-soft-field {
+  background: rgba(15, 23, 42, 0.04) !important;
+  box-shadow: none !important;
+}
+
+/* Graph-paper lines behind the Trailmate drawing board. A CSS background, not
+   canvas pixels: Clear and Erase never remove it and it is never shared. */
+.help-board-grid {
+  background-image:
+    linear-gradient(rgba(239, 232, 214, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(239, 232, 214, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+html.light .help-board-grid,
+html[data-theme="light"] .help-board-grid {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+}
+
+/* The unfilled part of a Practice track's progress ring: a cool grey band. */
+.practice-ring-track {
+  stroke: rgba(255, 255, 255, 0.09);
+}
+
+html.light .practice-ring-track,
+html[data-theme="light"] .practice-ring-track {
+  stroke: rgba(148, 163, 184, 0.42);
 }
 
 .interview-answer-input {
@@ -7507,16 +7578,15 @@ html[data-theme="light"] .interviews-skeleton [class*="bg-white/"] {
 
 /* Practice is a dense reading and coding surface. In light mode its cards,
    question panes, preparation dialog, and route fallbacks share one paper
-   palette while the scoped code editor supplies its own syntax theme. */
+   palette while the scoped code editor supplies its own syntax theme. Plain
+   paper, like Interviews: no accent wash behind the content. */
 html.light .practice-page,
 html[data-theme="light"] .practice-page,
 html.light .practice-question-page,
 html[data-theme="light"] .practice-question-page,
 html.light .practice-skeleton,
 html[data-theme="light"] .practice-skeleton {
-  background:
-    radial-gradient(circle at 54% 12%, color-mix(in srgb, var(--workspace-accent) 7%, transparent), transparent 34rem),
-    #f8f7f5 !important;
+  background: #f8f7f5 !important;
   color: #1f2937;
 }
 
@@ -7566,28 +7636,6 @@ html[data-theme="light"] .practice-question-page [class*="bg-[#0b0d10]"],
 html.light .practice-question-page [class*="bg-[#0e0f11]"],
 html[data-theme="light"] .practice-question-page [class*="bg-[#0e0f11]"] {
   background-color: #ffffff !important;
-}
-
-html.light .practice-page .interview-session-card,
-html[data-theme="light"] .practice-page .interview-session-card {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3);
-}
-
-html.light .practice-page .interview-session-card:hover,
-html[data-theme="light"] .practice-page .interview-session-card:hover {
-  border-color: color-mix(in srgb, var(--workspace-accent) 34%, rgba(15, 23, 42, 0.1));
-  background: #ffffff;
-  box-shadow: 0 22px 42px -32px rgba(15, 23, 42, 0.34);
-}
-
-html.light .practice-page .interview-session-icon,
-html[data-theme="light"] .practice-page .interview-session-icon {
-  border-color: color-mix(in srgb, var(--workspace-accent) 28%, rgba(15, 23, 42, 0.1));
-  background: color-mix(in srgb, var(--workspace-accent) 9%, #ffffff);
-  color: var(--workspace-accent);
-  box-shadow: none;
 }
 
 html.light .practice-page [class*="bg-white/"],
@@ -7926,6 +7974,25 @@ html[data-theme="light"] .practice-question-page textarea {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
 }
 
+/* The structured answer editor sits inside its own card, so its textarea has no
+   outline. While prompts are styled, a mirrored copy draws the text on top; the
+   textarea's own text must stay transparent or both copies show, offset. */
+html.light .practice-question-page textarea.structured-answer-input,
+html[data-theme="light"] .practice-question-page textarea.structured-answer-input,
+html.light .interview-workspace-page textarea.structured-answer-input,
+html[data-theme="light"] .interview-workspace-page textarea.structured-answer-input {
+  background: transparent !important;
+  box-shadow: none;
+}
+
+html.light .practice-question-page textarea.structured-answer-mirrored,
+html[data-theme="light"] .practice-question-page textarea.structured-answer-mirrored,
+html.light .interview-workspace-page textarea.structured-answer-mirrored,
+html[data-theme="light"] .interview-workspace-page textarea.structured-answer-mirrored {
+  color: transparent !important;
+  caret-color: #1f2937;
+}
+
 html.light .practice-page.practice-mobile-overlay,
 html[data-theme="light"] .practice-page.practice-mobile-overlay {
   background: rgba(248, 247, 245, 0.84) !important;
@@ -7933,9 +8000,9 @@ html[data-theme="light"] .practice-page.practice-mobile-overlay {
 
 html.light .practice-page.practice-mobile-overlay > section,
 html[data-theme="light"] .practice-page.practice-mobile-overlay > section {
-  border-color: rgba(15, 23, 42, 0.1) !important;
+  border-color: transparent !important;
   background: #ffffff !important;
-  box-shadow: 0 28px 70px -40px rgba(15, 23, 42, 0.34) !important;
+  box-shadow: none !important;
 }
 
 html.light .practice-skeleton [class*="bg-[#17181b]"],
@@ -7975,12 +8042,18 @@ html[data-theme="light"] .dsa-practice-page [class*="bg-[#202226]"] {
 }
 
 html.light .dsa-practice-page .dsa-chapter-details,
-html[data-theme="light"] .dsa-practice-page .dsa-chapter-details,
+html[data-theme="light"] .dsa-practice-page .dsa-chapter-details {
+  border-color: transparent !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* The checkpoint sits inside a white card, so it is a soft fill, not white. */
 html.light .practice-page .dsa-assessment-card,
 html[data-theme="light"] .practice-page .dsa-assessment-card {
-  border-color: rgba(15, 23, 42, 0.08) !important;
-  background: rgba(255, 255, 255, 0.9) !important;
-  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.035) !important;
+  box-shadow: none !important;
 }
 
 html.light .dsa-practice-page a[class*="bg-cream"],
@@ -7989,7 +8062,7 @@ html.light .dsa-practice-page button[class*="bg-cream"],
 html[data-theme="light"] .dsa-practice-page button[class*="bg-cream"] {
   background: #111827 !important;
   color: #ffffff !important;
-  box-shadow: 0 14px 26px -20px rgba(15, 23, 42, 0.5) !important;
+  box-shadow: none !important;
 }
 
 html.light .dsa-practice-page a[class*="bg-cream"] *,
@@ -8004,9 +8077,9 @@ html[data-theme="light"] .dsa-practice-page [class*="bg-[#303236]"] {
   background-color: #cbd5e1 !important;
 }
 
-/* The roadmap needs room for its progress rail and its hover labels. The dark
-   glow reads as a spill on paper, so the current step gets a crisp accent
-   instead and rows lift with a restrained border/shadow treatment. */
+/* The roadmap needs room for its progress rail and its hover labels. The
+   current step gets a crisp accent, and question rows stay flat: no fill or
+   border at rest, a soft fill on hover. */
 html.light .dsa-practice-page .dsa-chapter-details,
 html[data-theme="light"] .dsa-practice-page .dsa-chapter-details {
   overflow: visible !important;
@@ -8023,11 +8096,6 @@ html.light .dsa-practice-page .dsa-chapter-stepper-wrap,
 html[data-theme="light"] .dsa-practice-page .dsa-chapter-stepper-wrap {
   position: relative;
   z-index: 10;
-}
-
-html.light .dsa-practice-page .dsa-chapter-stepper-wrap,
-html[data-theme="light"] .dsa-practice-page .dsa-chapter-stepper-wrap {
-  border-top: 1px solid rgba(15, 23, 42, 0.07);
 }
 
 html.light .dsa-practice-page .dsa-question-step .workspace-accent-indicator,
@@ -8062,15 +8130,12 @@ html[data-theme="light"] .dsa-practice-page .dsa-question-step-tooltip strong {
 
 html.light .dsa-practice-page .dsa-question-row,
 html[data-theme="light"] .dsa-practice-page .dsa-question-row {
-  border: 1px solid rgba(15, 23, 42, 0.07);
-  background: rgba(255, 255, 255, 0.68) !important;
+  background: transparent !important;
 }
 
 html.light .dsa-practice-page .dsa-question-row:hover,
 html[data-theme="light"] .dsa-practice-page .dsa-question-row:hover {
-  border-color: color-mix(in srgb, var(--workspace-accent) 34%, rgba(15, 23, 42, 0.1)) !important;
-  background: #ffffff !important;
-  box-shadow: 0 16px 28px -24px rgba(15, 23, 42, 0.38) !important;
+  background: rgba(15, 23, 42, 0.04) !important;
 }
 
 /* Light portrait variants carry their own paper background; retain the stage
@@ -8103,9 +8168,9 @@ html.light .practice-page .story-assessment-preview,
 html[data-theme="light"] .practice-page .story-assessment-preview,
 html.light .practice-page .story-assessment-frame,
 html[data-theme="light"] .practice-page .story-assessment-frame {
-  border-color: rgba(15, 23, 42, 0.09) !important;
-  background: rgba(255, 255, 255, 0.92) !important;
-  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.035) !important;
+  box-shadow: none !important;
 }
 
 html.light .practice-page .story-assessment-portrait,
@@ -8133,9 +8198,9 @@ html[data-theme="light"] .practice-page .story-assessment-portrait-label {
 
 html.light .practice-page .practice-intro-stage,
 html[data-theme="light"] .practice-page .practice-intro-stage {
-  border-color: rgba(15, 23, 42, 0.09) !important;
+  border-color: transparent !important;
   background: #ffffff !important;
-  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+  box-shadow: none !important;
 }
 
 html.light .practice-page .practice-intro-dialogue,
@@ -8145,7 +8210,7 @@ html[data-theme="light"] .practice-page .practice-intro-listen {
   border-color: rgba(15, 23, 42, 0.1) !important;
   background: rgba(255, 255, 255, 0.96) !important;
   color: #475569 !important;
-  box-shadow: 0 16px 36px -22px rgba(15, 23, 42, 0.28) !important;
+  box-shadow: none !important;
 }
 
 html.light .practice-page .practice-intro-dialogue-tail,
@@ -8161,7 +8226,13 @@ html[data-theme="light"] .practice-page .story-practice-intro-listen {
   border-color: rgba(15, 23, 42, 0.1) !important;
   background: rgba(255, 255, 255, 0.98) !important;
   color: #475569 !important;
-  box-shadow: 0 16px 36px -22px rgba(15, 23, 42, 0.28) !important;
+  box-shadow: none !important;
+}
+
+/* The speech bubble keeps a soft lift so it reads as floating over the stage. */
+html.light .practice-page .story-practice-intro-dialogue,
+html[data-theme="light"] .practice-page .story-practice-intro-dialogue {
+  box-shadow: 0 14px 36px -14px rgba(15, 23, 42, 0.22) !important;
 }
 
 html.light .practice-page .story-practice-intro-dialogue-tail,
@@ -8537,15 +8608,27 @@ html[data-theme="light"] .practice-paper button[class*="bg-cream/"]:not([class~=
 
 html.light .practice-question-page .story-practice-artifact,
 html[data-theme="light"] .practice-question-page .story-practice-artifact {
-  border-color: rgba(15, 23, 42, 0.1) !important;
-  background: #ffffff !important;
-  box-shadow: 0 16px 36px -24px rgba(15, 23, 42, 0.24) !important;
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.03) !important;
+  box-shadow: none !important;
 }
 
 html.light .practice-question-page .story-practice-artifact-header,
 html[data-theme="light"] .practice-question-page .story-practice-artifact-header {
-  border-color: rgba(15, 23, 42, 0.08) !important;
-  background: #f8fafc !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.06);
+}
+
+/* Zebra rows for artifact tables. A class rather than `odd:bg-white/…`,
+   which the light theme would paint on every row. */
+.story-artifact-row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+html.light .story-artifact-row:nth-child(odd),
+html[data-theme="light"] .story-artifact-row:nth-child(odd) {
+  background: rgba(15, 23, 42, 0.03);
 }
 
 /* Tabs are navigation, not cards. Keep the active underline as the selected
@@ -8590,17 +8673,15 @@ html[data-theme="light"] .teacher-feedback-backdrop {
 
 html.light .teacher-feedback-modal,
 html[data-theme="light"] .teacher-feedback-modal {
-  border-color: rgba(15, 23, 42, 0.1) !important;
+  border-color: transparent !important;
   background: #ffffff !important;
-  box-shadow: 0 32px 120px rgba(15, 23, 42, 0.3) !important;
+  box-shadow: none !important;
 }
 
 html.light .teacher-feedback-stage,
 html[data-theme="light"] .teacher-feedback-stage {
-  border-color: rgba(15, 23, 42, 0.08) !important;
-  background:
-    radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--workspace-accent) 10%, transparent), transparent 13rem),
-    linear-gradient(180deg, #f8fafc, #eef3f7) !important;
+  border-color: transparent !important;
+  background: linear-gradient(180deg, #f8fafc, #eef3f7) !important;
 }
 
 html.light .teacher-feedback-stage-header,
@@ -8642,14 +8723,14 @@ html[data-theme="light"] .teacher-feedback-modal [class*="text-cream/"] {
 
 html.light .teacher-feedback-code,
 html[data-theme="light"] .teacher-feedback-code {
-  border-color: rgba(15, 23, 42, 0.1) !important;
+  border-color: transparent !important;
   background: #f8fafc !important;
 }
 
 html.light .teacher-feedback-follow-up,
 html[data-theme="light"] .teacher-feedback-follow-up {
-  border-color: color-mix(in srgb, var(--workspace-accent) 20%, rgba(15, 23, 42, 0.08)) !important;
-  background: color-mix(in srgb, var(--workspace-accent) 7%, #ffffff) !important;
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.04) !important;
 }
 
 /* Signed-in Home / Overview dashboard. The teacher media remains expressive,
@@ -9087,12 +9168,12 @@ html[data-theme="light"] .resume-roast-page .resume-roast-soft-rule {
 
 /* The resume is read straight off its panel in Resume Roast and the live
    interview room: no grey canvas and no floating sheet (a box inside a box). */
-.interview-workspace-page:not(.practice-paper) .resume-preview-canvas,
-.interview-workspace-page:not(.practice-paper) .resume-sheet,
-html.light .interview-workspace-page:not(.practice-paper) .resume-preview-canvas,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .resume-preview-canvas,
-html.light .interview-workspace-page:not(.practice-paper) .resume-sheet,
-html[data-theme="light"] .interview-workspace-page:not(.practice-paper) .resume-sheet {
+.interview-workspace-page .resume-preview-canvas,
+.interview-workspace-page .resume-sheet,
+html.light .interview-workspace-page .resume-preview-canvas,
+html[data-theme="light"] .interview-workspace-page .resume-preview-canvas,
+html.light .interview-workspace-page .resume-sheet,
+html[data-theme="light"] .interview-workspace-page .resume-sheet {
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;

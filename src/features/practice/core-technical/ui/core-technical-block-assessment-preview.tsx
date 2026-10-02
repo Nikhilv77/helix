@@ -3,6 +3,7 @@
 import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Loader2, Play, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -34,7 +35,8 @@ export function CoreTechnicalBlockAssessmentPreview({
   readyDescription = "Four evidence-based mechanism and diagnosis checks, then one live transfer repair in a focused 25-minute checkpoint.",
   metrics = METRICS,
   onOpen,
-  completedContent
+  completedContent,
+  id
 }: {
   block: StoryPracticeBlockView;
   terminalCount: number;
@@ -46,6 +48,8 @@ export function CoreTechnicalBlockAssessmentPreview({
   onOpen?: () => Promise<void>;
   /** Replaces the Core Technical results when the assessment is complete. */
   completedContent?: ReactNode;
+  /** Anchor for in-page links to the assessment or its report. */
+  id?: string;
 }) {
   const teacher = useWorkspaceTeacher();
   const { resolvedTheme } = useTheme();
@@ -58,9 +62,15 @@ export function CoreTechnicalBlockAssessmentPreview({
   const status = block.assessment?.status ?? "LOCKED";
   const isAssessed = status === "COMPLETED";
   const isInProgress = status === "IN_PROGRESS";
+  // Submitted and waiting for its grade: neither locked nor resumable.
+  const isGrading = status === "FINALIZING";
   const isReady =
-    status === "READY" || (allowEarlyStart && block.isCurrent && !isAssessed && !isInProgress);
-  const isPractising = !isAssessed && !isInProgress && !isReady;
+    status === "READY" ||
+    (allowEarlyStart && block.isCurrent && !isAssessed && !isInProgress && !isGrading);
+  // A path practised from the library never gets a checkpoint; only the
+  // current path does. Say so instead of showing it as locked.
+  const isLibraryPath = !block.isCurrent && status === "LOCKED";
+  const isPractising = !isAssessed && !isInProgress && !isGrading && !isReady && !isLibraryPath;
 
   const [noticeVisible, setNoticeVisible] = useState(false);
   const [nudging, setNudging] = useState(false);
@@ -121,8 +131,9 @@ export function CoreTechnicalBlockAssessmentPreview({
   return (
     <>
       <aside
+        id={id}
         aria-label={label}
-        className={`dsa-assessment-card ${nudging ? "assessment-card-nudge" : ""} relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]`}
+        className={`dsa-assessment-card ${nudging ? "assessment-card-nudge" : ""} relative overflow-hidden rounded-[1.15rem] bg-white/[0.025]`}
       >
         <div
           className={
@@ -136,7 +147,7 @@ export function CoreTechnicalBlockAssessmentPreview({
               type="button"
               onClick={showLockedNotice}
               disabled={!isPractising}
-              className="dsa-assessment-portrait relative h-36 overflow-hidden bg-[#08090a] text-left disabled:cursor-default sm:h-auto sm:min-h-[12.5rem]"
+              className="dsa-assessment-portrait relative h-36 overflow-hidden bg-[#08090a] text-left disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--workspace-accent)] sm:h-auto sm:min-h-[12.5rem]"
               aria-label={
                 isPractising
                   ? `Block assessment, ${remainingQuestions} ${remainingQuestions === 1 ? "question" : "questions"} left`
@@ -154,18 +165,20 @@ export function CoreTechnicalBlockAssessmentPreview({
                 className="dsa-assessment-portrait-image bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
               />
               <div className="dsa-assessment-portrait-vignette absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,transparent_32%,rgba(4,5,6,0.18)_64%,rgba(4,5,6,0.72)_100%)]" />
-              <div className="dsa-assessment-portrait-fade absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(14,16,17,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
+              <div className="dsa-assessment-portrait-fade absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(29,30,33,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
               <div className="absolute inset-y-[12%] right-0 w-px bg-[linear-gradient(180deg,transparent,var(--workspace-accent),transparent)] opacity-55" />
               <span className="absolute left-3 top-3 h-5 w-5 border-l border-t border-[color:var(--workspace-accent-border)]" />
               <span className="absolute bottom-3 right-3 h-5 w-5 border-b border-r border-white/20" />
-              <div className="dsa-assessment-portrait-label absolute bottom-3 left-3 rounded-full border border-white/10 bg-[#090a0b]/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/78">
+              <div className="dsa-assessment-portrait-label absolute bottom-3 left-3 rounded-full bg-[#090a0b]/90 px-2.5 py-1 text-[12px] font-medium text-cream/78">
                 {teacher.name} · 1:1 coach
               </div>
             </button>
           ) : null}
 
           <div className="flex min-w-0 flex-col justify-center px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
-            {isPractising ? (
+            {isLibraryPath ? (
+              <LibraryPathAssessment teacherName={teacher.name} />
+            ) : isPractising ? (
               <LockedAssessment
                 metrics={metrics}
                 remainingQuestions={remainingQuestions}
@@ -190,6 +203,8 @@ export function CoreTechnicalBlockAssessmentPreview({
                 error={startError}
                 onStart={() => void startAssessment()}
               />
+            ) : isGrading ? (
+              <GradingAssessment teacherName={teacher.name} />
             ) : isInProgress ? (
               <InProgressAssessment
                 starting={starting}
@@ -272,7 +287,7 @@ function LockedAssessment({
           <button
             type="button"
             onClick={onShowNotice}
-            className="inline-flex min-h-10 shrink-0 items-center rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:bg-white"
+            className="inline-flex min-h-10 shrink-0 items-center rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
           >
             Check progress
           </button>
@@ -288,14 +303,14 @@ function LockedAssessment({
       <button
         type="button"
         onClick={onShowNotice}
-        className="group/progress mt-3 flex w-full items-center gap-3 py-1 text-left"
+        className="group/progress mt-3 flex w-full items-center gap-3 rounded-lg py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
       >
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-4">
-            <span className="text-[11px] font-semibold text-cream/70">
+            <span className="text-[12.5px] font-semibold text-cream/70">
               {remainingQuestions} {remainingQuestions === 1 ? "question" : "questions"} left
             </span>
-            <span className="text-[10px] text-cream/36 transition group-hover/progress:text-cream/52">
+            <span className="text-[12px] text-cream/42 transition group-hover/progress:text-cream/60">
               Unlock assessment
             </span>
           </span>
@@ -329,7 +344,7 @@ function ReadyAssessment({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
         Assessment ready
       </p>
       <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
@@ -342,7 +357,7 @@ function ReadyAssessment({
         type="button"
         onClick={onStart}
         disabled={starting}
-        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-wait disabled:translate-y-0 disabled:opacity-65"
+        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-wait disabled:translate-y-0 disabled:opacity-65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
       >
         {starting ? (
           <Loader2 size={15} className="animate-spin" aria-hidden="true" />
@@ -361,6 +376,57 @@ function ReadyAssessment({
   );
 }
 
+function LibraryPathAssessment({ teacherName }: { teacherName: string }) {
+  return (
+    <div>
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
+        Not your current path
+      </p>
+      <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
+        No 1:1 for this path
+      </h3>
+      <p className="mt-2 text-[14px] leading-6 text-cream/58">
+        Your 1:1 with {teacherName} runs on your current path. To move on, open your current
+        path&apos;s results and choose Continue to next path.
+      </p>
+    </div>
+  );
+}
+
+/** How often a grading checkpoint re-reads the page, and for how long. */
+const GRADING_POLL_MS = 5_000;
+const GRADING_POLL_LIMIT_MS = 180_000;
+
+function GradingAssessment({ teacherName }: { teacherName: string }) {
+  const router = useRouter();
+  // Grading finishes on the server; re-read the page until the report lands.
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      if (Date.now() - startedAt >= GRADING_POLL_LIMIT_MS) {
+        window.clearInterval(timer);
+        return;
+      }
+      if (document.visibilityState === "visible") router.refresh();
+    }, GRADING_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [router]);
+
+  return (
+    <div role="status">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
+        Assessment submitted
+      </p>
+      <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
+        {teacherName} is grading your checkpoint
+      </h3>
+      <p className="mt-2 text-[14px] leading-6 text-cream/58">
+        Your answers are saved. Your results appear here as soon as grading finishes.
+      </p>
+    </div>
+  );
+}
+
 function InProgressAssessment({
   starting,
   error,
@@ -372,7 +438,7 @@ function InProgressAssessment({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
         Assessment in progress
       </p>
       <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
@@ -386,7 +452,7 @@ function InProgressAssessment({
         onClick={onStart}
         disabled={starting}
         aria-busy={starting}
-        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white disabled:translate-y-0 disabled:opacity-75"
+        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white disabled:translate-y-0 disabled:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
       >
         {starting ? "Opening assessment…" : "Resume assessment"}
         {starting ? (
@@ -423,6 +489,8 @@ function CompletedAssessment({
   }
 
   const scores = report.scores;
+  const next =
+    report.continuation?.kind === "continue" ? report.continuation.next : (report.nextStory ?? null);
   const promptById = new Map(
     block.assessment?.assessment?.prompts.map((prompt) => [prompt.id, prompt.prompt]) ?? []
   );
@@ -460,23 +528,110 @@ function CompletedAssessment({
         score: feedback.score,
         feedback: feedback.feedback
       }))}
-    />
+    >
+      {block.isCurrent && next ? <ContinueToNextPath blockId={block.id} next={next} /> : null}
+    </AssessmentResultsScorecard>
   );
+}
+
+/**
+ * The finished path's way forward. Continuing makes the recommended path the
+ * current one, which is the only path whose 1:1 can unlock.
+ */
+function ContinueToNextPath({
+  blockId,
+  next
+}: {
+  blockId: string;
+  next: { reason: string; selectedStory: { title: string } };
+}) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const continuePath = async () => {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    const key = `core-technical-continue:${blockId}`;
+    let requestId = window.sessionStorage.getItem(key);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      window.sessionStorage.setItem(key, requestId);
+    }
+    try {
+      const response = await workspaceMutationFetch("/api/practice/core-technical/continue", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ blockId, requestId })
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(readStartError(payload, response.status));
+      window.sessionStorage.removeItem(key);
+      const nextBlockId = readNextBlockId(payload);
+      window.location.assign(
+        nextBlockId
+          ? `/practice/core-technical?block=${encodeURIComponent(nextBlockId)}`
+          : "/practice/core-technical"
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "The next practice path could not be prepared. This report is still safe."
+      );
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="interview-soft-rule mt-6 flex flex-wrap items-center justify-between gap-4 pt-5">
+      <div className="min-w-0 max-w-[40rem]">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">Up next</p>
+        <p className="mt-1 text-[15px] font-semibold text-cream">{next.selectedStory.title}</p>
+        <p className="mt-1 text-[13px] leading-5 text-cream/52">{next.reason}</p>
+        {error ? (
+          <p role="alert" className="mt-2 text-[12.5px] leading-5 text-[#efb38f]">
+            {error}
+          </p>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        onClick={() => void continuePath()}
+        disabled={pending}
+        aria-busy={pending}
+        className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#090a0b] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] disabled:cursor-wait disabled:opacity-70"
+      >
+        {pending ? "Preparing next path…" : "Continue to next path"}
+        {pending ? (
+          <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
+        ) : (
+          <ArrowRight size={15} aria-hidden="true" />
+        )}
+      </button>
+    </div>
+  );
+}
+
+function readNextBlockId(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object" || !("data" in payload)) return null;
+  const data = (payload as { data?: { block?: { id?: unknown } | null } }).data;
+  return typeof data?.block?.id === "string" ? data.block.id : null;
 }
 
 function MetricPreview({ metrics }: { metrics: ReadonlyArray<readonly [string, string]> }) {
   return (
-    <div className="mt-4 border-t border-white/[0.06] pt-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cream/36">
-        Evaluated Dimensions
+    <div className="interview-soft-rule mt-4 pt-3">
+      <p className="text-[12px] text-cream/42">
+        Evaluated dimensions
       </p>
       <div className="mt-2.5 flex flex-wrap gap-2">
         {metrics.map(([key, label]) => (
           <span
             key={key}
-            className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.025] px-2.5 py-1 text-[11px] font-medium text-cream/65"
+            className="flex items-center gap-1.5 rounded-lg bg-white/[0.045] px-2.5 py-1 text-[12px] font-medium text-cream/65"
           >
-            <Check size={11} className="text-[var(--workspace-accent)]" />
+            <Check size={12} className="text-[var(--workspace-accent)]" />
             {label}
           </span>
         ))}
@@ -511,8 +666,8 @@ function AssessmentNotice({
           className="h-14 w-14 shrink-0 rounded-2xl object-cover"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-            Checkpoint Locked
+          <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
+            Checkpoint locked
           </p>
           <h4 className="mt-1 font-display text-lg font-semibold text-cream">
             Finish your {remainingQuestions} remaining question{remainingQuestions === 1 ? "" : "s"}
@@ -525,7 +680,7 @@ function AssessmentNotice({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg p-1 text-cream/40 transition hover:text-cream"
+          className="rounded-lg p-1 text-cream/40 transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
           aria-label="Close notification"
         >
           <X size={16} />

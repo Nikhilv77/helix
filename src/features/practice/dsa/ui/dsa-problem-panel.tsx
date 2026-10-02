@@ -42,11 +42,11 @@ export function DsaProblemPanel({ question }: { question: DsaQuestion }) {
   }, [question.hints?.length, question.slug]);
 
   return (
-    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#141619]">
+    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl bg-[#141619]">
       <div
         role="tablist"
         aria-label="Question reference"
-        className="dsa-problem-tabs thin-scroll flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.07] px-2 pt-2"
+        className="dsa-problem-tabs thin-scroll interview-soft-rule-bottom flex shrink-0 items-center gap-1 overflow-x-auto px-2 pt-2"
       >
         {TABS.map((item) => {
           const selected = item.id === tab;
@@ -64,7 +64,7 @@ export function DsaProblemPanel({ question }: { question: DsaQuestion }) {
             >
               {item.label}
               {item.id === "hints" && question.hints?.length ? (
-                <span className="ml-1.5 text-[11px] tabular-nums text-cream/34">
+                <span className="ml-1.5 text-[12px] tabular-nums text-cream/42">
                   {revealedHints}/{question.hints.length}
                 </span>
               ) : null}
@@ -107,10 +107,10 @@ function Description({ question }: { question: DsaQuestion }) {
       {question.examples?.length ? (
         <section>
           <h2 className="text-[13px] font-semibold text-cream/88">Examples</h2>
-          <div className="mt-3 space-y-3">
+          <div className="mt-1">
             {question.examples.map((example, index) => (
-              <article key={`${example.input}-${index}`} className="rounded-xl bg-black/25 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cream/38">
+              <article key={`${example.input}-${index}`} className="interview-soft-rule py-4 first:border-t-0">
+                <p className="text-[12.5px] font-semibold text-cream/48">
                   Example {index + 1}
                 </p>
                 <dl className="mt-3 grid gap-x-3 gap-y-2 font-mono text-[12.5px] leading-5 sm:grid-cols-[4.25rem_1fr]">
@@ -176,7 +176,7 @@ function Hints({
             <button
               type="button"
               onClick={revealNext}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[13px] font-semibold text-cream/72 transition hover:bg-white/[0.065] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white/[0.045] text-[13px] font-semibold text-cream/72 transition hover:bg-white/[0.065] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
             >
               <Lightbulb size={14} aria-hidden="true" />
               {revealed === 0 ? "Show first hint" : `Show next hint · ${revealed}/${hints.length}`}
@@ -188,7 +188,7 @@ function Hints({
       )}
 
       {question.keyInsight && allRevealed ? (
-        <details className="smooth-disclosure group mt-4 overflow-hidden rounded-xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)]">
+        <details className="smooth-disclosure group mt-4 overflow-hidden rounded-xl bg-[var(--workspace-accent-soft)]">
           <summary className="flex cursor-pointer list-none items-center gap-2.5 p-4 [&::-webkit-details-marker]:hidden">
             <Target size={15} aria-hidden="true" className="text-[var(--workspace-accent)]" />
             <span className="min-w-0 flex-1 text-[13px] font-semibold text-cream">Key insight</span>
@@ -198,7 +198,7 @@ function Hints({
               className="text-cream/42 transition-transform duration-300 ease-out group-open:rotate-180"
             />
           </summary>
-          <p className="smooth-disclosure-body border-t border-white/[0.07] px-4 pb-4 pt-3 text-[13.5px] leading-6 text-cream/72">
+          <p className="smooth-disclosure-body px-4 pb-4 pt-0 text-[13.5px] leading-6 text-cream/72">
             {question.keyInsight}
           </p>
         </details>
@@ -210,7 +210,7 @@ function Hints({
 function Review({ question }: { question: DsaQuestion }) {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] p-4">
+      <div className="rounded-xl bg-[var(--workspace-accent-soft)] p-4">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-cream">
           <Sparkles size={15} aria-hidden="true" className="text-[var(--workspace-accent)]" />
           Intended approach
@@ -274,7 +274,7 @@ function ReviewDisclosure({
   children: ReactNode;
 }) {
   return (
-    <details className="smooth-disclosure group overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.025]">
+    <details className="smooth-disclosure group overflow-hidden rounded-xl bg-white/[0.035]">
       <summary className="flex cursor-pointer list-none items-center gap-2.5 p-4 [&::-webkit-details-marker]:hidden">
         {icon === "warning" ? (
           <AlertTriangle size={14} aria-hidden="true" className="text-[var(--workspace-accent)]" />
@@ -282,7 +282,7 @@ function ReviewDisclosure({
         <span className="min-w-0 flex-1">
           <span className="block text-[13.5px] font-semibold text-cream/84">{title}</span>
           {subtitle ? (
-            <span className="mt-1 block font-mono text-[11px] text-cream/36">{subtitle}</span>
+            <span className="mt-1 block font-mono text-[12px] text-cream/42">{subtitle}</span>
           ) : null}
         </span>
         <ChevronDown
@@ -291,7 +291,7 @@ function ReviewDisclosure({
           className="text-cream/36 transition-transform duration-300 ease-out group-open:rotate-180"
         />
       </summary>
-      <div className="smooth-disclosure-body border-t border-white/[0.06] px-4 pb-4 pt-3 text-[13px] leading-6 text-cream/66">
+      <div className="smooth-disclosure-body px-4 pb-4 pt-0 text-[13px] leading-6 text-cream/66">
         {children}
       </div>
     </details>
@@ -332,8 +332,8 @@ function CompactList({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-lg bg-black/20 px-2.5 py-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.09em] text-cream/36">
+    <span className="inline-flex items-center gap-2 rounded-lg bg-white/[0.05] px-2.5 py-1.5">
+      <span className="text-[12px] text-cream/45">
         {label}
       </span>
       <span className="font-mono text-[12px] text-cream/76">{value}</span>

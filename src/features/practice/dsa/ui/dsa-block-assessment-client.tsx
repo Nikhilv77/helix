@@ -1,5 +1,6 @@
 "use client";
 
+import { readableCode } from "@/features/practice/shared/domain/readable-code";
 import { AssessmentRoomLoading } from "@/features/practice/shared/ui/assessment-room-loading";
 import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
@@ -156,10 +157,10 @@ export function DsaBlockAssessmentClient({
   useEffect(() => {
     if (!transfer) return;
     setDrafts({
-      javascript: transfer.starterCode.javascript ?? "",
+      javascript: readableCode(transfer.starterCode.javascript ?? ""),
       python: transfer.starterCode.python ?? "",
-      cpp: transfer.starterCode.cpp ?? "",
-      java: transfer.starterCode.java ?? ""
+      cpp: readableCode(transfer.starterCode.cpp ?? ""),
+      java: readableCode(transfer.starterCode.java ?? "")
     });
   }, [transfer?.slug]);
 
@@ -315,12 +316,12 @@ export function DsaBlockAssessmentClient({
   return (
     <VoiceShell workspaceAccent={workspaceAccent} wide className="practice-paper">
       <div className="flex min-h-0 flex-1 flex-col gap-3 pb-4">
-        <header className="flex min-h-14 items-center justify-between gap-4 rounded-2xl border border-white/[0.075] bg-[#0d0f11] px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:px-5">
+        <header className="flex min-h-14 items-center justify-between gap-4 rounded-2xl bg-[#0d0f11] px-4 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/practice/dsa"
               aria-label="Leave assessment"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] text-cream/52 transition hover:bg-white/[0.05] hover:text-cream"
+              className="practice-soft-hover grid h-9 w-9 shrink-0 place-items-center rounded-xl text-cream/52 transition-colors hover:text-cream"
             >
               <BackLinkIcon size={16} />
             </Link>
@@ -332,7 +333,7 @@ export function DsaBlockAssessmentClient({
               count={session.questionCount}
               done={isDone}
             />
-            <div className="flex h-9 items-center gap-2 rounded-xl border border-white/[0.07] bg-black/20 px-3 font-mono text-xs tabular-nums text-cream/68">
+            <div className="flex h-9 items-center gap-2 rounded-xl bg-white/[0.05] px-3 text-[14px] font-semibold tabular-nums tracking-[0.02em] text-cream/80">
               <Clock3 size={13} className="text-[var(--workspace-accent)]" />
               {formatClock(remainingMs)}
             </div>
@@ -419,8 +420,8 @@ function TeacherRail({
   onReplay: () => void;
 }) {
   return (
-    <aside className="flex min-h-[18rem] flex-col overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d0f11] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] lg:min-h-0">
-      <div className="relative h-40 shrink-0 overflow-hidden border-b border-white/[0.055] bg-black/20">
+    <aside className="flex min-h-[18rem] flex-col overflow-hidden rounded-2xl bg-[#0d0f11] lg:min-h-0">
+      <div className="relative h-40 shrink-0 overflow-hidden bg-black/20">
         <div className="absolute inset-x-[-22%] bottom-[-10%] top-0">
           <MayaStage
             speaking={voiceState === "speaking"}
@@ -430,7 +431,7 @@ function TeacherRail({
         </div>
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(13,15,17,0.88)_100%)]" />
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/76 backdrop-blur-xl">
+          <div className="flex items-center gap-2 rounded-full bg-black/45 px-2.5 py-1.5 text-[12px] font-medium text-cream/76">
             <span
               className={`h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] ${voiceState === "speaking" ? "animate-pulse" : ""}`}
             />
@@ -440,7 +441,7 @@ function TeacherRail({
             type="button"
             onClick={onReplay}
             disabled={!latest || voiceState === "loading"}
-            className="grid h-8 w-8 place-items-center rounded-full border border-white/[0.07] bg-black/45 text-cream/55 backdrop-blur-xl transition hover:text-cream disabled:opacity-30"
+            className="grid h-8 w-8 place-items-center rounded-full bg-black/45 text-cream/55 transition hover:text-cream disabled:opacity-30"
             aria-label={awaitingGesture ? "Play teacher guidance" : "Replay latest guidance"}
           >
             {voiceState === "unavailable" ? <VolumeX size={13} /> : <Volume2 size={13} />}
@@ -451,13 +452,13 @@ function TeacherRail({
         {turns.slice(runGuidance ? -3 : -4).map((turn, index, visibleTurns) => (
           <div
             key={turnKey(turn)}
-            className={`${index === visibleTurns.length - 1 && !runGuidance ? "opacity-100" : "opacity-40"} ${index ? "border-t border-white/[0.05] pt-3" : ""}`}
+            className={`${index === visibleTurns.length - 1 && !runGuidance ? "opacity-100" : "opacity-40"} ${index ? "interview-soft-rule pt-3" : ""}`}
           >
             <p className="text-[13px] leading-6 text-cream/72">{turn.text}</p>
           </div>
         ))}
         {runGuidance ? (
-          <div className="border-t border-white/[0.05] pt-3">
+          <div className="interview-soft-rule pt-3">
             <p className="text-[13px] leading-6 text-cream/72">{runGuidance}</p>
           </div>
         ) : null}
@@ -489,13 +490,13 @@ function ReviewCheckpoint({
 
   if (!hasCode) {
     return (
-      <section className="grid h-full min-h-[38rem] overflow-hidden rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] xl:grid-cols-[minmax(20rem,0.88fr)_minmax(24rem,1.12fr)]">
+      <section className="grid h-full min-h-[38rem] overflow-hidden rounded-2xl bg-[#111215] xl:grid-cols-[minmax(20rem,0.88fr)_minmax(24rem,1.12fr)]">
         <ReviewReference question={question} />
 
         <div className="flex min-h-[34rem] flex-col border-t border-white/[0.06] px-6 py-7 sm:px-8 lg:px-9 xl:border-l xl:border-t-0">
           <div>
             <div className="flex items-center justify-between gap-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+              <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                 Knowledge check
               </p>
               <span className="font-mono text-xs tabular-nums text-cream/36">
@@ -522,7 +523,7 @@ function ReviewCheckpoint({
             })}
           </div>
 
-          <div className="mt-auto flex items-end justify-between gap-4 border-t border-white/[0.06] pt-5">
+          <div className="mt-auto flex items-end justify-between gap-4 interview-soft-rule pt-5">
             <p className="max-w-xl text-xs leading-5 text-cream/32">
               Choose the answer you would defend in an interview.
             </p>
@@ -536,9 +537,9 @@ function ReviewCheckpoint({
 
   return (
     <div className="grid h-full min-h-[38rem] gap-3 xl:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)]">
-      <section className="flex min-h-[22rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] xl:min-h-0">
-        <div className="border-b border-white/[0.055] px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cream/38">
+      <section className="flex min-h-[22rem] min-w-0 flex-col overflow-hidden rounded-2xl bg-[#111215] xl:min-h-0">
+        <div className="interview-soft-rule-bottom px-5 py-4">
+          <p className="text-[12.5px] font-semibold text-cream/55">
             {hasCode ? "Saved solution" : "Block concept"}
           </p>
           <h2 className="mt-1 text-base font-semibold text-cream/82">
@@ -569,8 +570,8 @@ function ReviewCheckpoint({
         )}
       </section>
 
-      <section className="flex min-h-[32rem] flex-col rounded-2xl border border-white/[0.075] bg-[#111215] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] sm:p-6 xl:min-h-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+      <section className="flex min-h-[32rem] flex-col rounded-2xl bg-[#111215] p-5 sm:p-6 xl:min-h-0">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Knowledge check · {index + 1} of {count}
         </p>
         <h1 className="mt-3 text-balance font-display text-[1.7rem] font-semibold leading-[1.18] tracking-[-0.028em] text-cream">
@@ -587,7 +588,7 @@ function ReviewCheckpoint({
             />
           ))}
         </div>
-        <div className="mt-auto flex justify-end border-t border-white/[0.06] pt-4">
+        <div className="mt-auto flex justify-end interview-soft-rule pt-4">
           <ReviewSubmitButton selected={selected} sending={sending} onSubmit={onSubmit} />
         </div>
         {error ? <p className="mt-3 text-sm text-[#ffb4b4]">{error}</p> : null}
@@ -601,7 +602,7 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
   const example = reference?.examples[0];
   return (
     <article className="thin-scroll min-h-0 overflow-y-auto bg-[#0f1113] px-6 py-7 sm:px-7">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+      <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
         Problem reference
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -609,9 +610,7 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
           {reference?.title ?? question.evidenceAnchor ?? "Block problem"}
         </h2>
         {reference?.difficulty ? (
-          <span className="rounded-full border border-white/[0.07] bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/42">
-            {reference.difficulty}
-          </span>
+          <span className="text-[12px] text-cream/45">{reference.difficulty}</span>
         ) : null}
       </div>
       <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-cream/62">
@@ -623,7 +622,7 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
       {example ? (
         <section className="mt-7">
           <h3 className="text-xs font-semibold text-cream/74">Example</h3>
-          <div className="mt-3 rounded-xl border border-white/[0.055] bg-black/20 p-4 font-mono text-xs leading-6">
+          <div className="mt-3 rounded-xl bg-white/[0.035] p-4 font-mono text-xs leading-6">
             <p className="break-words text-cream/62">
               <span className="mr-3 text-cream/32">Input</span>
               {example.input}
@@ -633,7 +632,7 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
               {example.output}
             </p>
             {example.explanation ? (
-              <p className="mt-3 border-t border-white/[0.05] pt-3 font-sans text-cream/42">
+              <p className="mt-3 interview-soft-rule pt-3 font-sans text-cream/42">
                 {example.explanation}
               </p>
             ) : null}
@@ -644,7 +643,7 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
       {reference?.constraints.length ? (
         <section className="mt-7">
           <h3 className="text-xs font-semibold text-cream/74">Constraints</h3>
-          <ul className="mt-3 space-y-2 font-mono text-[11px] leading-5 text-cream/48">
+          <ul className="mt-3 space-y-2 font-mono text-[12px] leading-5 text-cream/48">
             {reference.constraints.slice(0, 5).map((constraint) => (
               <li key={constraint}>• {constraint}</li>
             ))}
@@ -671,10 +670,10 @@ function ReviewOption({
       type="button"
       onClick={() => onSelect(option)}
       aria-pressed={active}
-      className={`group flex min-h-14 w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition ${active ? "border-[color:var(--workspace-accent-border)] bg-[color:var(--workspace-accent-muted)] text-cream" : "border-white/[0.065] bg-white/[0.025] text-cream/66 hover:border-white/[0.12] hover:bg-white/[0.04]"}`}
+      className={`group flex min-h-14 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition ${active ? "bg-[var(--workspace-accent-soft)] text-cream" : "bg-white/[0.03] text-cream/66 hover:bg-white/[0.06]"}`}
     >
       <span
-        className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border text-xs font-semibold ${active ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent)] text-[#0b0c0d]" : "border-white/[0.09] text-cream/38"}`}
+        className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-semibold ${active ? "bg-[var(--workspace-accent)] text-[#0b0c0d]" : "bg-white/[0.06] text-cream/56"}`}
       >
         {active ? <Check size={13} /> : String.fromCharCode(65 + optionIndex)}
       </span>
@@ -749,8 +748,8 @@ function CodeCheckpoint({
   const transfer = question.dsaTransferQuestion!;
   return (
     <div className="grid min-h-[calc(100vh-8.5rem)] gap-3 xl:grid-cols-[minmax(20rem,0.72fr)_minmax(30rem,1.28fr)]">
-      <article className="thin-scroll overflow-y-auto rounded-2xl border border-white/[0.065] bg-[#101214] p-5 sm:p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+      <article className="thin-scroll overflow-y-auto rounded-2xl bg-[#101214] p-5 sm:p-6">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Unseen transfer problem
         </p>
         <h1 className="mt-3 font-display text-3xl font-semibold tracking-[-0.03em] text-cream">
@@ -774,7 +773,7 @@ function CodeCheckpoint({
               {transfer.examples.map((example, index) => (
                 <div
                   key={`${example.input}-${index}`}
-                  className="rounded-xl bg-black/20 p-4 text-xs leading-6"
+                  className="rounded-xl bg-white/[0.035] p-4 text-xs leading-6"
                 >
                   <p>
                     <span className="text-cream/36">Input</span>{" "}
@@ -804,8 +803,8 @@ function CodeCheckpoint({
         ) : null}
       </article>
 
-      <section className="flex min-h-[46rem] flex-col overflow-hidden rounded-2xl border border-white/[0.065] bg-[#101214]">
-        <div className="flex min-h-14 items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-2">
+      <section className="flex min-h-[46rem] flex-col overflow-hidden rounded-2xl bg-[#101214]">
+        <div className="flex min-h-14 items-center justify-between gap-3 interview-soft-rule-bottom px-4 py-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-cream">
             <Code2 size={15} className="text-[var(--workspace-accent)]" />
             Solution
@@ -820,7 +819,7 @@ function CodeCheckpoint({
               type="button"
               onClick={onRun}
               disabled={running || !code.trim()}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--workspace-accent)] px-4 text-sm font-semibold text-[#0a0a0b] shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition hover:brightness-105 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--workspace-accent)] px-4 text-sm font-semibold text-[#0a0a0b] transition hover:brightness-105 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {running ? (
                 <Loader2 size={14} className="animate-spin text-[#0a0a0b]" aria-hidden="true" />
@@ -841,7 +840,7 @@ function CodeCheckpoint({
           />
         </div>
         <ResultPanel result={result} running={running} stale={codeChangedAfterRun} />
-        <div className="border-t border-white/[0.06] bg-black/10 p-4">
+        <div className="interview-soft-rule p-4">
           <label htmlFor="assessment-reasoning" className="text-xs font-semibold text-cream/72">
             Approach and complexity
           </label>
@@ -851,7 +850,7 @@ function CodeCheckpoint({
             onChange={(event) => onNotesChange(event.target.value)}
             rows={3}
             placeholder="Explain the invariant, why the solution is correct, and its time and space complexity…"
-            className="mt-2 w-full resize-none rounded-xl border border-white/[0.065] bg-black/20 px-3.5 py-3 text-sm leading-6 text-cream outline-none placeholder:text-cream/25 focus:border-white/[0.13]"
+            className="practice-soft-field mt-2 w-full resize-none rounded-xl bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-cream outline-none placeholder:text-cream/25 focus:ring-1 focus:ring-[var(--workspace-accent-border)]"
           />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             {!skipConfirmationVisible ? (
@@ -865,7 +864,7 @@ function CodeCheckpoint({
               </button>
             ) : (
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-[11px] text-cream/46">This records 0 points.</span>
+                <span className="mr-1 text-[12px] text-cream/46">This records 0 points.</span>
                 <button
                   type="button"
                   onClick={onHideSkipConfirmation}
@@ -877,14 +876,14 @@ function CodeCheckpoint({
                   type="button"
                   onClick={onSkip}
                   disabled={sending}
-                  className="rounded-lg border border-white/[0.08] bg-white/[0.06] px-2.5 py-2 text-xs font-semibold text-cream hover:bg-white/[0.1]"
+                  className="rounded-lg bg-white/[0.06] px-2.5 py-2 text-xs font-semibold text-cream hover:bg-white/[0.1]"
                 >
                   Skip
                 </button>
               </div>
             )}
             <div className="flex items-center gap-3">
-              <p className="hidden text-[11px] text-cream/35 sm:block">
+              <p className="hidden text-[12px] text-cream/42 sm:block">
                 {canSubmit
                   ? "Latest code run will be used as evidence"
                   : "Run the current code before submitting"}
@@ -917,11 +916,11 @@ function ResultPanel({
   stale: boolean;
 }) {
   return (
-    <div className="max-h-56 overflow-y-auto border-t border-white/[0.06] bg-black/10 px-4 py-3">
+    <div className="max-h-56 overflow-y-auto interview-soft-rule px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold text-cream/68">Test evidence</p>
         <p
-          className={`text-[11px] font-semibold ${result?.accepted && !stale ? "text-[var(--workspace-accent)]" : "text-cream/38"}`}
+          className={`text-[12px] font-semibold ${result?.accepted && !stale ? "text-[var(--workspace-accent)]" : "text-cream/38"}`}
         >
           {running
             ? "Running…"
@@ -965,10 +964,10 @@ function CompletionPanel({ teacherName }: { teacherName: string }) {
   return (
     <div className="mx-auto grid min-h-[65vh] max-w-2xl place-items-center text-center">
       <div>
-        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-[color:var(--workspace-accent-border)] bg-[color:var(--workspace-accent-muted)] text-[var(--workspace-accent)]">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-[color:var(--workspace-accent-border)] text-[var(--workspace-accent)]">
           <CheckCircle2 size={30} />
         </div>
-        <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+        <p className="mt-6 text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Checkpoint complete
         </p>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.035em] text-cream">

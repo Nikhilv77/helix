@@ -90,6 +90,7 @@ export const APPLIED_ENGINEERING_WORKSPACE_EXPERIENCE: StoryPracticeWorkspaceExp
   routeBase: "/practice/applied-engineering",
   subjectNoun: "incident",
   environmentLabel: "JavaScript · Node.js 22",
+  answerReview: "modal",
   capabilities: { runCode: true },
   textAnswerPlaceholder:
     "Cite the evidence, isolate the root cause, and explain the safest production action…",

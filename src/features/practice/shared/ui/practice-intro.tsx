@@ -3,7 +3,7 @@
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo } from "react";
-import { ArrowRight, Loader2, Play, Volume2 } from "lucide-react";
+import { ArrowRight, AudioLines, Loader2, Play, Volume2 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import type { DsaRecommendation } from "@/features/practice/dsa/domain/dsa-recommendation";
@@ -95,7 +95,7 @@ export function PracticeIntro({
           </p>
         </div>
 
-        <div className="w-full rounded-xl border border-white/[0.08] bg-[#141619] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:max-w-[19rem]">
+        <div className="w-full rounded-xl bg-[#17181b] px-5 py-4 sm:max-w-[19rem]">
           <p className="text-[14px] font-medium leading-6 text-cream/72">
             {recommendation ? (
               <>
@@ -132,16 +132,16 @@ export function PracticeIntro({
         </div>
       </header>
 
-      <section className="practice-intro-stage relative mt-6 flex flex-col overflow-hidden rounded-2xl border border-white/[0.085] bg-[#141619] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:mt-7 md:block md:min-h-[13.5rem]">
+      <section className="practice-intro-stage relative mt-6 flex flex-col overflow-hidden rounded-2xl bg-[#17181b] sm:mt-7 md:block md:min-h-[13.5rem]">
         <div className="relative z-20 order-2 flex max-w-none flex-col items-start justify-start px-5 py-7 sm:px-7 md:min-h-[13.5rem] md:max-w-[52%] md:justify-center lg:px-8">
-          {!recommendation ? (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cream/44">
-              {completed > 0 ? "Continue where you left off" : "Start your DSA path"}
-            </p>
-          ) : null}
-          <h2
-            className={`${recommendation ? "" : "mt-4"} font-display text-[1.55rem] font-semibold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]`}
-          >
+          <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
+            {recommendation
+              ? "Current focus"
+              : completed > 0
+                ? "Continue where you left off"
+                : "Start your DSA path"}
+          </p>
+          <h2 className="mt-3 font-display text-[1.55rem] font-semibold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]">
             {recommendation?.focusLabel ?? activeChapter?.title ?? "Arrays & Hashing"}
           </h2>
           <p className="mt-2 max-w-[24rem] text-[14px] leading-6 text-cream/66">
@@ -182,17 +182,35 @@ export function PracticeIntro({
           <MayaStage speaking={speaking} transparent performanceProfile="practice" />
         </div>
 
+        <div className="story-practice-intro-dialogue absolute right-5 top-5 z-20 hidden w-[clamp(14.5rem,22vw,17rem)] max-w-[40%] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_14px_36px_-12px_rgba(0,0,0,0.45)] lg:block">
+          <span
+            aria-hidden
+            className="story-practice-intro-dialogue-tail absolute -left-2 top-8 h-4 w-4 rotate-45 border-b border-l border-white/[0.07] bg-[#1a1c20]"
+          />
+          <div className="relative flex gap-3">
+            <AudioLines
+              size={21}
+              strokeWidth={1.8}
+              aria-hidden="true"
+              className="mt-0.5 shrink-0 text-[var(--workspace-accent)]"
+            />
+            <p className="min-w-0 break-words text-pretty text-[14px] leading-6 text-cream/82">
+              “{script}”
+            </p>
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={say}
-          className="practice-intro-listen absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
+          className="practice-intro-listen absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
         >
           {state === "loading" ? (
-            <Loader2 size={14} aria-hidden="true" className="animate-spin" />
+            <Loader2 size={14} aria-hidden="true" className="motion-safe:animate-spin" />
           ) : (
             <Volume2 size={14} aria-hidden="true" />
           )}
-          Hear {teacher.name}
+          Listen
         </button>
       </section>
     </div>
@@ -202,7 +220,7 @@ export function PracticeIntro({
 /** A quiet problem-solving reminder beside the DSA path. */
 export function PracticeCoachCard() {
   return (
-    <aside className="overflow-hidden rounded-[1.45rem] border border-white/[0.085] bg-[#141619] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:px-6">
+    <aside className="overflow-hidden rounded-[1.45rem] bg-[#17181b] px-5 py-5 sm:px-6">
       <div>
         <h2 className="font-display text-[1.2rem] font-semibold leading-6 tracking-[-0.025em] text-cream">
           Use this simple loop.
@@ -221,7 +239,7 @@ export function PracticeCoachCard() {
 function ApproachStep({ number, title }: { number: string; title: string }) {
   return (
     <li className="flex items-baseline gap-3">
-      <span className="font-mono text-[9px] font-semibold text-[var(--workspace-accent)]">
+      <span className="text-[12px] font-semibold tabular-nums text-[var(--workspace-accent)]">
         {number}
       </span>
       <span className="text-[13px] font-medium leading-5 text-cream/76">{title}</span>

@@ -1,4 +1,5 @@
 import { Code2, FileText } from "lucide-react";
+import { EvidenceProse, isProseEvidence } from "@/features/practice/shared/ui/evidence-prose";
 import { PracticeCodeViewer } from "@/features/practice/shared/ui/practice-code-viewer";
 
 export type StoryPracticeArtifactKind =
@@ -57,7 +58,7 @@ export function StoryPracticeArtifactBlocks({
       {blocks.map((block, index) =>
         block.kind === "code" ? (
           <div key={index} className="relative">
-            <span className="pointer-events-none absolute right-3 top-2 z-10 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/28">
+            <span className="pointer-events-none absolute right-3 top-2 z-10 text-[12px] text-cream/38">
               {block.language === "plaintext" ? "text" : block.language}
             </span>
             <PracticeCodeViewer
@@ -102,7 +103,7 @@ export function StoryPracticeArtifact({
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-0.5">
         <div>
           <p
-            className={`${comfortable ? "text-sm tracking-[0.1em]" : "text-[10px] tracking-[0.15em]"} font-semibold uppercase text-[var(--workspace-accent)]`}
+            className={`${comfortable ? "text-sm" : "text-[12.5px]"} font-semibold text-[var(--workspace-accent)]`}
           >
             Evidence artifact
           </p>
@@ -114,29 +115,29 @@ export function StoryPracticeArtifact({
           </h2>
           {artifact.caption ? (
             <p
-              className={`${comfortable ? "text-sm leading-6" : "text-[11px] leading-5"} mt-1 text-cream/38`}
+              className={`${comfortable ? "text-sm leading-6" : "text-[12px] leading-5"} mt-1 text-cream/42`}
             >
               {artifact.caption}
             </p>
           ) : null}
         </div>
-        <span className="rounded-full border border-white/[0.065] bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/42">
+        <span className="text-[12px] font-medium text-cream/45">
           {humanize(artifact.kind)}
         </span>
       </div>
-      <div className="story-practice-artifact overflow-hidden rounded-xl border border-white/[0.085] bg-[#0b0d10] shadow-[0_16px_45px_rgba(0,0,0,0.2)]">
-        <div className="story-practice-artifact-header flex h-10 items-center gap-2 border-b border-white/[0.065] bg-[#15181d] px-3.5">
+      <div className="story-practice-artifact overflow-hidden rounded-xl bg-[#0b0d10]">
+        <div className="story-practice-artifact-header flex h-10 items-center gap-2 bg-[#15181d] px-3.5">
           {presentation.editor ? (
             <Code2 size={12} aria-hidden="true" className="text-[var(--workspace-accent)]" />
           ) : (
             <FileText size={12} aria-hidden="true" className="text-[var(--workspace-accent)]" />
           )}
           <span
-            className={`${comfortable ? "text-sm" : "text-[10.5px]"} min-w-0 truncate font-mono text-cream/42`}
+            className={`${comfortable ? "text-sm" : "text-[12px]"} min-w-0 truncate font-mono text-cream/42`}
           >
             {artifactFileName(artifact.title, presentation.extension)}
           </span>
-          <span className="ml-auto text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/28">
+          <span className="ml-auto text-[12px] text-cream/38">
             {presentation.editor && editorLanguage && editorLanguage !== "plaintext"
               ? `${humanize(editorLanguage)} · read only`
               : "Read only"}
@@ -161,7 +162,7 @@ export function StoryPracticeArtifact({
               </thead>
               <tbody>
                 {artifact.table.rows.map((row, index) => (
-                  <tr key={index} className="odd:bg-white/[0.025]">
+                  <tr key={index} className="story-artifact-row">
                     {row.map((cell, column) =>
                       column === 0 ? (
                         <th
@@ -199,13 +200,15 @@ export function StoryPracticeArtifact({
             ariaLabel={`${artifact.title} ${artifact.kind} artifact, read only`}
             embedded
           />
+        ) : lines.length === 1 && isProseEvidence(lines[0]!) ? (
+          <EvidenceProse text={lines[0]!} className="px-4 py-4" />
         ) : (
           <div className="thin-scroll max-h-[28rem] overflow-auto py-3">
             <ol
               className={`${comfortable ? "text-sm" : "text-[12px]"} w-full font-mono leading-[1.85] text-cream/64`}
             >
               {lines.map((line, index) => (
-                <li key={`${index}:${line}`} className="flex min-h-6 w-full hover:bg-white/[0.025]">
+                <li key={`${index}:${line}`} className="practice-soft-hover flex min-h-6 w-full">
                   <span
                     aria-hidden="true"
                     className="w-12 shrink-0 select-none border-r border-white/[0.045] pr-3 text-right tabular-nums text-cream/20"

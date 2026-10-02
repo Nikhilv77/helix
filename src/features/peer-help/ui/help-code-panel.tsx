@@ -64,7 +64,7 @@ export function HelpCodePanel({
           )}
           {seat === "helper" ? "Candidate solution" : "Solution"}
         </span>
-        <span className="rounded-lg bg-white/[0.045] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/44 ring-1 ring-inset ring-white/[0.045]">
+        <span className="rounded-lg bg-white/[0.045] px-2.5 py-1 text-[12px] font-medium text-cream/52">
           {workspace?.language ?? language}
         </span>
         <span className="flex-1" />
@@ -77,9 +77,7 @@ export function HelpCodePanel({
           >
             <span
               className={`h-1.5 w-1.5 rounded-full ${
-                snapshot && !stale
-                  ? "bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]"
-                  : "bg-cream/25"
+                snapshot && !stale ? "bg-[var(--workspace-accent)]" : "bg-cream/25"
               }`}
             />
             {!snapshot

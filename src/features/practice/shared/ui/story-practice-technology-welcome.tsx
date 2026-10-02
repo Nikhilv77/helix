@@ -131,7 +131,7 @@ export function StoryPracticeTechnologyWelcome<TValue extends string>({
                     type="button"
                     aria-label={`${option.label}: ${option.detail}`}
                     onClick={() => void prepare(option.value)}
-                    className="group flex min-h-[6rem] items-center gap-3.5 rounded-xl border border-white/[0.075] px-5 py-4 text-left transition hover:border-white/[0.14] hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+                    className="group flex min-h-[6rem] items-center gap-3.5 rounded-xl bg-[#17181b] px-5 py-4 text-left transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
                   >
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/[0.09] text-cream/34 transition group-hover:text-[var(--workspace-accent)]">
                       {option.resumeMatched ? (

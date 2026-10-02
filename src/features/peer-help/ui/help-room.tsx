@@ -263,7 +263,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
 
   return (
     <main className="practice-paper relative mx-auto w-full max-w-[104rem] px-3 pb-8 pt-3 sm:px-5 md:pt-5">
-      <header className="mb-3 flex min-h-16 flex-wrap items-center gap-3 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:px-4">
+      <header className="mb-3 flex min-h-16 flex-wrap items-center gap-3 rounded-2xl bg-[#17181b] px-3 py-2 sm:px-4">
         {room.peer?.profileImage ? (
           <Image
             src={room.peer.profileImage}
@@ -282,14 +282,14 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
           </span>
         )}
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+          <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
             Live Trailmate
           </p>
           <h1 className="truncate text-[15px] font-semibold text-cream">
             {room.title} with {room.peer?.label ?? "your peer"}
           </h1>
         </div>
-        <span className="rounded-full bg-white/[0.045] px-2.5 py-1 text-[11px] text-cream/44 ring-1 ring-inset ring-white/[0.045]">
+        <span className="rounded-full bg-white/[0.045] px-2.5 py-1 text-[12px] text-cream/52">
           {room.seat === "learner" ? "Candidate" : "Trailmate"}
         </span>
         <span className="flex-1" />

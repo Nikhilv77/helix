@@ -25,18 +25,11 @@ export function RecallQuizPanel({ quiz }: { quiz: Promise<RecallQuizItem[]> }) {
   const answered = picked !== undefined;
 
   return (
-    <section
-      aria-label="Recall check"
-      className="mt-8 overflow-hidden rounded-xl border border-white/[0.075] bg-white/[0.02]"
-    >
-      <header className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
+    <section aria-label="Recall check" className="mt-8 overflow-hidden rounded-xl bg-[#17181b]">
+      <header className="interview-soft-rule-bottom flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
-            Recall check
-          </p>
-          <span className="rounded-full border border-white/[0.07] bg-white/[0.035] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/42">
-            Not scored
-          </span>
+          <p className="text-[13px] font-semibold text-[var(--workspace-accent)]">Recall check</p>
+          <span className="text-[12px] text-cream/42">Not scored</span>
         </div>
         <div className="flex items-center gap-1.5" aria-hidden="true">
           {items.map((entry, position) => {
@@ -61,7 +54,7 @@ export function RecallQuizPanel({ quiz }: { quiz: Promise<RecallQuizItem[]> }) {
 
       {item ? (
         <div className="px-4 py-4">
-          <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-cream/34">
+          <p className="text-[12px] text-cream/42">
             {item.source} · {index + 1} of {items.length}
           </p>
           <p className="mt-2 text-sm font-medium leading-6 text-cream/86">{item.prompt}</p>
@@ -72,12 +65,12 @@ export function RecallQuizPanel({ quiz }: { quiz: Promise<RecallQuizItem[]> }) {
               const correct = choiceIndex === item.correctIndex;
               const chosen = choiceIndex === picked;
               const tone = !answered
-                ? "border-white/[0.07] bg-black/20 text-cream/72 hover:border-white/[0.14] hover:bg-white/[0.04] hover:text-cream"
+                ? "bg-white/[0.03] text-cream/72 hover:bg-white/[0.06] hover:text-cream"
                 : correct
-                  ? "border-[color:var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] text-cream"
+                  ? "bg-[var(--workspace-accent-soft)] text-cream"
                   : chosen
-                    ? "border-[#ffb4b4]/35 bg-[#ffb4b4]/[0.06] text-cream/80"
-                    : "border-white/[0.05] bg-black/10 text-cream/40";
+                    ? "bg-[#ffb4b4]/[0.08] text-cream/80"
+                    : "text-cream/40";
               return (
                 <button
                   key={choice}
@@ -86,9 +79,9 @@ export function RecallQuizPanel({ quiz }: { quiz: Promise<RecallQuizItem[]> }) {
                   aria-checked={chosen}
                   disabled={answered}
                   onClick={() => setPicks((current) => ({ ...current, [item.id]: choiceIndex }))}
-                  className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left text-[13px] leading-5 transition disabled:cursor-default ${tone}`}
+                  className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] leading-5 transition disabled:cursor-default ${tone}`}
                 >
-                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md border border-white/[0.1] font-mono text-[10px] text-cream/55">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-white/[0.06] text-[12px] text-cream/55">
                     {answered && correct ? (
                       <Check size={11} aria-hidden="true" />
                     ) : answered && chosen ? (
@@ -114,7 +107,7 @@ export function RecallQuizPanel({ quiz }: { quiz: Promise<RecallQuizItem[]> }) {
               <button
                 type="button"
                 onClick={() => setIndex((current) => current + 1)}
-                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-cream/80 transition hover:bg-white/[0.09] hover:text-cream"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-cream/80 transition hover:bg-white/[0.09] hover:text-cream"
               >
                 {index + 1 < items.length ? "Next" : "See result"}
                 <ChevronRight size={13} aria-hidden="true" />
@@ -137,7 +130,7 @@ export function RecallQuizPanel({ quiz }: { quiz: Promise<RecallQuizItem[]> }) {
               setPicks({});
               setIndex(0);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-cream/80 transition hover:bg-white/[0.09] hover:text-cream"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-cream/80 transition hover:bg-white/[0.09] hover:text-cream"
           >
             <RotateCcw size={12} aria-hidden="true" />
             Try again

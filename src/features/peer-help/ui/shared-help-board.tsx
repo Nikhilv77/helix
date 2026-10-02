@@ -226,9 +226,7 @@ export function SharedHelpBoard({
         <p className="mt-1 text-xs text-cream/36">Both people can type and draw live.</p>
       </header>
 
-      <section
-        className={`shrink-0 border-b ${HELP_ROOM_PANEL_RULE} bg-black/10 px-3 py-3 sm:px-4`}
-      >
+      <section className={`shrink-0 border-b ${HELP_ROOM_PANEL_RULE} px-3 py-3 sm:px-4`}>
         <label htmlFor="shared-help-notes" className="text-xs font-semibold text-cream/58">
           Notes
         </label>
@@ -238,7 +236,7 @@ export function SharedHelpBoard({
           onChange={(event) => updateNotes(event.target.value)}
           aria-label="Shared Trailmate notes"
           placeholder="Write an edge case or next step…"
-          className="thin-scroll mt-2 h-24 w-full resize-none overflow-y-auto rounded-xl border-0 bg-black/20 px-3 py-2.5 text-xs leading-5 text-cream/74 outline-none ring-1 ring-inset ring-white/[0.045] transition placeholder:text-cream/24 focus:bg-black/30 focus:ring-white/[0.1]"
+          className="practice-soft-field thin-scroll mt-2 h-24 w-full resize-none overflow-y-auto rounded-xl border-0 bg-white/[0.035] px-3 py-2.5 text-xs leading-5 text-cream/74 outline-none ring-1 ring-inset ring-white/[0.045] transition placeholder:text-cream/24 focus:bg-black/30 focus:ring-white/[0.1]"
         />
       </section>
 
@@ -274,7 +272,7 @@ export function SharedHelpBoard({
           onClick={() => {
             if (strokesType.length > 0) strokesType.delete(0, strokesType.length);
           }}
-          className="h-8 rounded-lg px-2 text-[11px] text-cream/38 transition hover:bg-cream/[0.06] hover:text-cream"
+          className="h-8 rounded-lg px-2 text-[12px] text-cream/42 transition hover:bg-cream/[0.06] hover:text-cream"
         >
           Clear
         </button>
@@ -284,33 +282,17 @@ export function SharedHelpBoard({
         <canvas
           ref={canvas}
           aria-label="Shared drawing canvas"
-          style={{
-            cursor: tool === "erase" ? ERASER_CURSOR : undefined,
-            ...BOARD_GRID
-          }}
+          style={{ cursor: tool === "erase" ? ERASER_CURSOR : undefined }}
           onPointerDown={beginStroke}
           onPointerMove={extendStroke}
           onPointerUp={finishStroke}
           onPointerCancel={finishStroke}
-          className={`block h-[44rem] min-h-full w-[42rem] min-w-full touch-none bg-[#0a0c0f] ${tool === "draw" ? "cursor-crosshair" : ""}`}
+          className={`help-board-grid block h-[44rem] min-h-full w-[42rem] min-w-full touch-none bg-[#0a0c0f] ${tool === "draw" ? "cursor-crosshair" : ""}`}
         />
       </div>
     </aside>
   );
 }
-
-/**
- * Graph-paper lines behind the drawing so the board reads as a sketch surface.
- * A CSS background, not canvas pixels: Clear and Erase never remove it and it
- * is never part of the shared strokes.
- */
-const BOARD_GRID = {
-  backgroundImage: [
-    "linear-gradient(rgba(239,232,214,0.035) 1px, transparent 1px)",
-    "linear-gradient(90deg, rgba(239,232,214,0.035) 1px, transparent 1px)"
-  ].join(", "),
-  backgroundSize: "24px 24px"
-} as const;
 
 function BoardTool({
   active,

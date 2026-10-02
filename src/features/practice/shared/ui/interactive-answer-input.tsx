@@ -7,7 +7,7 @@ import { CategoryPicker } from "./category-picker";
 import { NumberField } from "./number-field";
 
 const buttonClass =
-  "inline-flex h-9 items-center justify-center rounded-lg border border-white/10 px-2.5 text-cream/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] disabled:opacity-30";
+  "inline-flex h-9 items-center justify-center rounded-lg bg-white/[0.05] px-2.5 text-cream/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] disabled:opacity-30";
 
 /** Keyboard and touch accessible: ordering never depends on drag-and-drop. */
 export function InteractiveAnswerInput({
@@ -77,7 +77,7 @@ export function InteractiveAnswerInput({
                 <li
                   key={id}
                   ref={flipRef(id)}
-                  className="rounded-xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] p-3"
+                  className="rounded-xl bg-[var(--workspace-accent-soft)] p-3"
                 >
                   <div className="flex gap-3">
                     <span className="text-sm font-semibold text-[var(--workspace-accent)]">
@@ -123,7 +123,7 @@ export function InteractiveAnswerInput({
             })}
           </ol>
           {!response.order.length ? (
-            <p className="rounded-xl border border-dashed border-white/15 p-5 text-sm text-cream/45">
+            <p className="rounded-xl bg-white/[0.03] p-5 text-sm text-cream/45">
               Add your first action below, then arrange the remaining steps.
             </p>
           ) : null}
@@ -138,7 +138,7 @@ export function InteractiveAnswerInput({
                   onClick={() =>
                     onChange({ type: "sequence", order: [...response.order, item.id] })
                   }
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-left text-sm leading-6 text-cream/65 hover:border-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+                  className="flex w-full items-center gap-3 rounded-xl bg-white/[0.03] p-3 text-left text-sm leading-6 text-cream/65 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
                 >
                   <Plus
                     size={16}
@@ -154,8 +154,8 @@ export function InteractiveAnswerInput({
       {interaction.type === "classification" && response.type === "classification" ? (
         <div className="space-y-3">
           {interaction.items.map((item, index) => (
-            <div key={item.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--workspace-accent)]">
+            <div key={item.id} className="rounded-xl bg-white/[0.03] p-4">
+              <span className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
                 Evidence {index + 1}
               </span>
               <span

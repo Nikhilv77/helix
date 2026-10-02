@@ -230,39 +230,24 @@ export async function loadPracticeHomeView(ownerId: string, profile: CandidatePr
       dsaRecommendation={dsaRecommendation}
       dsaBlockCompletedQuestions={dsaBlockCompletedQuestions}
       coreTechnicalEntry={coreTechnicalPracticeEntry(coreTechnicalEligibility, coreTechnicalBlock)}
-      coreTechnicalTotals={
-        coreTechnicalAnalytics
-          ? {
-              totalQuestions: coreTechnicalAnalytics.totalQuestions,
-              completedQuestions: coreTechnicalAnalytics.completedQuestions
-            }
-          : null
-      }
+      coreTechnicalTotals={trackTotals(coreTechnicalAnalytics, coreTechnicalEligibility.stories)}
       appliedEngineeringEntry={appliedEngineeringPracticeEntry(
         appliedEngineeringEligibility,
         appliedEngineeringBlock
       )}
-      appliedEngineeringTotals={
-        appliedEngineeringAnalytics
-          ? {
-              totalQuestions: appliedEngineeringAnalytics.totalQuestions,
-              completedQuestions: appliedEngineeringAnalytics.completedQuestions
-            }
-          : null
-      }
+      appliedEngineeringTotals={trackTotals(
+        appliedEngineeringAnalytics,
+        appliedEngineeringEligibility.incidents
+      )}
       architectureDesignEntry={
         practiceRoadmap && nodeTracks
           ? architectureDesignPracticeEntry(architectureDesignEligibility, architectureDesignBlock)
           : null
       }
-      architectureDesignTotals={
-        architectureDesignAnalytics
-          ? {
-              totalQuestions: architectureDesignAnalytics.totalQuestions,
-              completedQuestions: architectureDesignAnalytics.completedQuestions
-            }
-          : null
-      }
+      architectureDesignTotals={trackTotals(
+        architectureDesignAnalytics,
+        architectureDesignEligibility.scenarios
+      )}
       generationFailed={generationFailed}
       storyProgressFailed={storyProgressFailed}
       storyEntries={
@@ -339,6 +324,24 @@ function storyPracticeEntries(
       href: architecture.href
     }
   ];
+}
+
+/**
+ * A track's whole question bank against everything solved in it, across every
+ * block. The bank is the catalogue offered to this learner; saved questions
+ * from older catalogue versions can push the total higher, never lower.
+ */
+function trackTotals(
+  analytics: { totalQuestions: number; completedQuestions: number } | null,
+  catalogue: ReadonlyArray<{ questions?: ReadonlyArray<unknown> }> | undefined
+): { totalQuestions: number; completedQuestions: number } | null {
+  const catalogueQuestions = (catalogue ?? []).reduce(
+    (total, entry) => total + (entry.questions?.length ?? 0),
+    0
+  );
+  const totalQuestions = Math.max(catalogueQuestions, analytics?.totalQuestions ?? 0);
+  if (totalQuestions === 0) return null;
+  return { totalQuestions, completedQuestions: analytics?.completedQuestions ?? 0 };
 }
 
 function progressStatus(completed: number, total: number): "ACTIVE" | "IN_PROGRESS" | "COMPLETED" {

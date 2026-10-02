@@ -90,11 +90,11 @@ export function StructuredAnswerEditor({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border border-white/[0.085] bg-[#0d0f10] shadow-[0_18px_48px_rgba(0,0,0,0.16)] ${fill ? "flex min-h-0 flex-1 flex-col" : ""}`}
+      className={`overflow-hidden rounded-2xl bg-[#0d0f10] ${fill ? "flex min-h-0 flex-1 flex-col" : ""}`}
     >
       {prompts.length ? (
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] px-3 py-2.5 sm:px-4">
-          <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cream/30">
+        <div className="interview-soft-rule-bottom flex flex-wrap items-center gap-1.5 px-3 py-2.5 sm:px-4">
+          <span className="mr-1 text-[12px] text-cream/42">
             Add a prompt
           </span>
           {prompts.map((prompt) => {
@@ -106,9 +106,9 @@ export function StructuredAnswerEditor({
                 onClick={() => addPrompt(prompt)}
                 disabled={disabled || alreadyAdded}
                 aria-label={alreadyAdded ? `${prompt.label} prompt added` : undefined}
-                className="rounded-md border border-white/[0.065] bg-white/[0.035] px-2 py-1 text-[10.5px] font-medium text-cream/48 transition hover:border-white/[0.12] hover:bg-white/[0.06] hover:text-cream/76 disabled:cursor-not-allowed disabled:border-white/[0.045] disabled:bg-white/[0.02] disabled:text-cream/28"
+                className="rounded-md bg-white/[0.045] px-2 py-1 text-[12px] font-medium text-cream/52 transition hover:bg-white/[0.07] hover:text-cream/76 disabled:cursor-not-allowed disabled:bg-white/[0.02] disabled:text-cream/28"
               >
-                {alreadyAdded ? <Check size={10} aria-hidden="true" className="mr-1 inline" /> : "+ "}
+                {alreadyAdded ? <Check size={12} aria-hidden="true" className="mr-1 inline" /> : "+ "}
                 {prompt.label}
               </button>
             );
@@ -128,7 +128,7 @@ export function StructuredAnswerEditor({
           disabled={disabled}
           maxLength={maxLength}
           rows={8}
-          className={`block w-full resize-none ${fill ? "min-h-[20rem] flex-1" : "min-h-56 max-h-[26.25rem]"} overflow-y-auto bg-transparent px-4 py-4 text-[14px] leading-7 caret-cream outline-none placeholder:text-cream/24 disabled:opacity-65 ${prompts.length && value ? "text-transparent" : "text-cream"}`}
+          className={`structured-answer-input block w-full resize-none ${fill ? "min-h-[20rem] flex-1" : "min-h-56 max-h-[26.25rem]"} overflow-y-auto bg-transparent px-4 py-4 text-[14px] leading-7 caret-cream outline-none placeholder:text-cream/24 disabled:opacity-65 ${prompts.length && value ? "structured-answer-mirrored text-transparent" : "text-cream"}`}
           placeholder={placeholder}
         />
         {prompts.length && value ? (
@@ -153,11 +153,11 @@ export function StructuredAnswerEditor({
           </div>
         ) : null}
       </div>
-      <div className="flex min-h-10 items-center justify-between border-t border-white/[0.055] px-3 sm:px-4">
-        <p className="text-[11px] text-cream/30">
+      <div className="interview-soft-rule flex min-h-10 items-center justify-between px-3 sm:px-4">
+        <p className="text-[12px] text-cream/38">
           {prompts.length ? "Use only the prompts that help your explanation." : hint}
         </p>
-        <p className="font-mono text-[10px] tabular-nums text-cream/28">
+        <p className="text-[12px] tabular-nums text-cream/38">
           {value.length}/{maxLength}
         </p>
       </div>

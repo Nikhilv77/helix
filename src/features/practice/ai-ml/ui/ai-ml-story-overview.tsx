@@ -145,10 +145,10 @@ function PersonalPathAssessmentNote({ href }: { href: string }) {
   return (
     <aside
       aria-label="Path assessment"
-      className="flex flex-wrap items-center justify-between gap-4 rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] px-5 py-4"
+      className="flex flex-wrap items-center justify-between gap-4 rounded-[1.15rem] bg-white/[0.025] px-5 py-4"
     >
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+        <p className="text-[12.5px] font-semibold text-[var(--workspace-accent)]">
           Path assessment
         </p>
         <p className="mt-1.5 text-[14px] leading-6 text-cream/65">
@@ -157,7 +157,7 @@ function PersonalPathAssessmentNote({ href }: { href: string }) {
       </div>
       <Link
         href={href}
-        className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/[0.08] px-4 text-[13px] font-semibold text-cream/80 transition hover:bg-white/[0.05] hover:text-cream"
+        className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold text-[var(--workspace-accent)]"
       >
         Go to the core paths
         <LinkPendingIcon direction="forward" size={14} />

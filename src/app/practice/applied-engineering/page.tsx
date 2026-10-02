@@ -101,7 +101,7 @@ function Unavailable({ message }: { message: string }) {
   return (
     <section
       role="status"
-      className="mt-10 max-w-2xl rounded-[1.4rem] border border-white/[0.085] bg-[#141619] px-5 py-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:px-7"
+      className="mt-10 max-w-2xl rounded-[1.4rem] bg-[#17181b] px-5 py-7 sm:px-7"
     >
       <LockKeyhole size={20} aria-hidden="true" className="text-cream/42" />
       <h1 className="mt-5 font-display text-[1.7rem] font-semibold tracking-[-0.025em] text-cream">

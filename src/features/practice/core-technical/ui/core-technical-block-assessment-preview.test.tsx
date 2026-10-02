@@ -179,7 +179,7 @@ describe("CoreTechnicalBlockAssessmentPreview", () => {
 
     // Opening notice
     fireEvent.click(screen.getByRole("button", { name: "Check progress" }));
-    expect(screen.getByText("Checkpoint Locked")).toBeInTheDocument();
+    expect(screen.getByText("Checkpoint locked")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Finish your 2 remaining questions" })
     ).toBeInTheDocument();

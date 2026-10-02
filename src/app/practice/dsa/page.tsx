@@ -141,7 +141,7 @@ export default async function DsaPracticePage({
       ) : (
         <div
           role="alert"
-          className="mt-10 rounded-2xl border border-white/[0.1] bg-black px-5 py-6 text-sm text-cream/62"
+          className="mt-10 rounded-2xl bg-[#17181b] px-5 py-6 text-sm text-cream/62"
         >
           The question bank is unavailable right now. Refresh in a moment.
         </div>

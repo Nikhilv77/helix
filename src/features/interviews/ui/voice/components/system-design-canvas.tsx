@@ -508,7 +508,7 @@ export function SystemDesignCanvas({
       }}
     >
       <div
-        className={`flex flex-wrap items-center gap-2 border-b border-white/[0.06] py-2.5 ${embedded ? "px-0" : "px-3"}`}
+        className={`flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-3 py-2.5`}
       >
         {!embedded ? (
           <div className="mr-auto min-w-44">

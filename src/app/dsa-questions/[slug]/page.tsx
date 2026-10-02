@@ -68,7 +68,7 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
   return (
     <main className="practice-question-page w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
       <div className="mx-auto flex min-h-0 w-full max-w-[112rem] flex-col gap-2 xl:h-full">
-        <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-white/[0.08] bg-[#141619] px-3 py-2.5 sm:px-4">
+        <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl bg-[#141619] px-3 py-2.5 sm:px-4">
           <Link
             href="/practice/dsa"
             aria-label="Back to DSA practice"
@@ -150,7 +150,7 @@ async function timedQuestionRead<T>(source: string, read: Promise<T>): Promise<T
 
 function QuestionMeta({ question }: { question: DsaQuestion }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 text-[11.5px] font-medium text-cream/44">
+    <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-cream/44">
       <span className="rounded-md bg-white/[0.045] px-2 py-1 capitalize">
         {question.difficulty}
       </span>
