@@ -89,4 +89,20 @@ describe("resume preview signatures", () => {
       )
     ).toBe(true);
   });
+
+  it("only verifies after confirmation's schema parsing when the signed value was parsed too", () => {
+    const raw = { fileName: "resume.pdf ", headline: "Engineer\n" };
+    const parse = (value: typeof raw) => ({
+      fileName: value.fileName.trim(),
+      headline: value.headline.trim()
+    });
+    const fromRaw = signResumePreview(raw, "user:a", SECRET, NOW);
+    expect(
+      verifyResumePreview(parse(raw), "user:a", fromRaw.previewExpiresAt, fromRaw.confirmationToken, SECRET, NOW)
+    ).toBe(false);
+    const fromParsed = signResumePreview(parse(raw), "user:a", SECRET, NOW);
+    expect(
+      verifyResumePreview(parse(raw), "user:a", fromParsed.previewExpiresAt, fromParsed.confirmationToken, SECRET, NOW)
+    ).toBe(true);
+  });
 });

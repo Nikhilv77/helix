@@ -261,7 +261,10 @@ export function ResumeReadinessStep({
                 {continuing ? <EntryProgress activeStage={entryStage} /> : null}
               </div>
               {error ? (
-                <p className="max-w-sm text-center text-base font-semibold leading-relaxed text-cream/68">
+                <p
+                  role="alert"
+                  className="resume-upload-error max-w-sm rounded-xl border border-[#f6b0b0]/35 bg-[#4b1f36]/30 px-4 py-2.5 text-center text-[15px] font-medium leading-relaxed text-[#ffd3d3]"
+                >
                   {error}
                 </p>
               ) : null}

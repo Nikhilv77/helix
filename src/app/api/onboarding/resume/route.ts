@@ -36,6 +36,10 @@ import {
 } from "@/features/onboarding/server/resume/technology-detector";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { signResumePreview } from "@/features/profile/server/resume-preview-token";
+import {
+  resumeExtractionSchema,
+  resumeFileSchema
+} from "@/features/onboarding/contracts/resume-extraction";
 import { initialPreparationOnboardingState } from "@/features/preparation-onboarding/server/preparation-onboarding-state";
 
 export const dynamic = "force-dynamic";
@@ -393,7 +397,32 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    const preview = { resumeFile, extraction };
+    // Sign exactly what confirmation will check. Confirmation parses the
+    // preview through these schemas, which trim strings and drop extra keys;
+    // signing the raw model output let a stray space or newline make every
+    // confirmation fail as "expired or changed".
+    const parsedFile = resumeFileSchema.safeParse(resumeFile);
+    const parsedExtraction = resumeExtractionSchema.safeParse(extraction);
+    if (!parsedFile.success || !parsedExtraction.success) {
+      logger.warn(
+        JSON.stringify({
+          event: "resume.preview.invalid",
+          ownerId,
+          issues: [
+            ...(parsedFile.error?.issues ?? []),
+            ...(parsedExtraction.error?.issues ?? [])
+          ]
+            .slice(0, 5)
+            .map((issue) => `${issue.path.join(".")}: ${issue.code}`)
+        })
+      );
+      throw new ApiRouteError(
+        422,
+        "RESUME_PREVIEW_INVALID",
+        "Trailgrad could not prepare a review of this resume. Try uploading it again."
+      );
+    }
+    const preview = { resumeFile: parsedFile.data, extraction: parsedExtraction.data };
     const signingSecret = app.config.interviewAuthSecret;
     if (!signingSecret) {
       throw new ApiRouteError(
@@ -404,8 +433,8 @@ export async function POST(request: NextRequest) {
     }
     return apiSuccess({
       profile: previewProfile,
-      resumeFile,
-      extraction,
+      resumeFile: preview.resumeFile,
+      extraction: preview.extraction,
       frontendRoadmap: null,
       comparison,
       ...signResumePreview(preview, ownerId, signingSecret)
