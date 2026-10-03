@@ -279,10 +279,18 @@ export function AvatarStage({
         alpha: true,
         powerPreference: profile.powerPreference
       });
-    } catch {
+    } catch (error) {
+      console.warn("[avatar] WebGL is unavailable", error);
       setStatus("failed");
       return;
     }
+    // The GPU process can drop the context (sleep, driver reset, too many
+    // contexts across tabs); report it instead of leaving a blank canvas.
+    const onContextLost = () => {
+      console.warn("[avatar] WebGL context lost");
+      setStatus("failed");
+    };
+    renderer.domElement.addEventListener("webglcontextlost", onContextLost);
 
     renderer.setPixelRatio(profile.pixelRatio);
     // Keep the backing surface transparent from the moment the browser first
@@ -500,8 +508,9 @@ export function AvatarStage({
           onModelReadyRef.current?.(nextUrl);
         },
         undefined,
-        () => {
+        (error) => {
           if (!disposed && request === modelRequest) {
+            console.warn(`[avatar] Could not load ${nextUrl}`, error);
             setStatus("failed");
             onModelErrorRef.current?.(nextUrl);
           }
@@ -766,6 +775,7 @@ export function AvatarStage({
       // context. A masked canvas can remain in the compositor for the rest of
       // the current frame even after removeChild; forcing context loss in that
       // same frame briefly exposes the browser's opaque clear surface.
+      renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
       renderer.domElement.style.visibility = "hidden";
       renderer.domElement.style.opacity = "0";
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
